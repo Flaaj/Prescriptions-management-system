@@ -59,6 +59,7 @@ impl NewPrescription {
         let prescription_type = prescription_type.unwrap_or(PrescriptionType::Regular);
 
         let duration = prescription_type.get_duration();
+        let end_date = start_date + duration;
 
         Self {
             doctor_id,
@@ -66,7 +67,7 @@ impl NewPrescription {
             prescribed_drugs: vec![],
             prescription_type,
             start_date,
-            end_date: start_date + duration,
+            end_date,
         }
     }
 
