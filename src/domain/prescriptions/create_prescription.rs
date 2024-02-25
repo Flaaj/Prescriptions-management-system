@@ -33,7 +33,6 @@ impl PrescriptionType {
 
 #[derive(Debug, PartialEq)]
 struct PrescribedDrug {
-    id: Uuid,
     drug_id: Uuid,
     amount: i32,
 }
@@ -70,6 +69,10 @@ impl NewPrescription {
             end_date: start_date + duration,
         }
     }
+
+    fn add_drug(&self, drug_id: Uuid, amount: i32) -> &Vec<PrescribedDrug> {
+        &self.prescribed_drugs
+    }
 }
 
 #[cfg(test)]
@@ -77,7 +80,9 @@ mod test {
     use chrono::{Duration, Utc};
     use uuid::Uuid;
 
-    use crate::domain::prescriptions::create_prescription::{NewPrescription, PrescriptionType};
+    use crate::domain::prescriptions::create_prescription::{
+        NewPrescription, PrescribedDrug, PrescriptionType,
+    };
 
     #[test]
     fn creates_prescription() {
@@ -171,5 +176,17 @@ mod test {
         assert_eq!(sut.end_date, timestamp + Duration::days(365));
     }
 
-    
+    #[test]
+    fn adds_prescribed_drug_to_prescription() {
+        let doctor_id = Uuid::new_v4();
+        let patient_id = Uuid::new_v4();
+        let drug_id = Uuid::new_v4();
+        let prescription = NewPrescription::new(doctor_id, patient_id, None, None);
+
+        let sut = prescription.add_drug(drug_id, 2);
+
+        let prescribed_drug = sut.get(0).unwrap();
+        let expected = &PrescribedDrug { drug_id, amount: 2 };
+        assert_eq!(prescribed_drug, expected);
+    }
 }
