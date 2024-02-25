@@ -70,7 +70,11 @@ impl NewPrescription {
         }
     }
 
-    fn add_drug(&self, drug_id: Uuid, amount: i32) -> &Vec<PrescribedDrug> {
+    // Returns reference to prescribed_drugs for testing purposes
+    fn add_drug(&mut self, drug_id: Uuid, amount: i32) -> &Vec<PrescribedDrug> {
+        &self
+            .prescribed_drugs
+            .push(PrescribedDrug { drug_id, amount });
         &self.prescribed_drugs
     }
 }
@@ -98,7 +102,7 @@ mod test {
     }
 
     #[test]
-    fn creates_prescription_with_30_days_duration_when_type_is_regular() {
+    fn creates_prescription_with_30_days_duration_for_regular_prescriptions() {
         let doctor_id = Uuid::new_v4();
         let patient_id = Uuid::new_v4();
         let timestamp = Utc::now();
@@ -181,7 +185,7 @@ mod test {
         let doctor_id = Uuid::new_v4();
         let patient_id = Uuid::new_v4();
         let drug_id = Uuid::new_v4();
-        let prescription = NewPrescription::new(doctor_id, patient_id, None, None);
+        let mut prescription = NewPrescription::new(doctor_id, patient_id, None, None);
 
         let sut = prescription.add_drug(drug_id, 2);
 
