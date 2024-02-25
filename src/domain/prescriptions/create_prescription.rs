@@ -16,7 +16,7 @@ enum PrescriptionType {
     Regular,
     ForAntibiotics,
     ForImmunologicalDrugs,
-    ForChronicDiseasesDrugs,
+    ForChronicDiseaseDrugs,
 }
 
 #[derive(Debug, PartialEq)]
@@ -51,7 +51,7 @@ impl NewPrescription {
             PrescriptionType::Regular => Duration::days(30),
             PrescriptionType::ForAntibiotics => Duration::days(7),
             PrescriptionType::ForImmunologicalDrugs => Duration::days(120),
-            PrescriptionType::ForChronicDiseasesDrugs => Duration::days(365),
+            PrescriptionType::ForChronicDiseaseDrugs => Duration::days(365),
         };
 
         Self {
@@ -153,12 +153,12 @@ mod test {
             doctor_id,
             patient_id,
             Some(timestamp),
-            Some(PrescriptionType::ForChronicDiseasesDrugs),
+            Some(PrescriptionType::ForChronicDiseaseDrugs),
         );
 
         assert_eq!(
             sut.prescription_type,
-            PrescriptionType::ForChronicDiseasesDrugs
+            PrescriptionType::ForChronicDiseaseDrugs
         );
         assert_eq!(sut.start_date, timestamp);
         assert_eq!(sut.end_date, timestamp + Duration::days(365));
