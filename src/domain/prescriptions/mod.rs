@@ -1,1 +1,1 @@
-pub mod prescriptions_service;
+pub mod create_prescription;
