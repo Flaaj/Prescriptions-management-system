@@ -19,6 +19,17 @@ enum PrescriptionType {
     ForChronicDiseaseDrugs,
 }
 
+impl PrescriptionType {
+    fn get_duration(&self) -> Duration {
+        match self {
+            PrescriptionType::Regular => Duration::days(30),
+            PrescriptionType::ForAntibiotics => Duration::days(7),
+            PrescriptionType::ForImmunologicalDrugs => Duration::days(120),
+            PrescriptionType::ForChronicDiseaseDrugs => Duration::days(365),
+        }
+    }
+}
+
 #[derive(Debug, PartialEq)]
 struct PrescribedDrug {
     id: Uuid,
@@ -47,19 +58,14 @@ impl NewPrescription {
         let start_date = start_date.unwrap_or(Utc::now());
         let prescription_type = prescription_type.unwrap_or(PrescriptionType::Regular);
 
-        let duration = match prescription_type {
-            PrescriptionType::Regular => Duration::days(30),
-            PrescriptionType::ForAntibiotics => Duration::days(7),
-            PrescriptionType::ForImmunologicalDrugs => Duration::days(120),
-            PrescriptionType::ForChronicDiseaseDrugs => Duration::days(365),
-        };
+        let duration = prescription_type.get_duration();
 
         Self {
             doctor_id,
             patient_id,
             prescribed_drugs: vec![],
-            start_date,
             prescription_type,
+            start_date,
             end_date: start_date + duration,
         }
     }
