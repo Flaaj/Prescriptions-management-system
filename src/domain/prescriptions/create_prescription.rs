@@ -190,8 +190,8 @@ mod test {
         let sut = prescription.add_drug(drug_id, 2);
 
         let prescribed_drug = sut.get(0).unwrap();
-        let expected = &PrescribedDrug { drug_id, amount: 2 };
-        assert_eq!(prescribed_drug, expected);
+        assert_eq!(prescribed_drug.drug_id, drug_id);
+        assert_eq!(prescribed_drug.amount, 2);
     }
 
     #[test]
