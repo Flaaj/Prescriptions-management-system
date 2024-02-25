@@ -41,20 +41,29 @@ impl NewPrescription {
         start_date: Option<DateTime<Utc>>,
         prescription_type: Option<PrescriptionType>,
     ) -> Self {
+        // defaults:
         let start_date = start_date.unwrap_or(Utc::now());
+        let duration = prescription_type.unwrap_or(PrescriptionType::Regular);
+
+        let duration = match duration {
+            PrescriptionType::Regular => Duration::days(30),
+            PrescriptionType::ForAntibiotics => Duration::days(7),
+            PrescriptionType::ForChronicDiseasesDrugs => Duration::days(365),
+            PrescriptionType::ForImmunologicalDrugs => Duration::days(120),
+        };
+
         Self {
             doctor_id,
             patient_id,
             prescribed_drugs: vec![],
             start_date,
-            end_date: start_date + Duration::days(30),
+            end_date: start_date + duration,
         }
     }
 }
 
 #[cfg(test)]
 mod test {
-
     use chrono::{Duration, Utc};
     use uuid::Uuid;
 
@@ -85,13 +94,59 @@ mod test {
             Some(PrescriptionType::Regular),
         );
 
-        let expected_prescription = NewPrescription {
+        assert_eq!(sut.start_date, timestamp);
+        assert_eq!(sut.end_date, timestamp + Duration::days(30));
+    }
+
+    #[test]
+    fn creates_prescription_with_7_days_duration_when_prescription_is_for_antibiotics() {
+        let doctor_id = Uuid::parse_str("11111111-1111-1111-1111-111111111111").unwrap();
+        let patient_id = Uuid::parse_str("22222222-2222-2222-2222-222222222222").unwrap();
+        let timestamp = Utc::now();
+
+        let sut = NewPrescription::new(
             doctor_id,
             patient_id,
-            prescribed_drugs: vec![],
-            start_date: timestamp,
-            end_date: timestamp + Duration::days(30),
-        };
-        assert_eq!(sut, expected_prescription)
+            Some(timestamp),
+            Some(PrescriptionType::ForAntibiotics),
+        );
+
+        assert_eq!(sut.start_date, timestamp);
+        assert_eq!(sut.end_date, timestamp + Duration::days(7));
+    }
+
+    #[test]
+    fn creates_prescription_with_120_days_duration_when_prescription_is_for_immunological_drugs() {
+        let doctor_id = Uuid::parse_str("11111111-1111-1111-1111-111111111111").unwrap();
+        let patient_id = Uuid::parse_str("22222222-2222-2222-2222-222222222222").unwrap();
+        let timestamp = Utc::now();
+
+        let sut = NewPrescription::new(
+            doctor_id,
+            patient_id,
+            Some(timestamp),
+            Some(PrescriptionType::ForImmunologicalDrugs),
+        );
+
+        assert_eq!(sut.start_date, timestamp);
+        assert_eq!(sut.end_date, timestamp + Duration::days(120));
+    }
+
+    #[test]
+    fn creates_prescription_with_365_days_duration_when_prescription_is_for_chronic_disease_drugs()
+    {
+        let doctor_id = Uuid::parse_str("11111111-1111-1111-1111-111111111111").unwrap();
+        let patient_id = Uuid::parse_str("22222222-2222-2222-2222-222222222222").unwrap();
+        let timestamp = Utc::now();
+
+        let sut = NewPrescription::new(
+            doctor_id,
+            patient_id,
+            Some(timestamp),
+            Some(PrescriptionType::ForChronicDiseasesDrugs),
+        );
+
+        assert_eq!(sut.start_date, timestamp);
+        assert_eq!(sut.end_date, timestamp + Duration::days(365));
     }
 }
