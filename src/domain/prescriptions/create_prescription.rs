@@ -1,15 +1,16 @@
+// This system tries to mimic polish electronic prescriptions system called "e-recepty".
+// It's a bit simplified tho, but I will try to keep adding features to make it more similar
+//
+// Prescription:
+//  - is prescribed by doctor
+//  - is prescribed to a patient
+//  - can have prescribed multiple different drugs, each with any quantity
+//  - has start date, which marks date from which it can be used
+//  - has end date, which marks date after which it can't be used anymore
+//  - each prescription can be used only once
+
 use chrono::{DateTime, Duration, Utc};
 use uuid::Uuid;
-
-/**
-Prescription:
- - is prescribed by doctor
- - is prescribed to a patient
- - can have prescribed multiple different drugs, each with any quantity
- - has start date, which marks date from which it can be used
- - has end date, which marks date after which it can't be used anymore
- - each prescription can be used only once
- */
 
 #[derive(Debug, PartialEq)]
 enum PrescriptionType {
