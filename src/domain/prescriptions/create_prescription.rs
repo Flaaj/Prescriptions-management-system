@@ -104,48 +104,48 @@ mod test {
     fn creates_prescription_with_30_days_duration_for_regular_prescriptions() {
         let doctor_id = Uuid::new_v4();
         let patient_id = Uuid::new_v4();
-        let timestamp = Utc::now();
+        let now = Utc::now();
 
         let sut = NewPrescription::new(
             doctor_id,
             patient_id,
-            Some(timestamp),
+            Some(now),
             Some(PrescriptionType::Regular),
         );
 
         assert_eq!(sut.prescription_type, PrescriptionType::Regular);
-        assert_eq!(sut.start_date, timestamp);
-        assert_eq!(sut.end_date, timestamp + Duration::days(30));
+        assert_eq!(sut.start_date, now);
+        assert_eq!(sut.end_date, now + Duration::days(30));
     }
 
     #[test]
     fn creates_prescription_with_7_days_duration_when_prescription_is_for_antibiotics() {
         let doctor_id = Uuid::new_v4();
         let patient_id = Uuid::new_v4();
-        let timestamp = Utc::now();
+        let now = Utc::now();
 
         let sut = NewPrescription::new(
             doctor_id,
             patient_id,
-            Some(timestamp),
+            Some(now),
             Some(PrescriptionType::ForAntibiotics),
         );
 
         assert_eq!(sut.prescription_type, PrescriptionType::ForAntibiotics);
-        assert_eq!(sut.start_date, timestamp);
-        assert_eq!(sut.end_date, timestamp + Duration::days(7));
+        assert_eq!(sut.start_date, now);
+        assert_eq!(sut.end_date, now + Duration::days(7));
     }
 
     #[test]
     fn creates_prescription_with_120_days_duration_when_prescription_is_for_immunological_drugs() {
         let doctor_id = Uuid::new_v4();
         let patient_id = Uuid::new_v4();
-        let timestamp = Utc::now();
+        let now = Utc::now();
 
         let sut = NewPrescription::new(
             doctor_id,
             patient_id,
-            Some(timestamp),
+            Some(now),
             Some(PrescriptionType::ForImmunologicalDrugs),
         );
 
@@ -153,8 +153,8 @@ mod test {
             sut.prescription_type,
             PrescriptionType::ForImmunologicalDrugs
         );
-        assert_eq!(sut.start_date, timestamp);
-        assert_eq!(sut.end_date, timestamp + Duration::days(120));
+        assert_eq!(sut.start_date, now);
+        assert_eq!(sut.end_date, now + Duration::days(120));
     }
 
     #[test]
@@ -162,12 +162,12 @@ mod test {
     {
         let doctor_id = Uuid::new_v4();
         let patient_id = Uuid::new_v4();
-        let timestamp = Utc::now();
+        let now = Utc::now();
 
         let sut = NewPrescription::new(
             doctor_id,
             patient_id,
-            Some(timestamp),
+            Some(now),
             Some(PrescriptionType::ForChronicDiseaseDrugs),
         );
 
@@ -175,8 +175,8 @@ mod test {
             sut.prescription_type,
             PrescriptionType::ForChronicDiseaseDrugs
         );
-        assert_eq!(sut.start_date, timestamp);
-        assert_eq!(sut.end_date, timestamp + Duration::days(365));
+        assert_eq!(sut.start_date, now);
+        assert_eq!(sut.end_date, now + Duration::days(365));
     }
 
     #[test]
