@@ -34,7 +34,7 @@ impl PrescriptionType {
 #[derive(Debug, PartialEq)]
 struct PrescribedDrug {
     drug_id: Uuid,
-    amount: i32,
+    amount: u16,
 }
 
 #[derive(Debug, PartialEq)]
@@ -71,7 +71,7 @@ impl NewPrescription {
     }
 
     // Returns reference to prescribed_drugs for testability
-    fn add_drug(&mut self, drug_id: Uuid, amount: i32) -> &Vec<PrescribedDrug> {
+    fn add_drug(&mut self, drug_id: Uuid, amount: u16) -> &Vec<PrescribedDrug> {
         let prescribed_drug = PrescribedDrug { drug_id, amount };
         self.prescribed_drugs.push(prescribed_drug);
         &self.prescribed_drugs
