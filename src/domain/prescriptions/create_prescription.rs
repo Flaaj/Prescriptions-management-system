@@ -73,7 +73,7 @@ impl NewPrescription {
     // Returns reference to prescribed_drugs for testability
     fn add_drug(&mut self, drug_id: Uuid, amount: i32) -> &Vec<PrescribedDrug> {
         let prescribed_drug = PrescribedDrug { drug_id, amount };
-        &self.prescribed_drugs.push(prescribed_drug);
+        self.prescribed_drugs.push(prescribed_drug);
         &self.prescribed_drugs
     }
 }
