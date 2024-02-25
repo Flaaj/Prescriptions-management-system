@@ -41,12 +41,13 @@ impl NewPrescription {
         start_date: Option<DateTime<Utc>>,
         prescription_type: Option<PrescriptionType>,
     ) -> Self {
+        let start_date = start_date.unwrap_or(Utc::now());
         Self {
             doctor_id,
             patient_id,
             prescribed_drugs: vec![],
-            start_date: Utc::now(),
-            end_date: Utc::now() + Duration::days(30),
+            start_date,
+            end_date: start_date + Duration::days(30),
         }
     }
 }
@@ -69,5 +70,28 @@ mod test {
         assert_eq!(sut.doctor_id, doctor_id);
         assert_eq!(sut.patient_id, patient_id);
         assert_eq!(sut.prescribed_drugs, vec![]);
+    }
+
+    #[test]
+    fn creates_prescription_with_30_days_duration_when_type_is_regular() {
+        let doctor_id = Uuid::parse_str("11111111-1111-1111-1111-111111111111").unwrap();
+        let patient_id = Uuid::parse_str("22222222-2222-2222-2222-222222222222").unwrap();
+        let timestamp = Utc::now();
+
+        let sut = NewPrescription::new(
+            doctor_id,
+            patient_id,
+            Some(timestamp),
+            Some(PrescriptionType::Regular),
+        );
+
+        let expected_prescription = NewPrescription {
+            doctor_id,
+            patient_id,
+            prescribed_drugs: vec![],
+            start_date: timestamp,
+            end_date: timestamp + Duration::days(30),
+        };
+        assert_eq!(sut, expected_prescription)
     }
 }
