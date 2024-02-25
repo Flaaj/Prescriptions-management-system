@@ -1,4 +1,4 @@
-use chrono::{DateTime, FixedOffset};
+use chrono::{Date, DateTime, Duration, Utc};
 use uuid::Uuid;
 
 /**
@@ -12,32 +12,56 @@ Prescription:
  */
 
 #[derive(Debug, PartialEq)]
+struct PrescribedDrug {
+    id: Uuid,
+    drug_id: Uuid,
+    amount: i32,
+}
+
+#[derive(Debug, PartialEq)]
 struct NewPrescription {
     doctor_id: Uuid,
     patient_id: Uuid,
-    drug_ids: Vec<Uuid>,
-    start_date: DateTime<FixedOffset>,
-    end_date: DateTime<FixedOffset>,
+    prescribed_drugs: Vec<PrescribedDrug>,
+    start_date: DateTime<Utc>,
+    end_date: DateTime<Utc>,
 }
 
-impl NewPrescription {}
+impl NewPrescription {
+    fn new(doctor_id: Uuid, patient_id: Uuid, start_date: DateTime<Utc>) -> Self {
+        Self {
+            doctor_id,
+            patient_id,
+            prescribed_drugs: vec![],
+            start_date,
+            end_date: start_date + Duration::days(30),
+        }
+    }
+}
 
 #[cfg(test)]
 mod test {
 
-    use chrono::{Date, DateTime};
+    use chrono::{Duration, Utc};
     use uuid::Uuid;
 
     use crate::domain::prescriptions::create_prescription::NewPrescription;
 
-    // #[test]
-    // fn creates_prescription() {
-    //     let new_prescription = NewPrescription {
-    //         doctor_id: Uuid::parse_str("11111111-1111-1111-1111-111111111111").unwrap(),
-    //         patient_id: Uuid::parse_str("22222222-2222-2222-2222-222222222222").unwrap(),
-    //         prescribed_drugs: vec![],
-    //         start_date: DateTime::n
-    //     };
-    //     assert_eq!(prescription, new_prescription)
-    // }
+    #[test]
+    fn creates_prescription() {
+        let doctor_id = Uuid::parse_str("11111111-1111-1111-1111-111111111111").unwrap();
+        let patient_id = Uuid::parse_str("22222222-2222-2222-2222-222222222222").unwrap();
+        let timestamp = Utc::now();
+
+        let sut = NewPrescription::new(doctor_id, patient_id, timestamp);
+
+        let expected_prescription = NewPrescription {
+            doctor_id,
+            patient_id,
+            prescribed_drugs: vec![],
+            start_date: timestamp,
+            end_date: timestamp + Duration::days(30),
+        };
+        assert_eq!(sut, expected_prescription)
+    }
 }
