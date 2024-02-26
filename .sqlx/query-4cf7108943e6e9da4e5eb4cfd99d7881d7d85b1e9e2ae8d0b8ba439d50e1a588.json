@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT * FROM GENERATE_SERIES($1, 10)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "generate_series",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "4cf7108943e6e9da4e5eb4cfd99d7881d7d85b1e9e2ae8d0b8ba439d50e1a588"
+}

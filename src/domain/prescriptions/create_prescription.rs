@@ -13,7 +13,7 @@ use chrono::{DateTime, Duration, Utc};
 use uuid::Uuid;
 
 #[derive(Debug, PartialEq)]
-enum PrescriptionType {
+pub enum PrescriptionType {
     Regular,
     ForAntibiotics,
     ForImmunologicalDrugs,
@@ -38,7 +38,7 @@ struct PrescribedDrug {
 }
 
 #[derive(Debug, PartialEq)]
-struct NewPrescription {
+pub struct NewPrescription {
     doctor_id: Uuid,
     patient_id: Uuid,
     prescribed_drugs: Vec<PrescribedDrug>,
@@ -48,7 +48,7 @@ struct NewPrescription {
 }
 
 impl NewPrescription {
-    fn new(
+    pub fn new(
         doctor_id: Uuid,
         patient_id: Uuid,
         start_date: Option<DateTime<Utc>>,
@@ -71,7 +71,7 @@ impl NewPrescription {
         }
     }
 
-    fn add_drug(&mut self, drug_id: Uuid, quantity: u16) -> Result<(), String> {
+    pub fn add_drug(&mut self, drug_id: Uuid, quantity: u16) -> Result<(), String> {
         if quantity == 0 {
             return Err(format!("Quantity of drug with id {} can't be 0", drug_id));
         }
