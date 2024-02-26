@@ -71,11 +71,9 @@ impl NewPrescription {
         }
     }
 
-    // Returns reference to prescribed_drugs for testability
-    fn add_drug(&mut self, drug_id: Uuid, amount: u16) -> &Vec<PrescribedDrug> {
+    fn add_drug(&mut self, drug_id: Uuid, amount: u16) {
         let prescribed_drug = PrescribedDrug { drug_id, amount };
         self.prescribed_drugs.push(prescribed_drug);
-        &self.prescribed_drugs
     }
 }
 
@@ -187,7 +185,8 @@ mod test {
         let drug_id = Uuid::new_v4();
         let mut prescription = NewPrescription::new(doctor_id, patient_id, None, None);
 
-        let sut = prescription.add_drug(drug_id, 2);
+        prescription.add_drug(drug_id, 2);
+        let sut = &prescription.prescribed_drugs;
 
         let prescribed_drug = sut.get(0).unwrap();
         assert_eq!(prescribed_drug.drug_id, drug_id);
@@ -202,7 +201,8 @@ mod test {
 
         prescription.add_drug(Uuid::new_v4(), 1);
         prescription.add_drug(Uuid::new_v4(), 2);
-        let sut = prescription.add_drug(Uuid::new_v4(), 3);
+        prescription.add_drug(Uuid::new_v4(), 3);
+        let sut = &prescription.prescribed_drugs;
 
         assert_eq!(sut.len(), 3);
     }
