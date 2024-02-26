@@ -188,7 +188,7 @@ mod test {
         let mut prescription = NewPrescription::new(doctor_id, patient_id, None, None);
 
         prescription.add_drug(drug_id, 2).unwrap();
-        let sut = &prescription.prescribed_drugs;
+        let sut = prescription.prescribed_drugs;
 
         let prescribed_drug = sut.get(0).unwrap();
         assert_eq!(prescribed_drug.drug_id, drug_id);
@@ -204,7 +204,7 @@ mod test {
         prescription.add_drug(Uuid::new_v4(), 1).unwrap();
         prescription.add_drug(Uuid::new_v4(), 2).unwrap();
         prescription.add_drug(Uuid::new_v4(), 3).unwrap();
-        let sut = &prescription.prescribed_drugs;
+        let sut = prescription.prescribed_drugs;
 
         assert_eq!(sut.len(), 3);
     }
