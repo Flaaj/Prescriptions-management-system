@@ -34,7 +34,7 @@ impl PrescriptionType {
 #[derive(Debug, PartialEq)]
 struct PrescribedDrug {
     drug_id: Uuid,
-    amount: u16,
+    quantity: u16,
 }
 
 #[derive(Debug, PartialEq)]
@@ -71,9 +71,13 @@ impl NewPrescription {
         }
     }
 
-    fn add_drug(&mut self, drug_id: Uuid, amount: u16) {
-        let prescribed_drug = PrescribedDrug { drug_id, amount };
+    fn add_drug(&mut self, drug_id: Uuid, quantity: u16) -> Result<(), String> {
+        if quantity == 0 {
+            return Err(format!("Quantity of drug with id {} can't be 0", drug_id));
+        }
+        let prescribed_drug = PrescribedDrug { drug_id, quantity };
         self.prescribed_drugs.push(prescribed_drug);
+        Ok(())
     }
 }
 
@@ -82,9 +86,7 @@ mod test {
     use chrono::{Duration, Utc};
     use uuid::Uuid;
 
-    use crate::domain::prescriptions::create_prescription::{
-        NewPrescription, PrescribedDrug, PrescriptionType,
-    };
+    use crate::domain::prescriptions::create_prescription::{NewPrescription, PrescriptionType};
 
     #[test]
     fn creates_prescription() {
@@ -185,12 +187,12 @@ mod test {
         let drug_id = Uuid::new_v4();
         let mut prescription = NewPrescription::new(doctor_id, patient_id, None, None);
 
-        prescription.add_drug(drug_id, 2);
+        prescription.add_drug(drug_id, 2).unwrap();
         let sut = &prescription.prescribed_drugs;
 
         let prescribed_drug = sut.get(0).unwrap();
         assert_eq!(prescribed_drug.drug_id, drug_id);
-        assert_eq!(prescribed_drug.amount, 2);
+        assert_eq!(prescribed_drug.quantity, 2);
     }
 
     #[test]
@@ -199,11 +201,26 @@ mod test {
         let patient_id = Uuid::new_v4();
         let mut prescription = NewPrescription::new(doctor_id, patient_id, None, None);
 
-        prescription.add_drug(Uuid::new_v4(), 1);
-        prescription.add_drug(Uuid::new_v4(), 2);
-        prescription.add_drug(Uuid::new_v4(), 3);
+        prescription.add_drug(Uuid::new_v4(), 1).unwrap();
+        prescription.add_drug(Uuid::new_v4(), 2).unwrap();
+        prescription.add_drug(Uuid::new_v4(), 3).unwrap();
         let sut = &prescription.prescribed_drugs;
 
         assert_eq!(sut.len(), 3);
+    }
+
+    #[test]
+    fn cant_add_drug_with_zero_quantity() {
+        let doctor_id = Uuid::new_v4();
+        let patient_id = Uuid::new_v4();
+        let drug_id = Uuid::parse_str("00000000-0000-0000-0000-000000000000").unwrap();
+        let mut prescription = NewPrescription::new(doctor_id, patient_id, None, None);
+
+        let sut = prescription.add_drug(drug_id, 0);
+
+        let expected_error = String::from(
+            "Quantity of drug with id 00000000-0000-0000-0000-000000000000 can't be 0",
+        );
+        assert!(sut == Err(expected_error));
     }
 }
