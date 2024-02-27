@@ -10,29 +10,10 @@
 //  - each prescription can be used only once
 
 use anyhow::bail;
-use chrono::{DateTime, Duration, Utc};
-use sqlx;
+use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
-#[derive(Debug, PartialEq, sqlx::Type)]
-#[sqlx(type_name = "prescriptiontype", rename_all = "lowercase")]
-pub enum PrescriptionType {
-    Regular,
-    ForAntibiotics,
-    ForImmunologicalDrugs,
-    ForChronicDiseaseDrugs,
-}
-
-impl PrescriptionType {
-    fn get_duration(&self) -> Duration {
-        match self {
-            PrescriptionType::Regular => Duration::days(30),
-            PrescriptionType::ForAntibiotics => Duration::days(7),
-            PrescriptionType::ForImmunologicalDrugs => Duration::days(120),
-            PrescriptionType::ForChronicDiseaseDrugs => Duration::days(365),
-        }
-    }
-}
+use super::prescription_type::PrescriptionType;
 
 #[derive(Debug, PartialEq)]
 pub struct PrescribedDrug {

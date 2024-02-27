@@ -1,8 +1,7 @@
 pub mod domain;
 
-use domain::prescriptions::create_prescription::{NewPrescription, PrescriptionType};
+use domain::prescriptions::{self};
 use sqlx::postgres::PgPoolOptions;
-use uuid::Uuid;
 
 #[macro_use]
 extern crate dotenv_codegen;
@@ -16,18 +15,19 @@ async fn main() -> anyhow::Result<()> {
 
     create_tables(&pool).await?;
 
-    let mut prescription = NewPrescription::new(
-        Uuid::new_v4(),
-        Uuid::new_v4(),
-        None,
-        Some(PrescriptionType::Regular),
-    );
-    prescription.add_drug(Uuid::new_v4(), 2)?;
-    prescription.add_drug(Uuid::new_v4(), 3)?;
+    prescriptions::controller::create_prescription(&pool).await?;
+    prescriptions::controller::create_prescription(&pool).await?;
+    prescriptions::controller::create_prescription(&pool).await?;
 
-    match prescription.save_to_database(&pool).await {
-        Ok(_) => println!("Prescription saved to database"),
-        Err(e) => println!("Error saving prescription to database: {}", e),
+    let res = prescriptions::controller::get_prescriptions(&pool).await;
+
+    match res {
+        Err(e) => println!("{}", e),
+        Ok(prescriptions) => {
+            for prescription in prescriptions {
+                println!("\n{:?}\n", prescription);
+            }
+        }
     }
 
     Ok(())
@@ -44,7 +44,7 @@ async fn create_tables(pool: &sqlx::PgPool) -> Result<(), sqlx::Error> {
         .execute(pool)
         .await?;
 
-    sqlx::query!(r#"CREATE TYPE prescriptiontype AS ENUM ('REGULAR', 'FORANTIBIOTICS', 'FORCHRONICDISEASEDRUGS', 'FORIMMUNOLOGICALDRUGS');"#)//
+    sqlx::query!(r#"CREATE TYPE prescriptiontype AS ENUM ('regular', 'forantibiotics', 'forchronicdiseasedrugs', 'forimmunologicaldrugs');"#)//
         .execute(pool)
         .await?;
 
@@ -55,8 +55,8 @@ async fn create_tables(pool: &sqlx::PgPool) -> Result<(), sqlx::Error> {
             patient_id UUID,
             doctor_id UUID,
             prescription_type PrescriptionType,
-            start_date TIMESTAMP,
-            end_date TIMESTAMP
+            start_date TIMESTAMPTZ,
+            end_date TIMESTAMPTZ
         );"#
     )
     .execute(pool)

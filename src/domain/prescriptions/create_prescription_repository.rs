@@ -16,8 +16,8 @@ impl NewPrescription {
             self.patient_id,
             self.doctor_id,
             self.prescription_type as _,
-            self.start_date.naive_utc(),
-            self.end_date.naive_utc()
+            self.start_date,
+            self.end_date
         )
         .execute(pool)
         .await?;
