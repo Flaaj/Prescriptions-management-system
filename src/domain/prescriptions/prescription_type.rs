@@ -1,6 +1,6 @@
 use chrono::Duration;
 
-#[derive(Debug, PartialEq, sqlx::Type, Clone)]
+#[derive(Debug, PartialEq, sqlx::Type, Clone, Copy)]
 #[sqlx(type_name = "prescriptiontype", rename_all = "lowercase")]
 pub enum PrescriptionType {
     Regular,

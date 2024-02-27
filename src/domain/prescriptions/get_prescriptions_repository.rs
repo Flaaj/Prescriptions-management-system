@@ -47,7 +47,7 @@ impl PrescriptionRepository {
             prescribed_drugs.drug_id, 
             prescribed_drugs.quantity
         FROM prescriptions
-        LEFT JOIN prescribed_drugs ON prescriptions.id = prescribed_drugs.prescription_id
+        JOIN prescribed_drugs ON prescriptions.id = prescribed_drugs.prescription_id
         ORDER BY prescriptions.id
         LIMIT $1 OFFSET $2
     "#,
@@ -57,7 +57,7 @@ impl PrescriptionRepository {
         .fetch_all(pool)
         .await?;
 
-        let mut prescriptions: HashMap<Uuid, Prescription> = HashMap::new();
+        let mut prescriptions = HashMap::new();
 
         for row in rows {
             let (

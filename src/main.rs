@@ -3,7 +3,8 @@ pub mod domain;
 use chrono::Utc;
 use domain::prescriptions::{self};
 use sqlx::postgres::PgPoolOptions;
-use uuid::timestamp;
+mod create_tables;
+use create_tables::create_tables;
 
 #[macro_use]
 extern crate dotenv_codegen;
@@ -26,7 +27,10 @@ async fn main() -> anyhow::Result<()> {
 
     let timestamp = Utc::now();
     let res = prescriptions::controller::get_prescriptions(&pool).await;
-    println!("nanoseconds passed: {}", (Utc::now() - timestamp).num_nanoseconds().unwrap());
+    println!(
+        "nanoseconds passed: {}",
+        (Utc::now() - timestamp).num_nanoseconds().unwrap()
+    );
 
     match res {
         Err(e) => println!("{}", e),
@@ -36,50 +40,6 @@ async fn main() -> anyhow::Result<()> {
             }
         }
     }
-
-    Ok(())
-}
-
-async fn create_tables(pool: &sqlx::PgPool) -> Result<(), sqlx::Error> {
-    sqlx::query!("DROP TABLE IF EXISTS prescribed_drugs;")
-        .execute(pool)
-        .await?;
-    sqlx::query!("DROP TABLE IF EXISTS prescriptions;")
-        .execute(pool)
-        .await?;
-    sqlx::query!("DROP TYPE IF EXISTS prescriptiontype;")
-        .execute(pool)
-        .await?;
-
-    sqlx::query!(r#"CREATE TYPE prescriptiontype AS ENUM ('regular', 'forantibiotics', 'forchronicdiseasedrugs', 'forimmunologicaldrugs');"#)//
-        .execute(pool)
-        .await?;
-
-    sqlx::query!(
-        r#"
-        CREATE TABLE prescriptions (
-            id UUID PRIMARY KEY,
-            patient_id UUID NOT NULL,
-            doctor_id UUID NOT NULL,
-            prescription_type PrescriptionType NOT NULL,
-            start_date TIMESTAMPTZ NOT NULL,
-            end_date TIMESTAMPTZ NOT NULL
-        );"#
-    )
-    .execute(pool)
-    .await?;
-
-    sqlx::query!(
-        r#"
-        CREATE TABLE prescribed_drugs (
-            id UUID PRIMARY KEY,
-            prescription_id UUID NOT NULL,
-            drug_id UUID NOT NULL,
-            quantity INT NOT NULL
-        );"#
-    )
-    .execute(pool)
-    .await?;
 
     Ok(())
 }
