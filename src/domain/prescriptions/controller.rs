@@ -26,6 +26,6 @@ pub async fn create_prescription(pool: &PgPool) -> anyhow::Result<()> {
 }
 
 pub async fn get_prescriptions(pool: &PgPool) -> anyhow::Result<Vec<Prescription>> {
-    let result = PrescriptionRepository::get_prescriptions(pool).await?;
+    let result = PrescriptionRepository::get_prescriptions(pool, None, None).await?;
     Ok(result)
 }

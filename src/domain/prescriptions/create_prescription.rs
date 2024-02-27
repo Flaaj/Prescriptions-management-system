@@ -18,7 +18,7 @@ use super::prescription_type::PrescriptionType;
 #[derive(Debug, PartialEq)]
 pub struct PrescribedDrug {
     pub drug_id: Uuid,
-    pub quantity: u16,
+    pub quantity: u32,
 }
 
 #[derive(Debug, PartialEq)]
@@ -55,7 +55,7 @@ impl NewPrescription {
         }
     }
 
-    pub fn add_drug(&mut self, drug_id: Uuid, quantity: u16) -> anyhow::Result<()> {
+    pub fn add_drug(&mut self, drug_id: Uuid, quantity: u32) -> anyhow::Result<()> {
         if quantity == 0 {
             bail!(format!("Quantity of drug with id {} can't be 0", drug_id));
         }
