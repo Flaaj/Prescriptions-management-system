@@ -1,8 +1,13 @@
+use std::borrow::Borrow;
+
 use chrono::{DateTime, Utc};
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
-use super::{get_prescriptions::Prescription, prescription_type::PrescriptionType};
+use super::{
+    get_prescriptions::{PrescribedDrug, Prescription},
+    prescription_type::PrescriptionType,
+};
 
 pub struct PrescriptionRepository {}
 
@@ -13,7 +18,7 @@ trait Into<T> {
 
 impl PrescriptionRepository {
     pub async fn get_prescriptions(pool: &PgPool) -> anyhow::Result<Vec<Prescription>> {
-        let prescriptions = sqlx::query(r#" SELECT * FROM prescriptions"#)
+        let mut prescriptions = sqlx::query(r#" SELECT * FROM prescriptions"#)
             .fetch_all(pool)
             .await?
             .iter()
@@ -31,23 +36,26 @@ impl PrescriptionRepository {
             })
             .collect::<anyhow::Result<Vec<Prescription>>>()?;
 
-        // let prescribed_drugs = sqlx::query(
-        //     r#"
-        //         SELECT * FROM prescribed_drugs WHERE prescription_id = $1
-        //     "#,
+        for prescription in &mut prescriptions {
+            let prescribed_drugs = sqlx::query!(
+                r#"SELECT * FROM prescribed_drugs WHERE prescription_id = $1"#,
+                prescription.id,
+            )
+            .fetch_all(pool)
+            .await?
+            .iter()
+            .map(|row| {
+                Ok(PrescribedDrug {
+                    id: row.id,
+                    prescription_id: row.prescription_id.unwrap(),
+                    drug_id: row.drug_id.unwrap(),
+                    quantity: row.quantity.unwrap() as i16,
+                })
+            })
+            .collect::<anyhow::Result<Vec<PrescribedDrug>>>()?;
 
-        // )
-        // .fetch_all(pool)
-        // .await?
-        // .iter()
-        // .map(|row| {
-        //     Ok((
-        //         row.try_get::<Uuid, &str>("prescription_id")?,
-        //         row.try_get::<Uuid, &str>("drug_id")?,
-        //         row.try_get::<i32, &str>("quantity")?,
-        //     ))
-        // })
-        // .collect::<anyhow::Result<Vec<(Uuid, Uuid, i32)>>>()?;
+            prescription.prescribed_drugs = prescribed_drugs;
+        }
 
         Ok(prescriptions)
     }

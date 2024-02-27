@@ -5,8 +5,10 @@ use super::prescription_type::PrescriptionType;
 
 #[derive(Debug, PartialEq)]
 pub struct PrescribedDrug {
+    pub id: Uuid,
+    pub prescription_id: Uuid,
     pub drug_id: Uuid,
-    pub quantity: u16,
+    pub quantity: i16,
 }
 
 #[derive(Debug, PartialEq)]
