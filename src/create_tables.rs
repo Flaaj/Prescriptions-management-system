@@ -1,13 +1,13 @@
 use sqlx::PgPool;
 
 pub async fn create_tables(pool: &PgPool) -> Result<(), sqlx::Error> {
-    sqlx::query!("DROP TABLE IF EXISTS prescribed_drugs;")
+    sqlx::query!(r#"DROP TABLE IF EXISTS prescribed_drugs;"#)
         .execute(pool)
         .await?;
-    sqlx::query!("DROP TABLE IF EXISTS prescriptions;")
+    sqlx::query!(r#"DROP TABLE IF EXISTS prescriptions;"#)
         .execute(pool)
         .await?;
-    sqlx::query!("DROP TYPE IF EXISTS prescriptiontype;")
+    sqlx::query!(r#"DROP TYPE IF EXISTS prescriptiontype;"#)
         .execute(pool)
         .await?;
 
