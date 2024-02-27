@@ -73,9 +73,9 @@ async fn create_tables(pool: &sqlx::PgPool) -> Result<(), sqlx::Error> {
         r#"
         CREATE TABLE prescribed_drugs (
             id UUID PRIMARY KEY,
-            prescription_id UUID,
-            drug_id UUID,
-            quantity INT
+            prescription_id UUID NOT NULL,
+            drug_id UUID NOT NULL,
+            quantity INT NOT NULL
         );"#
     )
     .execute(pool)
