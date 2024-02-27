@@ -3,15 +3,15 @@ use uuid::Uuid;
 
 use super::prescription_type::PrescriptionType;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct PrescribedDrug {
     pub id: Uuid,
     pub prescription_id: Uuid,
     pub drug_id: Uuid,
-    pub quantity: i16,
+    pub quantity: i32,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Prescription {
     pub id: Uuid,
     pub doctor_id: Uuid,

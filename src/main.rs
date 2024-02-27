@@ -1,7 +1,9 @@
 pub mod domain;
 
+use chrono::Utc;
 use domain::prescriptions::{self};
 use sqlx::postgres::PgPoolOptions;
+use uuid::timestamp;
 
 #[macro_use]
 extern crate dotenv_codegen;
@@ -18,14 +20,19 @@ async fn main() -> anyhow::Result<()> {
     prescriptions::controller::create_prescription(&pool).await?;
     prescriptions::controller::create_prescription(&pool).await?;
     prescriptions::controller::create_prescription(&pool).await?;
+    prescriptions::controller::create_prescription(&pool).await?;
+    prescriptions::controller::create_prescription(&pool).await?;
+    prescriptions::controller::create_prescription(&pool).await?;
 
+    let timestamp = Utc::now();
     let res = prescriptions::controller::get_prescriptions(&pool).await;
+    println!("nanoseconds passed: {}", (Utc::now() - timestamp).num_nanoseconds().unwrap());
 
     match res {
         Err(e) => println!("{}", e),
         Ok(prescriptions) => {
             for prescription in prescriptions {
-                println!("\n{:?}\n", prescription);
+                println!("\n{:#?}\n", prescription);
             }
         }
     }
