@@ -1,6 +1,6 @@
 pub mod domain;
-use std::borrow::Borrow;
 
+use domain::prescriptions::create_prescription::{NewPrescription, PrescriptionType};
 use sqlx::postgres::PgPoolOptions;
 use uuid::Uuid;
 
@@ -8,46 +8,71 @@ use uuid::Uuid;
 extern crate dotenv_codegen;
 
 #[tokio::main]
-async fn main() -> Result<(), sqlx::Error> {
+async fn main() -> anyhow::Result<()> {
     let pool = PgPoolOptions::new()
         .max_connections(5)
         .connect(dotenv!("DATABASE_URL"))
         .await?;
 
-    let res1 = sqlx::query!(
-        "
-CREATE TABLE IF NOT EXISTS prescriptions (
-    patient_id UUID,
-    doctor_id UUID
-)"
-    )
-    .execute(&pool)
-    .await?;
+    create_tables(&pool).await?;
 
-    let patient_id = Uuid::new_v4();
-    let doctor_id = Uuid::new_v4();
-    let res2 = sqlx::query!(
-        "INSERT INTO prescriptions (patient_id, doctor_id) VALUES ($1, $2)",
-        patient_id,
-        doctor_id
-    )
-    .execute(&pool)
-    .await?;
+    let mut prescription = NewPrescription::new(
+        Uuid::new_v4(),
+        Uuid::new_v4(),
+        None,
+        Some(PrescriptionType::Regular),
+    );
+    prescription.add_drug(Uuid::new_v4(), 2)?;
+    prescription.add_drug(Uuid::new_v4(), 3)?;
 
-    println!("rows affected: {}", res2.rows_affected());
-
-    let res3 = sqlx::query!(
-        "SELECT * FROM prescriptions WHERE patient_id = $1",
-        Uuid::parse_str("cf402afa-fd60-4bf2-969c-00e4e0ed13b0").unwrap()
-    )
-    .fetch_all(&pool)
-    .await?;
-
-    for row in res3.iter() {
-        let patient_id: Uuid = row.patient_id.unwrap();
-        let doctor_id: Uuid = row.doctor_id.unwrap();
-        println!("patient_id: {}, doctor_id: {}", patient_id, doctor_id);
+    match prescription.save_to_database(&pool).await {
+        Ok(_) => println!("Prescription saved to database"),
+        Err(e) => println!("Error saving prescription to database: {}", e),
     }
+
+    Ok(())
+}
+
+async fn create_tables(pool: &sqlx::PgPool) -> Result<(), sqlx::Error> {
+    sqlx::query!("DROP TABLE IF EXISTS prescribed_drugs;")
+        .execute(pool)
+        .await?;
+    sqlx::query!("DROP TABLE IF EXISTS prescriptions;")
+        .execute(pool)
+        .await?;
+    sqlx::query!("DROP TYPE IF EXISTS prescriptiontype;")
+        .execute(pool)
+        .await?;
+
+    sqlx::query!(r#"CREATE TYPE prescriptiontype AS ENUM ('REGULAR', 'FORANTIBIOTICS', 'FORCHRONICDISEASEDRUGS', 'FORIMMUNOLOGICALDRUGS');"#)//
+        .execute(pool)
+        .await?;
+
+    sqlx::query!(
+        r#"
+        CREATE TABLE prescriptions (
+            id UUID PRIMARY KEY,
+            patient_id UUID,
+            doctor_id UUID,
+            prescription_type PrescriptionType,
+            start_date TIMESTAMP,
+            end_date TIMESTAMP
+        );"#
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query!(
+        r#"
+        CREATE TABLE prescribed_drugs (
+            id UUID PRIMARY KEY,
+            prescription_id UUID,
+            drug_id UUID,
+            quantity INT
+        );"#
+    )
+    .execute(pool)
+    .await?;
 
     Ok(())
 }

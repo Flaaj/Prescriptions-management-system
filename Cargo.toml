@@ -11,9 +11,10 @@ chrono = "0.4.31"
 rand = "0.8.5"
 mini-redis = "0.4"
 tokio = { version = "1", features = ["full"] }
-sqlx = { version = "0.7", features = ["runtime-tokio", "postgres", "uuid"] }
+sqlx = { version = "0.7", features = ["runtime-tokio", "postgres", "uuid", "time", "chrono"] }
 dotenv = "0.15.0"
 dotenv_codegen = "0.15.0"
+anyhow = "1.0.80"
 
 [dependencies.uuid]
 version = "1.6.1"

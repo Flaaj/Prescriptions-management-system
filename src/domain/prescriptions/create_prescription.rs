@@ -9,10 +9,13 @@
 //  - has end date, which marks date after which it can't be used anymore
 //  - each prescription can be used only once
 
+use anyhow::bail;
 use chrono::{DateTime, Duration, Utc};
+use sqlx;
 use uuid::Uuid;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, sqlx::Type)]
+#[sqlx(type_name = "prescriptiontype", rename_all = "lowercase")]
 pub enum PrescriptionType {
     Regular,
     ForAntibiotics,
@@ -32,19 +35,19 @@ impl PrescriptionType {
 }
 
 #[derive(Debug, PartialEq)]
-struct PrescribedDrug {
-    drug_id: Uuid,
-    quantity: u16,
+pub struct PrescribedDrug {
+    pub drug_id: Uuid,
+    pub quantity: u16,
 }
 
 #[derive(Debug, PartialEq)]
 pub struct NewPrescription {
-    doctor_id: Uuid,
-    patient_id: Uuid,
-    prescribed_drugs: Vec<PrescribedDrug>,
-    prescription_type: PrescriptionType,
-    start_date: DateTime<Utc>,
-    end_date: DateTime<Utc>,
+    pub doctor_id: Uuid,
+    pub patient_id: Uuid,
+    pub prescribed_drugs: Vec<PrescribedDrug>,
+    pub prescription_type: PrescriptionType,
+    pub start_date: DateTime<Utc>,
+    pub end_date: DateTime<Utc>,
 }
 
 impl NewPrescription {
@@ -71,12 +74,19 @@ impl NewPrescription {
         }
     }
 
-    pub fn add_drug(&mut self, drug_id: Uuid, quantity: u16) -> Result<(), String> {
+    pub fn add_drug(&mut self, drug_id: Uuid, quantity: u16) -> anyhow::Result<()> {
         if quantity == 0 {
-            return Err(format!("Quantity of drug with id {} can't be 0", drug_id));
+            bail!(format!("Quantity of drug with id {} can't be 0", drug_id));
         }
         let prescribed_drug = PrescribedDrug { drug_id, quantity };
         self.prescribed_drugs.push(prescribed_drug);
+        Ok(())
+    }
+
+    pub fn validate(&self) -> anyhow::Result<()> {
+        if self.prescribed_drugs.is_empty() {
+            bail!("Prescription must have at least one prescribed drug");
+        }
         Ok(())
     }
 }
@@ -103,13 +113,11 @@ mod test {
 
     #[test]
     fn creates_prescription_with_30_days_duration_for_regular_prescriptions() {
-        let doctor_id = Uuid::new_v4();
-        let patient_id = Uuid::new_v4();
         let now = Utc::now();
 
         let sut = NewPrescription::new(
-            doctor_id,
-            patient_id,
+            Uuid::new_v4(),
+            Uuid::new_v4(),
             Some(now),
             Some(PrescriptionType::Regular),
         );
@@ -121,13 +129,11 @@ mod test {
 
     #[test]
     fn creates_prescription_with_7_days_duration_when_prescription_is_for_antibiotics() {
-        let doctor_id = Uuid::new_v4();
-        let patient_id = Uuid::new_v4();
         let now = Utc::now();
 
         let sut = NewPrescription::new(
-            doctor_id,
-            patient_id,
+            Uuid::new_v4(),
+            Uuid::new_v4(),
             Some(now),
             Some(PrescriptionType::ForAntibiotics),
         );
@@ -139,13 +145,11 @@ mod test {
 
     #[test]
     fn creates_prescription_with_120_days_duration_when_prescription_is_for_immunological_drugs() {
-        let doctor_id = Uuid::new_v4();
-        let patient_id = Uuid::new_v4();
         let now = Utc::now();
 
         let sut = NewPrescription::new(
-            doctor_id,
-            patient_id,
+            Uuid::new_v4(),
+            Uuid::new_v4(),
             Some(now),
             Some(PrescriptionType::ForImmunologicalDrugs),
         );
@@ -161,13 +165,11 @@ mod test {
     #[test]
     fn creates_prescription_with_365_days_duration_when_prescription_is_for_chronic_disease_drugs()
     {
-        let doctor_id = Uuid::new_v4();
-        let patient_id = Uuid::new_v4();
         let now = Utc::now();
 
         let sut = NewPrescription::new(
-            doctor_id,
-            patient_id,
+            Uuid::new_v4(),
+            Uuid::new_v4(),
             Some(now),
             Some(PrescriptionType::ForChronicDiseaseDrugs),
         );
@@ -182,10 +184,8 @@ mod test {
 
     #[test]
     fn adds_prescribed_drug_to_prescription() {
-        let doctor_id = Uuid::new_v4();
-        let patient_id = Uuid::new_v4();
         let drug_id = Uuid::new_v4();
-        let mut prescription = NewPrescription::new(doctor_id, patient_id, None, None);
+        let mut prescription = NewPrescription::new(Uuid::new_v4(), Uuid::new_v4(), None, None);
 
         prescription.add_drug(drug_id, 2).unwrap();
         let sut = prescription.prescribed_drugs;
@@ -197,9 +197,7 @@ mod test {
 
     #[test]
     fn adds_multiple_drugs_to_prescription() {
-        let doctor_id = Uuid::new_v4();
-        let patient_id = Uuid::new_v4();
-        let mut prescription = NewPrescription::new(doctor_id, patient_id, None, None);
+        let mut prescription = NewPrescription::new(Uuid::new_v4(), Uuid::new_v4(), None, None);
 
         prescription.add_drug(Uuid::new_v4(), 1).unwrap();
         prescription.add_drug(Uuid::new_v4(), 2).unwrap();
@@ -211,16 +209,34 @@ mod test {
 
     #[test]
     fn cant_add_drug_with_zero_quantity() {
-        let doctor_id = Uuid::new_v4();
-        let patient_id = Uuid::new_v4();
         let drug_id = Uuid::parse_str("00000000-0000-0000-0000-000000000000").unwrap();
-        let mut prescription = NewPrescription::new(doctor_id, patient_id, None, None);
+        let mut prescription = NewPrescription::new(Uuid::new_v4(), Uuid::new_v4(), None, None);
 
         let sut = prescription.add_drug(drug_id, 0);
 
         let expected_error = String::from(
             "Quantity of drug with id 00000000-0000-0000-0000-000000000000 can't be 0",
         );
-        assert!(sut == Err(expected_error));
+        assert!(sut.err().unwrap().to_string() == expected_error);
+    }
+
+    #[test]
+    fn passes_validation_when_more_than_one_drug_is_prescribed() {
+        let mut prescription = NewPrescription::new(Uuid::new_v4(), Uuid::new_v4(), None, None);
+        prescription.add_drug(Uuid::new_v4(), 1).unwrap();
+
+        let sut = prescription.validate();
+
+        assert!(sut.is_ok());
+    }
+
+    #[test]
+    fn doesnt_pass_validation_when_no_drugs_are_added_to_prescription() {
+        let prescription = NewPrescription::new(Uuid::new_v4(), Uuid::new_v4(), None, None);
+
+        let sut = prescription.validate();
+
+        let expected_error = String::from("Prescription must have at least one prescribed drug");
+        assert!(sut.err().unwrap().to_string() == expected_error);
     }
 }
