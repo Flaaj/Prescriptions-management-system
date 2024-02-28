@@ -17,7 +17,7 @@ impl PrescriptionRepository {
         page_size: Option<i16>,
     ) -> anyhow::Result<Vec<Prescription>> {
         let page = page.unwrap_or(0);
-        let page_size = page_size.unwrap_or(2);
+        let page_size = page_size.unwrap_or(10);
         let offset = page * page_size;
 
         let rows = sqlx::query_as::<
@@ -47,7 +47,7 @@ impl PrescriptionRepository {
             prescribed_drugs.quantity
         FROM (
             SELECT * FROM prescriptions
-            ORDER BY id
+            ORDER BY created_at ASC
             LIMIT $1 OFFSET $2
         ) AS prescriptions
         JOIN prescribed_drugs ON prescriptions.id = prescribed_drugs.prescription_id
@@ -58,7 +58,7 @@ impl PrescriptionRepository {
         .fetch_all(pool)
         .await?;
 
-        let mut prescriptions = HashMap::new();
+        let mut prescriptions: Vec<Prescription> = vec![];
 
         for row in rows {
             let (
@@ -73,27 +73,34 @@ impl PrescriptionRepository {
                 quantity,
             ) = row;
 
-            let prescription =
-                prescriptions
-                    .entry(prescription_id)
-                    .or_insert_with(|| Prescription {
-                        id: prescription_id,
-                        patient_id,
-                        doctor_id,
-                        prescription_type,
-                        start_date,
-                        end_date,
-                        prescribed_drugs: vec![],
-                    });
-
-            prescription.prescribed_drugs.push(PrescribedDrug {
-                id: prescribed_drug_id,
-                prescription_id,
-                drug_id,
-                quantity,
-            });
+            let prescription = prescriptions.iter_mut().find(|p| p.id == prescription_id);
+            if let Some(prescription) = prescription {
+                prescription.prescribed_drugs.push(PrescribedDrug {
+                    id: prescribed_drug_id,
+                    prescription_id,
+                    drug_id,
+                    quantity,
+                });
+            } else {
+                let mut prescription = Prescription {
+                    id: prescription_id,
+                    patient_id,
+                    doctor_id,
+                    prescription_type,
+                    start_date,
+                    end_date,
+                    prescribed_drugs: vec![],
+                };
+                prescription.prescribed_drugs.push(PrescribedDrug {
+                    id: prescribed_drug_id,
+                    prescription_id,
+                    drug_id,
+                    quantity,
+                });
+                prescriptions.push(prescription);
+            }
         }
 
-        Ok(prescriptions.into_values().collect())
+        Ok(prescriptions)
     }
 }

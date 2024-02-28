@@ -35,6 +35,7 @@ async fn main() -> anyhow::Result<()> {
     match res {
         Err(e) => println!("{}", e),
         Ok(prescriptions) => {
+            println!("{}", prescriptions.len());
             for prescription in prescriptions {
                 println!("\n{:#?}\n", prescription);
             }

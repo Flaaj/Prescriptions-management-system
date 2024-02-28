@@ -26,12 +26,14 @@ pub async fn create_tables(pool: &sqlx::PgPool) -> Result<(), sqlx::Error> {
     sqlx::query!(
         r#"
         CREATE TABLE IF NOT EXISTS prescriptions (
-            id UUID PRIMARY KEY,
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
             patient_id UUID NOT NULL,
             doctor_id UUID NOT NULL,
             prescription_type PrescriptionType NOT NULL,
             start_date TIMESTAMPTZ NOT NULL,
-            end_date TIMESTAMPTZ NOT NULL
+            end_date TIMESTAMPTZ NOT NULL,
+            created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
         );"#
     )
     .execute(pool)
@@ -40,10 +42,12 @@ pub async fn create_tables(pool: &sqlx::PgPool) -> Result<(), sqlx::Error> {
     sqlx::query!(
         r#"
         CREATE TABLE IF NOT EXISTS prescribed_drugs (
-            id UUID PRIMARY KEY,
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
             prescription_id UUID NOT NULL,
             drug_id UUID NOT NULL,
-            quantity INT NOT NULL
+            quantity INT NOT NULL,
+            created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
         );"#
     )
     .execute(pool)
