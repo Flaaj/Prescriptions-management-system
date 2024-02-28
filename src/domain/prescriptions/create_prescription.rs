@@ -56,7 +56,7 @@ impl NewPrescription {
 
     pub fn add_drug(&mut self, drug_id: Uuid, quantity: u32) -> anyhow::Result<()> {
         if quantity == 0 {
-            anyhow::bail!(format!("Quantity of drug with id {} can't be 0", drug_id));
+            anyhow::bail!("Quantity of drug with id {} can't be 0", drug_id);
         }
         let prescribed_drug = NewPrescribedDrug { drug_id, quantity };
         self.prescribed_drugs.push(prescribed_drug);
