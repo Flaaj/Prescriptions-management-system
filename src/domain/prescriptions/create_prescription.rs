@@ -72,7 +72,7 @@ impl NewPrescription {
 }
 
 #[cfg(test)]
-mod test {
+mod unit_tests {
     use chrono::{Duration, Utc};
     use uuid::Uuid;
 
