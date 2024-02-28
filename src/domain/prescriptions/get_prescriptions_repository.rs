@@ -17,7 +17,7 @@ impl PrescriptionRepository {
         page_size: Option<i16>,
     ) -> anyhow::Result<Vec<Prescription>> {
         let page = page.unwrap_or(0);
-        let page_size = page_size.unwrap_or(10);
+        let page_size = page_size.unwrap_or(2);
         let offset = page * page_size;
 
         let rows = sqlx::query_as::<
@@ -45,10 +45,12 @@ impl PrescriptionRepository {
             prescribed_drugs.id, 
             prescribed_drugs.drug_id, 
             prescribed_drugs.quantity
-        FROM prescriptions
+        FROM (
+            SELECT * FROM prescriptions
+            ORDER BY id
+            LIMIT $1 OFFSET $2
+        ) AS prescriptions
         JOIN prescribed_drugs ON prescriptions.id = prescribed_drugs.prescription_id
-        ORDER BY prescriptions.id
-        LIMIT $1 OFFSET $2
     "#,
         )
         .bind(page_size)
