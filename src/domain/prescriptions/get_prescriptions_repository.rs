@@ -1,3 +1,4 @@
+use anyhow::bail;
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
@@ -16,6 +17,9 @@ impl PrescriptionRepository {
     ) -> anyhow::Result<Vec<Prescription>> {
         let page = page.unwrap_or(0);
         let page_size = page_size.unwrap_or(10);
+        if page_size < 1 || page < 0 {
+            bail!("Invalid page or page_size: page must be at least 0 and page_size must be at least 1");
+        }
         let offset = page * page_size;
 
         let rows = sqlx::query_as::<
