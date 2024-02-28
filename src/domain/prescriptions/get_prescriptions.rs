@@ -9,6 +9,8 @@ pub struct PrescribedDrug {
     pub prescription_id: Uuid,
     pub drug_id: Uuid,
     pub quantity: i32,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -20,4 +22,6 @@ pub struct Prescription {
     pub prescription_type: PrescriptionType,
     pub start_date: DateTime<Utc>,
     pub end_date: DateTime<Utc>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }

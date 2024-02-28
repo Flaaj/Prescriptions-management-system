@@ -30,9 +30,13 @@ impl PrescriptionRepository {
                 PrescriptionType,
                 DateTime<Utc>,
                 DateTime<Utc>,
+                DateTime<Utc>,
+                DateTime<Utc>,
                 Uuid,
                 Uuid,
                 i32,
+                DateTime<Utc>,
+                DateTime<Utc>,
             ),
         >(
             r#"
@@ -43,9 +47,13 @@ impl PrescriptionRepository {
             prescriptions.prescription_type, 
             prescriptions.start_date, 
             prescriptions.end_date, 
+            prescriptions.created_at,
+            prescriptions.updated_at,
             prescribed_drugs.id, 
             prescribed_drugs.drug_id, 
-            prescribed_drugs.quantity
+            prescribed_drugs.quantity,
+            prescribed_drugs.created_at,
+            prescribed_drugs.updated_at
         FROM (
             SELECT * FROM prescriptions
             ORDER BY created_at ASC
@@ -69,36 +77,40 @@ impl PrescriptionRepository {
                 prescription_type,
                 start_date,
                 end_date,
+                prescription_created_at,
+                prescription_updated_at,
                 prescribed_drug_id,
                 drug_id,
                 quantity,
+                prescribed_drug_created_at,
+                prescribed_drug_updated_at,
             ) = row;
 
             let prescription = prescriptions.iter_mut().find(|p| p.id == prescription_id);
+
+            let prescribed_drug = PrescribedDrug {
+                id: prescribed_drug_id,
+                prescription_id,
+                drug_id,
+                quantity,
+                created_at: prescribed_drug_created_at,
+                updated_at: prescribed_drug_updated_at,
+            };
+
             if let Some(prescription) = prescription {
-                prescription.prescribed_drugs.push(PrescribedDrug {
-                    id: prescribed_drug_id,
-                    prescription_id,
-                    drug_id,
-                    quantity,
-                });
+                prescription.prescribed_drugs.push(prescribed_drug);
             } else {
-                let mut prescription = Prescription {
+                prescriptions.push(Prescription {
                     id: prescription_id,
                     patient_id,
                     doctor_id,
                     prescription_type,
                     start_date,
                     end_date,
-                    prescribed_drugs: vec![],
-                };
-                prescription.prescribed_drugs.push(PrescribedDrug {
-                    id: prescribed_drug_id,
-                    prescription_id,
-                    drug_id,
-                    quantity,
+                    prescribed_drugs: vec![prescribed_drug],
+                    created_at: prescription_created_at,
+                    updated_at: prescription_updated_at,
                 });
-                prescriptions.push(prescription);
             }
         }
 
