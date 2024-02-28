@@ -30,7 +30,6 @@ mod integration_tests {
             Some(start_date),
             Some(prescription_type),
         );
-
         prescription.add_drug(drug_id, drug_quantity)?;
         prescription.add_drug(Uuid::new_v4(), 1)?; // Add another drugs, this time we wont check their ids
         prescription.add_drug(Uuid::new_v4(), 1)?;
