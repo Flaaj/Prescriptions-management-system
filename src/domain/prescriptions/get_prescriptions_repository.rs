@@ -91,6 +91,7 @@ impl PrescriptionRepository {
                 quantity,
             });
         }
+
         Ok(prescriptions.into_values().collect())
     }
 }
