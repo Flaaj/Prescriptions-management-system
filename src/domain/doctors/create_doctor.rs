@@ -18,31 +18,29 @@ impl NewDoctor {
     }
 
     fn validate_pesel_number(pesel: &str) -> anyhow::Result<()> {
-        let error_str = "Provided PESEL number is not a valid PESEL.";
         if pesel.len() != 11 || pesel.parse::<u64>().is_err() {
-            anyhow::bail!(error_str);
+            anyhow::bail!("Provided PESEL number is not a valid PESEL.");
         }
 
         let (date_part, _) = pesel.split_at(6);
         let is_valid_date: bool =
             NaiveDate::parse_from_str(&format!("19{}", date_part), "%Y%m%d").is_ok();
         if !is_valid_date {
-            anyhow::bail!(error_str);
+            anyhow::bail!("The date part of provided PESEL number is incorrect");
         }
 
+        let (checksum_components, last_digit_str) = pesel.split_at(10);
         let digit_multipliters = [1, 3, 7, 9, 1, 3, 7, 9, 1, 3];
         let mut sum = 0;
-        for (i, c) in pesel.chars().enumerate() {
-            if i < 10 {
-                let digit = c.to_digit(10).unwrap();
-                let multiplier = digit_multipliters[i];
-                sum += digit * multiplier;
-            }
+        for (i, c) in checksum_components.chars().enumerate() {
+            let digit = c.to_digit(10).unwrap();
+            let multiplier = digit_multipliters[i];
+            sum += digit * multiplier;
         }
-        let last_digit = pesel.chars().last().unwrap().to_digit(10).unwrap();
+        let last_digit = last_digit_str.parse::<u32>().unwrap();
         let checksum = sum % 10;
         if last_digit != checksum {
-            anyhow::bail!(error_str)
+            anyhow::bail!("The checksum of provided PESEL number is incorrect")
         }
 
         Ok(())
@@ -79,21 +77,17 @@ mod unit_tests {
             "96021807251",
             "93022900005",
             "92223300009",
+            "9222330000a",
+            "aaaaaaaaaaa",
             "962218072500",
         ];
 
         for valid_pesel in valid_pesel_numbers {
-            assert_eq!(
-                NewDoctor::validate_pesel_number(valid_pesel.into()).is_ok(),
-                true
-            )
+            assert!(NewDoctor::validate_pesel_number(valid_pesel).is_ok())
         }
 
         for invalid_pesel in invalid_pesel_numbers {
-            assert_eq!(
-                NewDoctor::validate_pesel_number(invalid_pesel.into()).is_err(),
-                true
-            )
+            assert!(NewDoctor::validate_pesel_number(invalid_pesel).is_err())
         }
     }
 }
