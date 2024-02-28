@@ -1,5 +1,4 @@
 use chrono::{Duration, Utc};
-use sqlx::PgPool;
 use uuid::Uuid;
 
 use super::{
@@ -7,7 +6,7 @@ use super::{
     get_prescriptions_repository::PrescriptionRepository, prescription_type::PrescriptionType,
 };
 
-pub async fn create_prescription(pool: &PgPool) -> anyhow::Result<()> {
+pub async fn create_prescription(pool: &sqlx::PgPool) -> anyhow::Result<()> {
     let mut prescription = NewPrescription::new(
         Uuid::new_v4(),
         Uuid::new_v4(),
@@ -25,7 +24,7 @@ pub async fn create_prescription(pool: &PgPool) -> anyhow::Result<()> {
     Ok(())
 }
 
-pub async fn get_prescriptions(pool: &PgPool) -> anyhow::Result<Vec<Prescription>> {
+pub async fn get_prescriptions(pool: &sqlx::PgPool) -> anyhow::Result<Vec<Prescription>> {
     let result = PrescriptionRepository::get_prescriptions(pool, None, None).await?;
     Ok(result)
 }

@@ -1,7 +1,6 @@
 #[cfg(test)]
 mod integration_tests {
     use chrono::{Duration, Utc};
-    use sqlx::PgPool;
     use uuid::Uuid;
 
     use crate::{
@@ -14,7 +13,7 @@ mod integration_tests {
     };
 
     #[sqlx::test]
-    async fn test_create_prescription(pool: PgPool) -> anyhow::Result<()> {
+    async fn test_create_prescription(pool: sqlx::PgPool) -> anyhow::Result<()> {
         create_tables(&pool).await?;
 
         let doctor_id = Uuid::new_v4();

@@ -1,6 +1,4 @@
-use sqlx::PgPool;
-
-pub async fn create_tables(pool: &PgPool) -> Result<(), sqlx::Error> {
+pub async fn create_tables(pool: &sqlx::PgPool) -> Result<(), sqlx::Error> {
     sqlx::query!(r#"DROP TABLE IF EXISTS prescribed_drugs;"#)
         .execute(pool)
         .await?;
@@ -11,13 +9,23 @@ pub async fn create_tables(pool: &PgPool) -> Result<(), sqlx::Error> {
         .execute(pool)
         .await?;
 
-    sqlx::query!(r#"CREATE TYPE prescriptiontype AS ENUM ('regular', 'forantibiotics', 'forchronicdiseasedrugs', 'forimmunologicaldrugs');"#)//
+    sqlx::query!(
+        r#"
+        DO $$
+        BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'prescriptiontype') THEN
+            CREATE TYPE prescriptiontype AS ENUM ('regular', 'forantibiotics', 'forchronicdiseasedrugs', 'forimmunologicaldrugs');
+            END IF;
+        END
+        $$;
+        "#
+    )//
         .execute(pool)
         .await?;
 
     sqlx::query!(
         r#"
-        CREATE TABLE prescriptions (
+        CREATE TABLE IF NOT EXISTS prescriptions (
             id UUID PRIMARY KEY,
             patient_id UUID NOT NULL,
             doctor_id UUID NOT NULL,
@@ -31,7 +39,7 @@ pub async fn create_tables(pool: &PgPool) -> Result<(), sqlx::Error> {
 
     sqlx::query!(
         r#"
-        CREATE TABLE prescribed_drugs (
+        CREATE TABLE IF NOT EXISTS prescribed_drugs (
             id UUID PRIMARY KEY,
             prescription_id UUID NOT NULL,
             drug_id UUID NOT NULL,

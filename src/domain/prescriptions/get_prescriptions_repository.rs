@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use chrono::{DateTime, Utc};
-use sqlx::PgPool;
 use uuid::Uuid;
 
 use super::{
@@ -13,7 +12,7 @@ pub struct PrescriptionRepository {}
 
 impl PrescriptionRepository {
     pub async fn get_prescriptions(
-        pool: &PgPool,
+        pool: &sqlx::PgPool,
         page: Option<i16>,
         page_size: Option<i16>,
     ) -> anyhow::Result<Vec<Prescription>> {
