@@ -9,7 +9,6 @@
 //  - has end date, which marks date after which it can't be used anymore
 //  - each prescription can be used only once
 
-use anyhow::bail;
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
@@ -57,7 +56,7 @@ impl NewPrescription {
 
     pub fn add_drug(&mut self, drug_id: Uuid, quantity: u32) -> anyhow::Result<()> {
         if quantity == 0 {
-            bail!(format!("Quantity of drug with id {} can't be 0", drug_id));
+            anyhow::bail!(format!("Quantity of drug with id {} can't be 0", drug_id));
         }
         let prescribed_drug = NewPrescribedDrug { drug_id, quantity };
         self.prescribed_drugs.push(prescribed_drug);
@@ -66,7 +65,7 @@ impl NewPrescription {
 
     pub fn validate(&self) -> anyhow::Result<()> {
         if self.prescribed_drugs.is_empty() {
-            bail!("Prescription must have at least one prescribed drug");
+            anyhow::bail!("Prescription must have at least one prescribed drug");
         }
         Ok(())
     }
