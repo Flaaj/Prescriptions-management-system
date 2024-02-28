@@ -35,13 +35,13 @@ mod integration_tests {
         prescription.add_drug(Uuid::new_v4(), 1)?;
         prescription.add_drug(Uuid::new_v4(), 1)?;
 
-        prescription.save_to_database(&pool).await?;
+        prescription.clone().commit_to_repository(&pool).await?;
 
         for _ in 0..10 {
             let mut another_prescription =
                 NewPrescription::new(Uuid::new_v4(), Uuid::new_v4(), None, None); // Fields of this prescription also wont be checked
             another_prescription.add_drug(Uuid::new_v4(), 1)?;
-            another_prescription.save_to_database(&pool).await?;
+            another_prescription.commit_to_repository(&pool).await?;
         }
 
         let prescriptions = PrescriptionRepository::get_prescriptions(&pool, None, Some(7)).await?;

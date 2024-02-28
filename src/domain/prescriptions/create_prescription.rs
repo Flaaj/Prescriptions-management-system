@@ -14,13 +14,13 @@ use uuid::Uuid;
 
 use super::prescription_type::PrescriptionType;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct NewPrescribedDrug {
     pub drug_id: Uuid,
     pub quantity: u32,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct NewPrescription {
     pub doctor_id: Uuid,
     pub patient_id: Uuid,

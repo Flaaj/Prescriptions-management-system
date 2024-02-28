@@ -3,7 +3,7 @@ use uuid::Uuid;
 use super::create_prescription::NewPrescription;
 
 impl NewPrescription {
-    pub async fn save_to_database(&self, pool: &sqlx::PgPool) -> anyhow::Result<()> {
+    pub async fn commit_to_repository(self, pool: &sqlx::PgPool) -> anyhow::Result<()> {
         self.validate()?;
 
         let prescription_id = Uuid::new_v4();

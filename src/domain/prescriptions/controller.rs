@@ -16,7 +16,7 @@ pub async fn create_prescription(pool: &sqlx::PgPool) -> anyhow::Result<()> {
     prescription.add_drug(Uuid::new_v4(), 2)?;
     prescription.add_drug(Uuid::new_v4(), 3)?;
 
-    match prescription.save_to_database(&pool).await {
+    match prescription.commit_to_repository(&pool).await {
         Ok(_) => println!("Prescription saved to database"),
         Err(e) => println!("{}", e),
     };
