@@ -16,7 +16,7 @@ use uuid::Uuid;
 use super::prescription_type::PrescriptionType;
 
 #[derive(Debug, PartialEq)]
-pub struct PrescribedDrug {
+pub struct NewPrescribedDrug {
     pub drug_id: Uuid,
     pub quantity: u32,
 }
@@ -25,7 +25,7 @@ pub struct PrescribedDrug {
 pub struct NewPrescription {
     pub doctor_id: Uuid,
     pub patient_id: Uuid,
-    pub prescribed_drugs: Vec<PrescribedDrug>,
+    pub prescribed_drugs: Vec<NewPrescribedDrug>,
     pub prescription_type: PrescriptionType,
     pub start_date: DateTime<Utc>,
     pub end_date: DateTime<Utc>,
@@ -59,7 +59,7 @@ impl NewPrescription {
         if quantity == 0 {
             bail!(format!("Quantity of drug with id {} can't be 0", drug_id));
         }
-        let prescribed_drug = PrescribedDrug { drug_id, quantity };
+        let prescribed_drug = NewPrescribedDrug { drug_id, quantity };
         self.prescribed_drugs.push(prescribed_drug);
         Ok(())
     }
