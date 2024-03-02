@@ -1,13 +1,14 @@
 use chrono::NaiveDate;
 
 pub struct NewDoctor {
-    name: String,
-    pwz_number: String,
-    pesel_number: String,
+    pub name: String,
+    pub pwz_number: String,
+    pub pesel_number: String,
 }
 
 impl NewDoctor {
     pub fn new(name: String, pwz_number: String, pesel_number: String) -> anyhow::Result<Self> {
+        Self::validate_name(&name)?;
         Self::validate_pesel_number(&pesel_number)?;
         Self::validate_pwz_number(&pwz_number)?;
 
@@ -55,12 +56,16 @@ impl NewDoctor {
         }
 
         let (control_digit_str, checksum_components) = pwz_number.split_at(1);
-        let mut sum = 0;
-        for (i, c) in checksum_components.chars().enumerate() {
-            let digit = c.to_digit(10).unwrap();
-            sum += digit * (i + 1) as u32;
-        }
-        let control_digit = control_digit_str.parse::<u32>().unwrap() % 10;
+
+        let sum = checksum_components
+            .chars()
+            .enumerate()
+            .fold(0, |acc, (i, c)| {
+                let digit = c.to_digit(10).unwrap();
+                acc + digit * (i + 1) as u32
+            });
+
+        let control_digit = control_digit_str.parse::<u32>().unwrap();
         let checksum = sum % 11;
         if checksum != control_digit {
             anyhow::bail!("The checksum of provided PWZ number is incorrect")
@@ -68,10 +73,33 @@ impl NewDoctor {
 
         Ok(())
     }
+
+    fn validate_name(name: &str) -> anyhow::Result<()> {
+        if name.len() < 4 || name.len() > 100 {
+            anyhow::bail!("Name must be between 4 and 100 characters long");
+        }
+
+        let word_count = name.split(' ').count();
+        if word_count < 2 {
+            anyhow::bail!("Name must be in format: Firstname Lastname");
+        }
+
+        let is_pascal_case = name.split(|c| c == ' ' || c == '-').all(|word| {
+            let is_first_uppercase = word.chars().next().unwrap().is_uppercase();
+            let is_rest_lowercase = word.chars().skip(1).all(|c| c.is_lowercase());
+            is_first_uppercase && is_rest_lowercase
+        });
+        if !is_pascal_case {
+            anyhow::bail!("Name must be in format: Firstname Lastname");
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]
 mod unit_tests {
+    use rstest::rstest;
+
     use crate::domain::doctors::create_doctor::NewDoctor;
 
     #[test]
@@ -84,55 +112,76 @@ mod unit_tests {
         assert_eq!(sut.pesel_number, "96021817257");
     }
 
+    #[rstest]
+    #[case("96021817257", true)]
+    #[case("99031301347", true)]
+    #[case("92022900002", true)]
+    #[case("96221807250", false)]
+    #[case("96021807251", false)]
+    #[case("93022900005", false)]
+    #[case("92223300009", false)]
+    #[case("9222330000a", false)]
+    #[case("aaaaaaaaaaa", false)]
+    #[case("960218072500", false)]
+    #[case("30", false)]
+    #[case("", false)]
+    fn validates_pesel_number(#[case] pesel_number: &str, #[case] expected: bool) {
+        assert_eq!(
+            NewDoctor::validate_pesel_number(pesel_number).is_ok(),
+            expected
+        );
+    }
+
     #[test]
     fn doesnt_create_doctor_if_pesel_number_is_invalid() {
-        let sut = NewDoctor::new("John Doe".into(), "4123456".into(), "92223300009".into());
-        assert!(sut.is_err());
+        assert!(NewDoctor::new("John Doe".into(), "4123456".into(), "92223300009".into()).is_err());
+    }
+
+    #[rstest]
+    #[case("5425740", true)]
+    #[case("8463856", true)]
+    #[case("3123456", true)]
+    #[case("4425740", false)]
+    #[case("1234567", false)]
+    #[case("aaaaaaa", false)]
+    #[case("1111111", false)]
+    #[case("111111a", false)]
+    #[case("11111111", false)]
+    #[case("30", false)]
+    #[case("", false)]
+    fn validates_pwz_number(#[case] pwz_number: &str, #[case] expected: bool) {
+        assert_eq!(NewDoctor::validate_pwz_number(pwz_number).is_ok(), expected)
     }
 
     #[test]
     fn doesnt_create_doctor_if_pwz_number_is_invalid() {
-        let sut = NewDoctor::new("John Doe".into(), "1234567".into(), "96021817257".into());
-        assert!(sut.is_err());
+        assert!(NewDoctor::new("John Doe".into(), "1234567".into(), "96021817257".into()).is_err());
+    }
+
+    #[rstest]
+    #[case("John Doe", true)]
+    #[case("Mark Zuckerberg", true)]
+    #[case("Anne Pattison Clark", true)]
+    #[case("Karl Heinz-Müller", true)]
+    #[case("Ędward Żądło", true)]
+    #[case("Hu Ho", true)]
+    #[case("Aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa Aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", true)]
+    #[case("John", false)]
+    #[case("John doe", false)]
+    #[case("john Doe", false)]
+    #[case("JOhn Doe", false)]
+    #[case("john doe", false)]
+    #[case("John-Doe", false)]
+    #[case("J D", false)]
+    #[case("", false)]
+    #[case("AaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAaaaaaaaaaaaaaaaaaa Aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", false)]
+    #[case("Aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa Aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", false)]
+    fn validates_name(#[case] name: &str, #[case] expected: bool) {
+        assert_eq!(NewDoctor::validate_name(name).is_ok(), expected)
     }
 
     #[test]
-    fn validates_pesel_number() {
-        let valid_pesel_numbers: Vec<&str> = vec!["96021817257", "99031301347", "92022900002"];
-        let invalid_pesel_numbers: Vec<&str> = vec![
-            "",
-            "30",
-            "96221807250",
-            "96021807251",
-            "93022900005",
-            "92223300009",
-            "9222330000a",
-            "aaaaaaaaaaa",
-            "962218072500",
-        ];
-
-        for valid_pesel in valid_pesel_numbers {
-            assert!(NewDoctor::validate_pesel_number(valid_pesel).is_ok())
-        }
-
-        for invalid_pesel in invalid_pesel_numbers {
-            assert!(NewDoctor::validate_pesel_number(invalid_pesel).is_err())
-        }
-    }
-
-    #[test]
-    fn validates_pwz_number() {
-        let valid_pwz_numbers: Vec<&str> = vec!["5425740", "8463856", "3123456"];
-        let invalid_pwz_numbers: Vec<&str> = vec![
-            "", "30", "1111111", "aaaaaaa", "111111a", "11111111", "4425740",
-        ];
-
-        for valid_pwz in valid_pwz_numbers {
-            assert!(NewDoctor::validate_pwz_number(valid_pwz).is_ok())
-        }
-
-        for invalid_pwz in invalid_pwz_numbers {
-            assert!(NewDoctor::validate_pwz_number(invalid_pwz).is_err())
-        }
+    fn doesnt_create_doctor_if_name_is_invalid() {
+        assert!(NewDoctor::new("John".into(), "5425740".into(), "96021817257".into()).is_err());
     }
 }

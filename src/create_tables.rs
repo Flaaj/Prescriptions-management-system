@@ -53,5 +53,19 @@ pub async fn create_tables(pool: &sqlx::PgPool) -> Result<(), sqlx::Error> {
     .execute(pool)
     .await?;
 
+    sqlx::query!(
+        r#"
+        CREATE TABLE IF NOT EXISTS doctors (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            name VARCHAR(100) NOT NULL,
+            pesel_number VARCHAR(11) NOT NULL,
+            pwz_number VARCHAR(7) NOT NULL,
+            created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+        );"#
+    )
+    .execute(pool)
+    .await?;
+
     Ok(())
 }

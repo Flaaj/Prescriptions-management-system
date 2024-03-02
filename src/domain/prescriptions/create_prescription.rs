@@ -62,7 +62,7 @@ impl NewPrescription {
         self.prescribed_drugs.push(prescribed_drug);
         Ok(())
     }
-
+    
     pub fn validate(&self) -> anyhow::Result<()> {
         if self.prescribed_drugs.is_empty() {
             anyhow::bail!("Prescription must have at least one prescribed drug");
