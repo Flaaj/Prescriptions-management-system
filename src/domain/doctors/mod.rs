@@ -1,5 +1,5 @@
-mod create_doctor;
-mod create_doctor_repository;
-mod get_doctors;
-mod get_doctors_repository;
-mod tests;
+pub mod create_doctor;
+pub mod create_doctor_repository;
+pub mod get_doctors;
+pub mod get_doctors_repository;
+pub mod tests;

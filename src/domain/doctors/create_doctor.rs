@@ -6,6 +6,32 @@ pub struct NewDoctor {
     pub pesel_number: String,
 }
 
+#[derive(thiserror::Error, Debug)]
+enum PeselNumberValidationError {
+    #[error("PESEL number must be 11 characters long and contain only digits")]
+    InvalidFormat,
+    #[error("The date part of PESEL number is incorrect")]
+    InvalidDate,
+    #[error("The checksum of PESEL number is incorrect")]
+    InvalidChecksum,
+}
+
+#[derive(thiserror::Error, Debug)]
+enum PwzNumberValidationError {
+    #[error("PWZ number must be 7 characters long and contain only digits")]
+    InvalidFormat,
+    #[error("The checksum of PWZ number is incorrect")]
+    InvalidChecksum,
+}
+
+#[derive(thiserror::Error, Debug)]
+enum NameValidationError {
+    #[error("Name must be between {0} and {1} characters long")]
+    InvalidLength(u16, u16),
+    #[error("Name must be in format: Firstname Lastname")]
+    InvalidFormat,
+}
+
 impl NewDoctor {
     pub fn new(name: String, pwz_number: String, pesel_number: String) -> anyhow::Result<Self> {
         Self::validate_name(&name)?;
@@ -22,14 +48,14 @@ impl NewDoctor {
     fn validate_pesel_number(pesel_number: &str) -> anyhow::Result<()> {
         let pesel_length = 11;
         if pesel_number.len() != pesel_length || pesel_number.parse::<u64>().is_err() {
-            anyhow::bail!("Provided PESEL number is not a valid PESEL number.");
+            Err(PeselNumberValidationError::InvalidFormat)?;
         }
 
         let (date_part, _) = pesel_number.split_at(6);
         let is_valid_date =
             NaiveDate::parse_from_str(&format!("19{}", date_part), "%Y%m%d").is_ok();
         if !is_valid_date {
-            anyhow::bail!("The date part of provided PESEL number is incorrect");
+            Err(PeselNumberValidationError::InvalidDate)?;
         }
 
         let (checksum_components, control_digit_str) = pesel_number.split_at(10);
@@ -43,7 +69,7 @@ impl NewDoctor {
         let control_digit = control_digit_str.parse::<u32>().unwrap();
         let checksum = sum % 10;
         if checksum != control_digit {
-            anyhow::bail!("The checksum of provided PESEL number is incorrect")
+            Err(PeselNumberValidationError::InvalidChecksum)?;
         }
 
         Ok(())
@@ -52,7 +78,7 @@ impl NewDoctor {
     fn validate_pwz_number(pwz_number: &str) -> anyhow::Result<()> {
         let pwz_number_length = 7;
         if pwz_number.len() != pwz_number_length || pwz_number.parse::<u32>().is_err() {
-            anyhow::bail!("Provided PWZ number is not a valid PWZ number.");
+            Err(PwzNumberValidationError::InvalidFormat)?;
         }
 
         let (control_digit_str, checksum_components) = pwz_number.split_at(1);
@@ -68,20 +94,22 @@ impl NewDoctor {
         let control_digit = control_digit_str.parse::<u32>().unwrap();
         let checksum = sum % 11;
         if checksum != control_digit {
-            anyhow::bail!("The checksum of provided PWZ number is incorrect")
+            Err(PwzNumberValidationError::InvalidChecksum)?;
         }
 
         Ok(())
     }
 
     fn validate_name(name: &str) -> anyhow::Result<()> {
-        if name.len() < 4 || name.len() > 100 {
-            anyhow::bail!("Name must be between 4 and 100 characters long");
+        let min_len: u16 = 4;
+        let max_len: u16 = 100;
+        if name.len() < min_len.into() || name.len() > max_len.into() {
+            Err(NameValidationError::InvalidLength(min_len, max_len))?;
         }
 
         let word_count = name.split(' ').count();
         if word_count < 2 {
-            anyhow::bail!("Name must be in format: Firstname Lastname");
+            Err(NameValidationError::InvalidFormat)?;
         }
 
         let is_pascal_case = name.split(|c| c == ' ' || c == '-').all(|word| {
@@ -90,7 +118,7 @@ impl NewDoctor {
             is_first_uppercase && is_rest_lowercase
         });
         if !is_pascal_case {
-            anyhow::bail!("Name must be in format: Firstname Lastname");
+            Err(NameValidationError::InvalidFormat)?;
         }
         Ok(())
     }

@@ -1,6 +1,7 @@
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
+#[derive(Debug)]
 pub struct Doctor {
     pub id: Uuid,
     pub name: String,

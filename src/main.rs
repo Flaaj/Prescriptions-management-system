@@ -1,10 +1,11 @@
+mod create_tables;
 pub mod domain;
 
 use chrono::Utc;
+use create_tables::create_tables;
+use domain::doctors::{create_doctor::NewDoctor, get_doctors_repository::DoctorsRepository};
 use domain::prescriptions::{self};
 use sqlx::postgres::PgPoolOptions;
-mod create_tables;
-use create_tables::create_tables;
 
 #[macro_use]
 extern crate dotenv_codegen;
@@ -16,7 +17,7 @@ async fn main() -> anyhow::Result<()> {
         .connect(dotenv!("DATABASE_URL"))
         .await?;
 
-    create_tables(&pool).await?;
+    create_tables(&pool, true).await?;
 
     prescriptions::controller::create_prescription(&pool).await?;
     prescriptions::controller::create_prescription(&pool).await?;
@@ -24,22 +25,35 @@ async fn main() -> anyhow::Result<()> {
     prescriptions::controller::create_prescription(&pool).await?;
     prescriptions::controller::create_prescription(&pool).await?;
     prescriptions::controller::create_prescription(&pool).await?;
+
+    NewDoctor::new("John Doe".into(), "3123456".into(), "96021807250".into())
+        .unwrap()
+        .commit_to_repository(&pool)
+        .await?;
+
+    NewDoctor::new(
+        "Mark Zuckerberk".into(),
+        "3123456".into(),
+        "96021807250".into(),
+    )
+    .unwrap()
+    .commit_to_repository(&pool)
+    .await?;
 
     let timestamp = Utc::now();
-    let res = prescriptions::controller::get_prescriptions(&pool).await;
+    let prescriptions = prescriptions::controller::get_prescriptions(&pool).await?;
     println!(
         "nanoseconds passed: {}",
         (Utc::now() - timestamp).num_nanoseconds().unwrap()
     );
 
-    match res {
-        Err(e) => println!("{}", e),
-        Ok(prescriptions) => {
-            println!("{}", prescriptions.len());
-            for prescription in prescriptions {
-                println!("\n{:#?}\n", prescription);
-            }
-        }
+    for prescription in prescriptions {
+        println!("\n{:#?}\n", prescription);
+    }
+
+    let doctors = DoctorsRepository::get_doctors(&pool).await?;
+    for doctor in doctors {
+        println!("\n{:#?}\n", doctor);
     }
 
     Ok(())

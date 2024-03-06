@@ -1,8 +1,5 @@
 #[cfg(test)]
 mod integration_tests {
-    use chrono::{Duration, Utc};
-    use uuid::Uuid;
-
     use crate::{
         create_tables::create_tables,
         domain::doctors::{create_doctor::NewDoctor, get_doctors_repository::DoctorsRepository},
@@ -10,7 +7,7 @@ mod integration_tests {
 
     #[sqlx::test]
     async fn create_and_read_doctors_from_database(pool: sqlx::PgPool) -> anyhow::Result<()> {
-        create_tables(&pool).await?;
+        create_tables(&pool, true).await?;
 
         let doctor_name = "John Doe";
         let pwz_number = "5425740";

@@ -14,7 +14,7 @@ mod integration_tests {
 
     #[sqlx::test]
     async fn create_and_read_prescriptions_from_database(pool: sqlx::PgPool) -> anyhow::Result<()> {
-        create_tables(&pool).await?;
+        create_tables(&pool, true).await?;
 
         let doctor_id = Uuid::new_v4();
         let patient_id = Uuid::new_v4();

@@ -1,12 +1,12 @@
-use chrono::{DateTime, Utc};
-use uuid::Uuid;
-
-use super::{
-    get_prescriptions::{PrescribedDrug, Prescription},
-    prescription_type::PrescriptionType,
-};
+use super::get_prescriptions::{PrescribedDrug, Prescription};
 
 pub struct PrescriptionRepository {}
+
+#[derive(thiserror::Error, Debug)]
+enum PaginationError {
+    #[error("Invalid page or page_size: page must be at least 0 and page_size must be at least 1")]
+    InvalidPageOrPageSize,
+}
 
 impl PrescriptionRepository {
     pub async fn get_prescriptions(
@@ -17,28 +17,11 @@ impl PrescriptionRepository {
         let page = page.unwrap_or(0);
         let page_size = page_size.unwrap_or(10);
         if page_size < 1 || page < 0 {
-            anyhow::bail!("Invalid page or page_size: page must be at least 0 and page_size must be at least 1");
+            Err(PaginationError::InvalidPageOrPageSize)?;
         }
         let offset = page * page_size;
 
-        let rows = sqlx::query_as::<
-            _,
-            (
-                Uuid,
-                Uuid,
-                Uuid,
-                PrescriptionType,
-                DateTime<Utc>,
-                DateTime<Utc>,
-                DateTime<Utc>,
-                DateTime<Utc>,
-                Uuid,
-                Uuid,
-                i32,
-                DateTime<Utc>,
-                DateTime<Utc>,
-            ),
-        >(
+        let prescriptions_from_db = sqlx::query_as(
             r#"
         SELECT 
             prescriptions.id, 
@@ -69,23 +52,22 @@ impl PrescriptionRepository {
 
         let mut prescriptions: Vec<Prescription> = vec![];
 
-        for row in rows {
-            let (
-                prescription_id,
-                patient_id,
-                doctor_id,
-                prescription_type,
-                start_date,
-                end_date,
-                prescription_created_at,
-                prescription_updated_at,
-                prescribed_drug_id,
-                drug_id,
-                quantity,
-                prescribed_drug_created_at,
-                prescribed_drug_updated_at,
-            ) = row;
-
+        for (
+            prescription_id,
+            patient_id,
+            doctor_id,
+            prescription_type,
+            start_date,
+            end_date,
+            prescription_created_at,
+            prescription_updated_at,
+            prescribed_drug_id,
+            drug_id,
+            quantity,
+            prescribed_drug_created_at,
+            prescribed_drug_updated_at,
+        ) in prescriptions_from_db
+        {
             let prescription = prescriptions.iter_mut().find(|p| p.id == prescription_id);
 
             let prescribed_drug = PrescribedDrug {

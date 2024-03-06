@@ -30,6 +30,14 @@ pub struct NewPrescription {
     pub end_date: DateTime<Utc>,
 }
 
+#[derive(thiserror::Error, Debug)]
+pub enum NewPrescriptionValidationError {
+    #[error("Prescription must have at least one prescribed drug")]
+    NoPrescribedDrugs,
+    #[error("Quantity of drug with id {0} can't be 0")]
+    InvalidDrugQuantity(Uuid),
+}
+
 impl NewPrescription {
     pub fn new(
         doctor_id: Uuid,
@@ -56,16 +64,16 @@ impl NewPrescription {
 
     pub fn add_drug(&mut self, drug_id: Uuid, quantity: u32) -> anyhow::Result<()> {
         if quantity == 0 {
-            anyhow::bail!("Quantity of drug with id {} can't be 0", drug_id);
+            Err(NewPrescriptionValidationError::InvalidDrugQuantity(drug_id))?;
         }
         let prescribed_drug = NewPrescribedDrug { drug_id, quantity };
         self.prescribed_drugs.push(prescribed_drug);
         Ok(())
     }
-    
+
     pub fn validate(&self) -> anyhow::Result<()> {
         if self.prescribed_drugs.is_empty() {
-            anyhow::bail!("Prescription must have at least one prescribed drug");
+            Err(NewPrescriptionValidationError::NoPrescribedDrugs)?;
         }
         Ok(())
     }
