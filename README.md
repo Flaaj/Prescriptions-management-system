@@ -1,5 +1,5 @@
 ###### Run database:
-- `docker compose up`
+- `docker compose up` (requires having docker-desktop installed and added to PATH)
 
 ###### Run unit tests:
 - `cargo watch -x test`

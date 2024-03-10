@@ -19,8 +19,8 @@ impl DoctorsRepository {
                 name: record.name,
                 pwz_number: record.pwz_number,
                 pesel_number: record.pesel_number,
-                created_at: record.created_at.unwrap(),
-                updated_at: record.updated_at.unwrap(),
+                created_at: record.created_at,
+                updated_at: record.updated_at,
             })
             .collect();
 
@@ -40,8 +40,8 @@ impl DoctorsRepository {
             name: doctor_from_db.name,
             pwz_number: doctor_from_db.pwz_number,
             pesel_number: doctor_from_db.pesel_number,
-            created_at: doctor_from_db.created_at.unwrap(),
-            updated_at: doctor_from_db.updated_at.unwrap(),
+            created_at: doctor_from_db.created_at,
+            updated_at: doctor_from_db.updated_at,
         })
     }
 }
