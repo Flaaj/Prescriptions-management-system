@@ -1,3 +1,5 @@
+use uuid::Uuid;
+
 use super::get_prescriptions::{PrescribedDrug, Prescription};
 
 pub struct PrescriptionRepository {}
@@ -6,6 +8,12 @@ pub struct PrescriptionRepository {}
 enum PaginationError {
     #[error("Invalid page or page_size: page must be at least 0 and page_size must be at least 1")]
     InvalidPageOrPageSize,
+}
+
+#[derive(thiserror::Error, Debug, PartialEq)]
+pub enum GetPrescriptionError {
+    #[error("Prescription with id {0} not found")]
+    NotFound(Uuid),
 }
 
 impl PrescriptionRepository {
@@ -97,5 +105,88 @@ impl PrescriptionRepository {
         }
 
         Ok(prescriptions)
+    }
+
+    pub async fn get_prescription_by_id(
+        pool: &sqlx::PgPool,
+        id: Uuid,
+    ) -> anyhow::Result<Prescription> {
+        let prescription_from_db = sqlx::query_as(
+            r#"
+        SELECT
+            prescriptions.id, 
+            prescriptions.patient_id, 
+            prescriptions.doctor_id, 
+            prescriptions.prescription_type, 
+            prescriptions.start_date, 
+            prescriptions.end_date, 
+            prescriptions.created_at,
+            prescriptions.updated_at,
+            prescribed_drugs.id, 
+            prescribed_drugs.drug_id, 
+            prescribed_drugs.quantity,
+            prescribed_drugs.created_at,
+            prescribed_drugs.updated_at
+        FROM (
+            SELECT * FROM prescriptions
+            WHERE id = $1
+        ) AS prescriptions
+        JOIN prescribed_drugs ON prescriptions.id = prescribed_drugs.prescription_id
+    "#,
+        )
+        .bind(id)
+        .fetch_all(pool)
+        .await?;
+
+        let mut prescriptions: Vec<Prescription> = vec![];
+
+        for (
+            prescription_id,
+            patient_id,
+            doctor_id,
+            prescription_type,
+            start_date,
+            end_date,
+            prescription_created_at,
+            prescription_updated_at,
+            prescribed_drug_id,
+            drug_id,
+            quantity,
+            prescribed_drug_created_at,
+            prescribed_drug_updated_at,
+        ) in prescription_from_db
+        {
+            let prescription = prescriptions.iter_mut().find(|p| p.id == prescription_id);
+
+            let prescribed_drug = PrescribedDrug {
+                id: prescribed_drug_id,
+                prescription_id,
+                drug_id,
+                quantity,
+                created_at: prescribed_drug_created_at,
+                updated_at: prescribed_drug_updated_at,
+            };
+
+            if let Some(prescription) = prescription {
+                prescription.prescribed_drugs.push(prescribed_drug);
+            } else {
+                prescriptions.push(Prescription {
+                    id: prescription_id,
+                    patient_id,
+                    doctor_id,
+                    prescription_type,
+                    start_date,
+                    end_date,
+                    prescribed_drugs: vec![prescribed_drug],
+                    created_at: prescription_created_at,
+                    updated_at: prescription_updated_at,
+                });
+            }
+        }
+
+        let prescription = prescriptions
+            .first()
+            .ok_or(GetPrescriptionError::NotFound(id))?;
+        Ok(prescription.clone())
     }
 }

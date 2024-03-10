@@ -1,6 +1,9 @@
 use chrono::NaiveDate;
+use uuid::Uuid;
 
+#[derive(Clone, Debug)]
 pub struct NewDoctor {
+    pub id: Uuid,
     pub name: String,
     pub pwz_number: String,
     pub pesel_number: String,
@@ -39,6 +42,7 @@ impl NewDoctor {
         Self::validate_pwz_number(&pwz_number)?;
 
         Ok(NewDoctor {
+            id: Uuid::new_v4(),
             name,
             pwz_number,
             pesel_number,
@@ -113,13 +117,15 @@ impl NewDoctor {
         }
 
         let is_pascal_case = name.split(|c| c == ' ' || c == '-').all(|word| {
-            let is_first_uppercase = word.chars().next().unwrap().is_uppercase();
-            let is_rest_lowercase = word.chars().skip(1).all(|c| c.is_lowercase());
+            let mut chars = word.chars();
+            let is_first_uppercase = chars.next().unwrap().is_uppercase();
+            let is_rest_lowercase = chars.all(|c| c.is_lowercase());
             is_first_uppercase && is_rest_lowercase
         });
         if !is_pascal_case {
             Err(NameValidationError::InvalidFormat)?;
         }
+
         Ok(())
     }
 }

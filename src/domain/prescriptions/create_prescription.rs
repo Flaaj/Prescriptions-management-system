@@ -22,6 +22,7 @@ pub struct NewPrescribedDrug {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct NewPrescription {
+    pub id: Uuid,
     pub doctor_id: Uuid,
     pub patient_id: Uuid,
     pub prescribed_drugs: Vec<NewPrescribedDrug>,
@@ -53,6 +54,7 @@ impl NewPrescription {
         let end_date = start_date + duration;
 
         Self {
+            id: Uuid::new_v4(),
             doctor_id,
             patient_id,
             prescribed_drugs: vec![],

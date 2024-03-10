@@ -6,7 +6,7 @@ pub async fn create_tables(pool: &sqlx::PgPool, drop: bool) -> Result<(), sqlx::
         sqlx::query!(r#"DROP TABLE IF EXISTS prescriptions;"#)
             .execute(pool)
             .await?;
-        sqlx::query!(r#"DROP TYPE IF EXISTS prescriptiontype;"#)
+        sqlx::query!(r#"DROP TYPE IF EXISTS prescription_type;"#)
             .execute(pool)
             .await?;
         sqlx::query!(r#"DROP TABLE IF EXISTS doctors;"#)
@@ -18,8 +18,8 @@ pub async fn create_tables(pool: &sqlx::PgPool, drop: bool) -> Result<(), sqlx::
     r#"
         DO $$
         BEGIN
-            IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'prescriptiontype') THEN
-            CREATE TYPE prescriptiontype AS ENUM ('regular', 'forantibiotics', 'forchronicdiseasedrugs', 'forimmunologicaldrugs');
+            IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'prescription_type') THEN
+            CREATE TYPE prescription_type AS ENUM ('regular', 'for_antibiotics', 'for_chronic_disease_drugs', 'for_immunological_drugs');
             END IF;
         END
         $$;
@@ -34,7 +34,7 @@ pub async fn create_tables(pool: &sqlx::PgPool, drop: bool) -> Result<(), sqlx::
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
             patient_id UUID NOT NULL,
             doctor_id UUID NOT NULL,
-            prescription_type PrescriptionType NOT NULL,
+            prescription_type prescription_type NOT NULL,
             start_date TIMESTAMPTZ NOT NULL,
             end_date TIMESTAMPTZ NOT NULL,
             created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
