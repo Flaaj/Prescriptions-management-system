@@ -4,18 +4,18 @@ use crate::utils::validators::{
     validate_name::validate_name, validate_pesel_number::validate_pesel_number,
 };
 
-pub struct NewPatient {
+pub struct NewPharmacist {
     pub id: Uuid,
     pub name: String,
     pub pesel: String,
 }
 
-impl NewPatient {
+impl NewPharmacist {
     pub fn new(name: String, pesel: String) -> anyhow::Result<Self> {
         validate_name(&name)?;
         validate_pesel_number(&pesel)?;
 
-        Ok(NewPatient {
+        Ok(NewPharmacist {
             id: Uuid::new_v4(),
             name,
             pesel,
@@ -25,23 +25,23 @@ impl NewPatient {
 
 #[cfg(test)]
 mod unit_tests {
-    use super::NewPatient;
+    use super::NewPharmacist;
 
     #[test]
-    fn creates_patient() {
-        let sut = NewPatient::new("John Doe".into(), "96021817257".into()).unwrap();
+    fn creates_pharmacist() {
+        let sut = NewPharmacist::new("John Doe".into(), "96021817257".into()).unwrap();
 
         assert_eq!(sut.name, "John Doe");
         assert_eq!(sut.pesel, "96021817257");
     }
 
     #[test]
-    fn doesnt_create_patient_if_name_is_invalid() {
-        assert!(NewPatient::new("John".into(), "96021817257".into()).is_err());
+    fn doesnt_create_pharmacist_if_name_is_invalid() {
+        assert!(NewPharmacist::new("John".into(), "96021817257".into()).is_err());
     }
 
     #[test]
-    fn doesnt_create_patient_if_pesel_number_is_invalid() {
-        assert!(NewPatient::new("John Doe".into(), "92223300009".into()).is_err());
+    fn doesnt_create_pharmacist_if_pesel_number_is_invalid() {
+        assert!(NewPharmacist::new("John Doe".into(), "92223300009".into()).is_err());
     }
 }
