@@ -1,5 +1,6 @@
 mod create_tables;
 pub mod domain;
+pub mod utils;
 
 use create_tables::create_tables;
 use sqlx::postgres::PgPoolOptions;
