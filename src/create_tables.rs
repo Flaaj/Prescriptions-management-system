@@ -15,16 +15,15 @@ pub async fn create_tables(pool: &sqlx::PgPool, drop: bool) -> Result<(), sqlx::
     }
 
     sqlx::query!(
-    r#"
+        r#"
         DO $$
         BEGIN
             IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'prescription_type') THEN
             CREATE TYPE prescription_type AS ENUM ('regular', 'for_antibiotics', 'for_chronic_disease_drugs', 'for_immunological_drugs');
             END IF;
         END
-        $$;
-        "#
-    )//
+        $$;"#
+    )
         .execute(pool)
         .await?;
 

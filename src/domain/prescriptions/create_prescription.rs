@@ -31,12 +31,14 @@ pub struct NewPrescription {
     pub end_date: DateTime<Utc>,
 }
 
-#[derive(thiserror::Error, Debug)]
+#[derive(thiserror::Error, Debug, PartialEq)]
 pub enum NewPrescriptionValidationError {
     #[error("Prescription must have at least one prescribed drug")]
     NoPrescribedDrugs,
     #[error("Quantity of drug with id {0} can't be 0")]
     InvalidDrugQuantity(Uuid),
+    #[error("Can't prescribe two drugs with the same id {0}")]
+    DuplicateDrugId(Uuid),
 }
 
 impl NewPrescription {
@@ -64,12 +66,21 @@ impl NewPrescription {
         }
     }
 
+    fn has_drug_with_id(&self, drug_id: Uuid) -> bool {
+        self.prescribed_drugs.iter().any(|drug| drug.drug_id == drug_id)
+    }
+
     pub fn add_drug(&mut self, drug_id: Uuid, quantity: u32) -> anyhow::Result<()> {
         if quantity == 0 {
             Err(NewPrescriptionValidationError::InvalidDrugQuantity(drug_id))?;
         }
+        if self.has_drug_with_id(drug_id) {
+            Err(NewPrescriptionValidationError::DuplicateDrugId(drug_id))?;
+        }
+
         let prescribed_drug = NewPrescribedDrug { drug_id, quantity };
         self.prescribed_drugs.push(prescribed_drug);
+        
         Ok(())
     }
 
@@ -77,6 +88,7 @@ impl NewPrescription {
         if self.prescribed_drugs.is_empty() {
             Err(NewPrescriptionValidationError::NoPrescribedDrugs)?;
         }
+        
         Ok(())
     }
 }
@@ -86,7 +98,9 @@ mod unit_tests {
     use chrono::{Duration, Utc};
     use uuid::Uuid;
 
-    use crate::domain::prescriptions::create_prescription::{NewPrescription, PrescriptionType};
+    use crate::domain::prescriptions::create_prescription::{
+        NewPrescription, NewPrescriptionValidationError, PrescriptionType,
+    };
 
     #[test]
     fn creates_prescription() {
@@ -199,15 +213,26 @@ mod unit_tests {
 
     #[test]
     fn cant_add_drug_with_zero_quantity() {
-        let drug_id = Uuid::parse_str("00000000-0000-0000-0000-000000000000").unwrap();
+        let drug_id = Uuid::new_v4();
         let mut prescription = NewPrescription::new(Uuid::new_v4(), Uuid::new_v4(), None, None);
 
         let sut = prescription.add_drug(drug_id, 0);
 
-        let expected_error = String::from(
-            "Quantity of drug with id 00000000-0000-0000-0000-000000000000 can't be 0",
-        );
-        assert!(sut.err().unwrap().to_string() == expected_error);
+        let expected_err = NewPrescriptionValidationError::InvalidDrugQuantity(drug_id);
+        assert_eq!(sut.unwrap_err().downcast_ref(), Some(&expected_err));
+    }
+
+
+    #[test]
+    fn cant_add_two_drugs_with_the_same_id() {
+        let drug_id = Uuid::new_v4();
+        let mut prescription = NewPrescription::new(Uuid::new_v4(), Uuid::new_v4(), None, None);
+
+        prescription.add_drug(drug_id, 1).unwrap();
+        let sut = prescription.add_drug(drug_id, 2);
+
+        let expected_err = NewPrescriptionValidationError::DuplicateDrugId(drug_id);
+        assert_eq!(sut.unwrap_err().downcast_ref(), Some(&expected_err));
     }
 
     #[test]
@@ -226,7 +251,7 @@ mod unit_tests {
 
         let sut = prescription.validate();
 
-        let expected_error = String::from("Prescription must have at least one prescribed drug");
-        assert!(sut.err().unwrap().to_string() == expected_error);
+        let expected_err = NewPrescriptionValidationError::NoPrescribedDrugs;
+        assert_eq!(sut.unwrap_err().downcast_ref(), Some(&expected_err));
     }
 }
