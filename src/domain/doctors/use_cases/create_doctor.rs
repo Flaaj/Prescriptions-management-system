@@ -29,8 +29,7 @@ impl NewDoctor {
 
 #[cfg(test)]
 mod unit_tests {
-
-    use crate::domain::doctors::create_doctor::NewDoctor;
+    use crate::domain::doctors::use_cases::create_doctor::NewDoctor;
 
     #[test]
     fn creates_doctor() {
