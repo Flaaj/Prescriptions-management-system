@@ -9,27 +9,12 @@
 //  - has end date, which marks date after which it can't be used anymore
 //  - each prescription can be used only once
 
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration, Utc};
 use uuid::Uuid;
 
-use super::prescription_type::PrescriptionType;
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct NewPrescribedDrug {
-    pub drug_id: Uuid,
-    pub quantity: u32,
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct NewPrescription {
-    pub id: Uuid,
-    pub doctor_id: Uuid,
-    pub patient_id: Uuid,
-    pub prescribed_drugs: Vec<NewPrescribedDrug>,
-    pub prescription_type: PrescriptionType,
-    pub start_date: DateTime<Utc>,
-    pub end_date: DateTime<Utc>,
-}
+use crate::domain::prescriptions::prescriptions_models::{
+    NewPrescribedDrug, NewPrescription, PrescriptionType,
+};
 
 #[derive(thiserror::Error, Debug, PartialEq)]
 pub enum NewPrescriptionValidationError {
@@ -39,6 +24,17 @@ pub enum NewPrescriptionValidationError {
     InvalidDrugQuantity(Uuid),
     #[error("Can't prescribe two drugs with the same id {0}")]
     DuplicateDrugId(Uuid),
+}
+
+impl PrescriptionType {
+    pub fn get_duration(&self) -> Duration {
+        match self {
+            PrescriptionType::Regular => Duration::days(30),
+            PrescriptionType::ForAntibiotics => Duration::days(7),
+            PrescriptionType::ForImmunologicalDrugs => Duration::days(120),
+            PrescriptionType::ForChronicDiseaseDrugs => Duration::days(365),
+        }
+    }
 }
 
 impl NewPrescription {
@@ -67,7 +63,9 @@ impl NewPrescription {
     }
 
     fn has_drug_with_id(&self, drug_id: Uuid) -> bool {
-        self.prescribed_drugs.iter().any(|drug| drug.drug_id == drug_id)
+        self.prescribed_drugs
+            .iter()
+            .any(|drug| drug.drug_id == drug_id)
     }
 
     pub fn add_drug(&mut self, drug_id: Uuid, quantity: u32) -> anyhow::Result<()> {
@@ -80,7 +78,7 @@ impl NewPrescription {
 
         let prescribed_drug = NewPrescribedDrug { drug_id, quantity };
         self.prescribed_drugs.push(prescribed_drug);
-        
+
         Ok(())
     }
 
@@ -88,7 +86,7 @@ impl NewPrescription {
         if self.prescribed_drugs.is_empty() {
             Err(NewPrescriptionValidationError::NoPrescribedDrugs)?;
         }
-        
+
         Ok(())
     }
 }
@@ -98,9 +96,7 @@ mod unit_tests {
     use chrono::{Duration, Utc};
     use uuid::Uuid;
 
-    use crate::domain::prescriptions::create_prescription::{
-        NewPrescription, NewPrescriptionValidationError, PrescriptionType,
-    };
+    use super::{NewPrescription, NewPrescriptionValidationError, PrescriptionType};
 
     #[test]
     fn creates_prescription() {
@@ -221,7 +217,6 @@ mod unit_tests {
         let expected_err = NewPrescriptionValidationError::InvalidDrugQuantity(drug_id);
         assert_eq!(sut.unwrap_err().downcast_ref(), Some(&expected_err));
     }
-
 
     #[test]
     fn cant_add_two_drugs_with_the_same_id() {
