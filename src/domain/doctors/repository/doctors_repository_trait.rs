@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use uuid::Uuid;
 
-use crate::domain::doctors::use_cases::{create_doctor::NewDoctor, get_doctors::Doctor};
+use crate::domain::doctors::models::{Doctor, NewDoctor};
 
 #[async_trait]
 pub trait DoctorsRepositoryTrait {

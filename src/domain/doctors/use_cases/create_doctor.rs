@@ -1,16 +1,12 @@
 use uuid::Uuid;
 
-use crate::utils::validators::{
-    validate_name::validate_name, validate_pesel_number::validate_pesel_number,
-    validate_pwz_number::validate_pwz_number,
+use crate::{
+    domain::doctors::models::NewDoctor,
+    utils::validators::{
+        validate_name::validate_name, validate_pesel_number::validate_pesel_number,
+        validate_pwz_number::validate_pwz_number,
+    },
 };
-#[derive(Clone, Debug)]
-pub struct NewDoctor {
-    pub id: Uuid,
-    pub name: String,
-    pub pwz_number: String,
-    pub pesel_number: String,
-}
 
 impl NewDoctor {
     pub fn new(name: String, pwz_number: String, pesel_number: String) -> anyhow::Result<Self> {
@@ -29,7 +25,8 @@ impl NewDoctor {
 
 #[cfg(test)]
 mod unit_tests {
-    use crate::domain::doctors::use_cases::create_doctor::NewDoctor;
+    use crate::domain::doctors::models::NewDoctor;
+
 
     #[test]
     fn creates_doctor() {

@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use uuid::Uuid;
 
-use crate::domain::prescriptions::prescriptions_models::{NewPrescription, Prescription};
+use crate::domain::prescriptions::models::{NewPrescription, Prescription};
 
 #[async_trait]
 pub trait PrescriptionsRepositoryTrait {

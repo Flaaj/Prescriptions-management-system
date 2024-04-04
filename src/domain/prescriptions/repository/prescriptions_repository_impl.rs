@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use uuid::Uuid;
 
-use crate::domain::prescriptions::prescriptions_models::{
+use crate::domain::prescriptions::models::{
     NewPrescription, PrescribedDrug, Prescription,
 };
 
@@ -244,7 +244,7 @@ mod integration_tests {
     use super::{GetPrescriptionError, PrescriptionsRepository};
     use crate::{
         create_tables::create_tables,
-        domain::prescriptions::{prescriptions_models::{NewPrescription, PrescriptionType}, repository::prescriptions_repository_trait::PrescriptionsRepositoryTrait},
+        domain::prescriptions::{models::{NewPrescription, PrescriptionType}, repository::prescriptions_repository_trait::PrescriptionsRepositoryTrait},
     };
 
     #[sqlx::test]

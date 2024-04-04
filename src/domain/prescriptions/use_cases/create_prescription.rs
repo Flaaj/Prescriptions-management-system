@@ -12,7 +12,7 @@
 use chrono::{DateTime, Duration, Utc};
 use uuid::Uuid;
 
-use crate::domain::prescriptions::prescriptions_models::{
+use crate::domain::prescriptions::models::{
     NewPrescribedDrug, NewPrescription, PrescriptionType,
 };
 

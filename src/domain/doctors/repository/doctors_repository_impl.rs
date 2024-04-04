@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use uuid::Uuid;
 
-use crate::domain::doctors::use_cases::{create_doctor::NewDoctor, get_doctors::Doctor};
+use crate::domain::doctors::models::{Doctor, NewDoctor};
 
 use super::doctors_repository_trait::DoctorsRepositoryTrait;
 
@@ -76,13 +76,10 @@ impl<'a> DoctorsRepositoryTrait for DoctorsRepository<'a> {
 mod integration_tests {
     use crate::{
         create_tables::create_tables,
-        domain::doctors::{
-            repository::{
-                doctors_repository_impl::DoctorsRepository,
-                doctors_repository_trait::DoctorsRepositoryTrait,
-            },
-            use_cases::create_doctor::NewDoctor,
-        },
+        domain::doctors::{models::NewDoctor, repository::{
+            doctors_repository_impl::DoctorsRepository,
+            doctors_repository_trait::DoctorsRepositoryTrait,
+        }},
     };
 
     #[sqlx::test]
