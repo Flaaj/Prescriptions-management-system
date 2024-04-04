@@ -23,6 +23,7 @@ pub struct NewPrescription {
     pub patient_id: Uuid,
     pub prescribed_drugs: Vec<NewPrescribedDrug>,
     pub prescription_type: PrescriptionType,
+    pub code: String,
     pub start_date: DateTime<Utc>,
     pub end_date: DateTime<Utc>,
 }

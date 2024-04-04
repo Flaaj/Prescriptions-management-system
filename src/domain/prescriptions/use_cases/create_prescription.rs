@@ -51,12 +51,15 @@ impl NewPrescription {
         let duration = prescription_type.get_duration();
         let end_date = start_date + duration;
 
+        let code = rand::random::<u64>().to_string().chars().take(8).collect();
+
         Self {
             id: Uuid::new_v4(),
             doctor_id,
             patient_id,
             prescribed_drugs: vec![],
             prescription_type,
+            code,
             start_date,
             end_date,
         }
@@ -109,6 +112,14 @@ mod unit_tests {
         assert_eq!(sut.patient_id, patient_id);
         assert_eq!(sut.prescribed_drugs, vec![]);
         assert_eq!(sut.prescription_type, PrescriptionType::Regular);
+    }
+
+    #[test]
+    fn generates_random_8_digit_code_on_creation() {
+        let sut = NewPrescription::new(Uuid::new_v4(), Uuid::new_v4(), None, None);
+
+        assert_eq!(sut.code.len(), 8);
+        assert!(sut.code.chars().all(char::is_numeric));
     }
 
     #[test]
