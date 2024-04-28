@@ -89,8 +89,8 @@ mod unit_tests {
     }
 
     #[test]
-    fn doesnt_fill_if_prescription_date_ended() {
-        let mut prescription = create_mock_prescription();
+    fn doesnt_fill_if_prescription_the_date_is_after_end_date() {
+        let mut prescription: Prescription = create_mock_prescription();
         prescription.end_date = Utc::now() - Duration::minutes(1);
         let pharmacist_id = Uuid::new_v4();
 
