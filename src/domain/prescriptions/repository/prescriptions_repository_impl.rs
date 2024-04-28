@@ -1,8 +1,9 @@
 use async_trait::async_trait;
 use uuid::Uuid;
 
-use crate::domain::prescriptions::models::{
-    NewPrescription, PrescribedDrug, Prescription,
+use crate::domain::prescriptions::{
+    models::{NewPrescription, NewPrescriptionFill, PrescribedDrug, Prescription},
+    use_cases::fill_prescription,
 };
 
 use super::prescriptions_repository_trait::PrescriptionsRepositoryTrait;
@@ -146,6 +147,7 @@ impl<'a> PrescriptionsRepositoryTrait for PrescriptionsRepository<'a> {
                     start_date,
                     end_date,
                     prescribed_drugs: vec![prescribed_drug],
+                    fill: None,
                     created_at: prescription_created_at,
                     updated_at: prescription_updated_at,
                 });
@@ -223,6 +225,7 @@ impl<'a> PrescriptionsRepositoryTrait for PrescriptionsRepository<'a> {
                     start_date,
                     end_date,
                     prescribed_drugs: vec![prescribed_drug],
+                    fill: None,
                     created_at: prescription_created_at,
                     updated_at: prescription_updated_at,
                 });
@@ -234,6 +237,13 @@ impl<'a> PrescriptionsRepositoryTrait for PrescriptionsRepository<'a> {
             .ok_or(GetPrescriptionError::NotFound(id))?;
         Ok(prescription.clone())
     }
+
+    async fn fill_prescription(
+        &self,
+        prescription_fill: NewPrescriptionFill,
+    ) -> anyhow::Result<()> {
+        todo!()
+    }
 }
 
 #[cfg(test)]
@@ -244,7 +254,10 @@ mod integration_tests {
     use super::{GetPrescriptionError, PrescriptionsRepository};
     use crate::{
         create_tables::create_tables,
-        domain::prescriptions::{models::{NewPrescription, PrescriptionType}, repository::prescriptions_repository_trait::PrescriptionsRepositoryTrait},
+        domain::prescriptions::{
+            models::{NewPrescription, PrescriptionType},
+            repository::prescriptions_repository_trait::PrescriptionsRepositoryTrait,
+        },
     };
 
     #[sqlx::test]
@@ -354,5 +367,10 @@ mod integration_tests {
             prescription_from_db.unwrap_err().downcast_ref(),
             Some(&GetPrescriptionError::NotFound(prescription_id)),
         );
+    }
+
+    #[sqlx::test]
+    async fn fills_prescription(pool: sqlx::PgPool) {
+        todo!();
     }
 }

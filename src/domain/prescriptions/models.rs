@@ -45,8 +45,25 @@ pub struct Prescription {
     pub patient_id: Uuid,
     pub prescribed_drugs: Vec<PrescribedDrug>,
     pub prescription_type: PrescriptionType,
+    pub fill: Option<PrescriptionFill>,
     pub start_date: DateTime<Utc>,
     pub end_date: DateTime<Utc>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct NewPrescriptionFill {
+    pub id: Uuid,
+    pub prescription_id: Uuid,
+    pub pharmacist_id: Uuid,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct PrescriptionFill {
+    pub id: Uuid,
+    pub prescription_id: Uuid,
+    pub pharmacist_id: Uuid,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
