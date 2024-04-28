@@ -14,7 +14,7 @@ pub enum PrescriptionFillError {
 impl Prescription {
     pub fn fill(self, pharmacist_id: Uuid) -> anyhow::Result<NewPrescriptionFill> {
         let now = Utc::now();
-        if now < self.start_date || self.end_date < now {
+        if now < self.start_date || now > self.end_date {
             Err(PrescriptionFillError::InvalidDate)?;
         }
         if self.fill.is_some() {
