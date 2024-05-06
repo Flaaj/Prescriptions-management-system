@@ -242,7 +242,16 @@ impl<'a> PrescriptionsRepositoryTrait for PrescriptionsRepository<'a> {
         &self,
         prescription_fill: NewPrescriptionFill,
     ) -> anyhow::Result<()> {
-        todo!()
+        sqlx::query!(
+            r#"INSERT INTO prescription_fills (id, prescription_id, pharmacist_id) VALUES ($1, $2, $3)"#,
+            prescription_fill.id,
+            prescription_fill.prescription_id,
+            prescription_fill.pharmacist_id
+        )
+        .execute(self.pool)
+        .await?;
+
+        Ok(())
     }
 }
 
@@ -370,7 +379,38 @@ mod integration_tests {
     }
 
     #[sqlx::test]
-    async fn fills_prescription(pool: sqlx::PgPool) {
-        todo!();
+    async fn fills_prescription_and_saves_to_database(pool: sqlx::PgPool) {
+        create_tables(&pool, true).await.unwrap();
+        let repo = PrescriptionsRepository::new(&pool);
+
+        let doctor_id = Uuid::new_v4();
+        let patient_id = Uuid::new_v4();
+        let prescription_type = PrescriptionType::ForChronicDiseaseDrugs;
+        let start_date = Utc::now() - Duration::days(1);
+        let drug_id = Uuid::new_v4();
+        let drug_quantity = 2;
+
+        let mut prescription = NewPrescription::new(
+            doctor_id,
+            patient_id,
+            Some(start_date),
+            Some(prescription_type),
+        );
+        prescription.add_drug(drug_id, drug_quantity).unwrap();
+
+        repo.create_prescription(prescription.clone())
+            .await
+            .unwrap();
+
+        let prescription_from_db = repo.get_prescription_by_id(prescription.id).await.unwrap();
+
+        assert!(prescription_from_db.fill.is_none());
+
+        let prescription_fill = prescription_from_db.fill(Uuid::new_v4()).unwrap();
+        repo.fill_prescription(prescription_fill).await.unwrap();
+
+        let prescription_from_db = repo.get_prescription_by_id(prescription.id).await.unwrap();
+
+        assert!(prescription_from_db.fill.is_some());
     }
 }

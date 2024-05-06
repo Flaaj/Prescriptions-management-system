@@ -12,6 +12,9 @@ pub async fn create_tables(pool: &sqlx::PgPool, drop: bool) -> Result<(), sqlx::
         sqlx::query!(r#"DROP TABLE IF EXISTS doctors;"#)
             .execute(pool)
             .await?;
+        sqlx::query!(r#"DROP TABLE IF EXISTS prescription_fills;"#)
+            .execute(pool)
+            .await?;
     }
 
     sqlx::query!(
@@ -64,6 +67,19 @@ pub async fn create_tables(pool: &sqlx::PgPool, drop: bool) -> Result<(), sqlx::
             name VARCHAR(100) NOT NULL,
             pesel_number VARCHAR(11) NOT NULL,
             pwz_number VARCHAR(7) NOT NULL,
+            created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+            updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
+        );"#
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query!(
+        r#"
+        CREATE TABLE IF NOT EXISTS prescription_fills (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            prescription_id UUID,
+            pharmacist_id UUID,
             created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
             updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
         );"#
