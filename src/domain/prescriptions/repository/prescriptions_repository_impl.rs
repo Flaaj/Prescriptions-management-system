@@ -1,9 +1,11 @@
 use async_trait::async_trait;
+use chrono::{DateTime, Utc};
+use sqlx::Row;
 use uuid::Uuid;
 
-use crate::domain::prescriptions::{
-    models::{NewPrescription, NewPrescriptionFill, PrescribedDrug, Prescription},
-    use_cases::fill_prescription,
+use crate::domain::prescriptions::models::{
+    NewPrescription, NewPrescriptionFill, PrescribedDrug, Prescription, PrescriptionFill,
+    PrescriptionType,
 };
 
 use super::prescriptions_repository_trait::PrescriptionsRepositoryTrait;
@@ -78,7 +80,7 @@ impl<'a> PrescriptionsRepositoryTrait for PrescriptionsRepository<'a> {
         }
         let offset = page * page_size;
 
-        let prescriptions_from_db = sqlx::query_as(
+        let prescriptions_from_db = sqlx::query(
             r#"
         SELECT 
             prescriptions.id, 
@@ -93,12 +95,17 @@ impl<'a> PrescriptionsRepositoryTrait for PrescriptionsRepository<'a> {
             prescribed_drugs.drug_id, 
             prescribed_drugs.quantity,
             prescribed_drugs.created_at,
-            prescribed_drugs.updated_at
+            prescribed_drugs.updated_at,
+            prescription_fills.id,
+            prescription_fills.pharmacist_id,
+            prescription_fills.created_at,
+            prescription_fills.updated_at
         FROM (
             SELECT * FROM prescriptions
             ORDER BY created_at ASC
             LIMIT $1 OFFSET $2
         ) AS prescriptions
+        LEFT JOIN prescription_fills ON prescriptions.id = prescription_fills.prescription_id
         JOIN prescribed_drugs ON prescriptions.id = prescribed_drugs.prescription_id
     "#,
         )
@@ -109,22 +116,25 @@ impl<'a> PrescriptionsRepositoryTrait for PrescriptionsRepository<'a> {
 
         let mut prescriptions: Vec<Prescription> = vec![];
 
-        for (
-            prescription_id,
-            patient_id,
-            doctor_id,
-            prescription_type,
-            start_date,
-            end_date,
-            prescription_created_at,
-            prescription_updated_at,
-            prescribed_drug_id,
-            drug_id,
-            quantity,
-            prescribed_drug_created_at,
-            prescribed_drug_updated_at,
-        ) in prescriptions_from_db
-        {
+        for row in prescriptions_from_db {
+            let prescription_id: Uuid = row.get(0);
+            let patient_id: Uuid = row.get(1);
+            let doctor_id: Uuid = row.get(2);
+            let prescription_type: PrescriptionType = row.get(3);
+            let start_date: DateTime<Utc> = row.get(4);
+            let end_date: DateTime<Utc> = row.get(5);
+            let prescription_created_at: DateTime<Utc> = row.get(6);
+            let prescription_updated_at: DateTime<Utc> = row.get(7);
+            let prescribed_drug_id: Uuid = row.get(8);
+            let drug_id: Uuid = row.get(9);
+            let quantity: i32 = row.get(10);
+            let prescribed_drug_created_at: DateTime<Utc> = row.get(11);
+            let prescribed_drug_updated_at: DateTime<Utc> = row.get(12);
+            let prescription_fill_id: Option<Uuid> = row.get(13);
+            let filling_pharmacist_id: Option<Uuid> = row.get(14);
+            let prescription_fill_created_at: Option<DateTime<Utc>> = row.get(15);
+            let prescription_fill_updated_at: Option<DateTime<Utc>> = row.get(16);
+
             let prescription = prescriptions.iter_mut().find(|p| p.id == prescription_id);
 
             let prescribed_drug = PrescribedDrug {
@@ -139,6 +149,18 @@ impl<'a> PrescriptionsRepositoryTrait for PrescriptionsRepository<'a> {
             if let Some(prescription) = prescription {
                 prescription.prescribed_drugs.push(prescribed_drug);
             } else {
+                let fill = if let Some(prescription_fill_id) = prescription_fill_id {
+                    Some(PrescriptionFill {
+                        id: prescription_fill_id,
+                        prescription_id,
+                        pharmacist_id: filling_pharmacist_id.unwrap(),
+                        created_at: prescription_fill_created_at.unwrap(),
+                        updated_at: prescription_fill_updated_at.unwrap(),
+                    })
+                } else {
+                    None
+                };
+
                 prescriptions.push(Prescription {
                     id: prescription_id,
                     patient_id,
@@ -147,7 +169,7 @@ impl<'a> PrescriptionsRepositoryTrait for PrescriptionsRepository<'a> {
                     start_date,
                     end_date,
                     prescribed_drugs: vec![prescribed_drug],
-                    fill: None,
+                    fill,
                     created_at: prescription_created_at,
                     updated_at: prescription_updated_at,
                 });
@@ -158,7 +180,7 @@ impl<'a> PrescriptionsRepositoryTrait for PrescriptionsRepository<'a> {
     }
 
     async fn get_prescription_by_id(&self, id: Uuid) -> anyhow::Result<Prescription> {
-        let prescription_from_db = sqlx::query_as(
+        let prescription_from_db = sqlx::query(
             r#"
         SELECT
             prescriptions.id, 
@@ -173,11 +195,16 @@ impl<'a> PrescriptionsRepositoryTrait for PrescriptionsRepository<'a> {
             prescribed_drugs.drug_id, 
             prescribed_drugs.quantity,
             prescribed_drugs.created_at,
-            prescribed_drugs.updated_at
+            prescribed_drugs.updated_at,
+            prescription_fills.id,
+            prescription_fills.pharmacist_id,
+            prescription_fills.created_at,
+            prescription_fills.updated_at
         FROM (
             SELECT * FROM prescriptions
             WHERE id = $1
         ) AS prescriptions
+        LEFT JOIN prescription_fills ON prescriptions.id = prescription_fills.prescription_id
         JOIN prescribed_drugs ON prescriptions.id = prescribed_drugs.prescription_id
     "#,
         )
@@ -187,22 +214,25 @@ impl<'a> PrescriptionsRepositoryTrait for PrescriptionsRepository<'a> {
 
         let mut prescriptions: Vec<Prescription> = vec![];
 
-        for (
-            prescription_id,
-            patient_id,
-            doctor_id,
-            prescription_type,
-            start_date,
-            end_date,
-            prescription_created_at,
-            prescription_updated_at,
-            prescribed_drug_id,
-            drug_id,
-            quantity,
-            prescribed_drug_created_at,
-            prescribed_drug_updated_at,
-        ) in prescription_from_db
-        {
+        for row in prescription_from_db {
+            let prescription_id: Uuid = row.get(0);
+            let patient_id: Uuid = row.get(1);
+            let doctor_id: Uuid = row.get(2);
+            let prescription_type: PrescriptionType = row.get(3);
+            let start_date: DateTime<Utc> = row.get(4);
+            let end_date: DateTime<Utc> = row.get(5);
+            let prescription_created_at: DateTime<Utc> = row.get(6);
+            let prescription_updated_at: DateTime<Utc> = row.get(7);
+            let prescribed_drug_id: Uuid = row.get(8);
+            let drug_id: Uuid = row.get(9);
+            let quantity: i32 = row.get(10);
+            let prescribed_drug_created_at: DateTime<Utc> = row.get(11);
+            let prescribed_drug_updated_at: DateTime<Utc> = row.get(12);
+            let prescription_fill_id: Option<Uuid> = row.get(13);
+            let filling_pharmacist_id: Option<Uuid> = row.get(14);
+            let prescription_fill_created_at: Option<DateTime<Utc>> = row.get(15);
+            let prescription_fill_updated_at: Option<DateTime<Utc>> = row.get(16);
+
             let prescription = prescriptions.iter_mut().find(|p| p.id == prescription_id);
 
             let prescribed_drug = PrescribedDrug {
@@ -217,6 +247,18 @@ impl<'a> PrescriptionsRepositoryTrait for PrescriptionsRepository<'a> {
             if let Some(prescription) = prescription {
                 prescription.prescribed_drugs.push(prescribed_drug);
             } else {
+                let fill = if let Some(prescription_fill_id) = prescription_fill_id {
+                    Some(PrescriptionFill {
+                        id: prescription_fill_id,
+                        prescription_id,
+                        pharmacist_id: filling_pharmacist_id.unwrap(),
+                        created_at: prescription_fill_created_at.unwrap(),
+                        updated_at: prescription_fill_updated_at.unwrap(),
+                    })
+                } else {
+                    None
+                };
+
                 prescriptions.push(Prescription {
                     id: prescription_id,
                     patient_id,
@@ -225,7 +267,7 @@ impl<'a> PrescriptionsRepositoryTrait for PrescriptionsRepository<'a> {
                     start_date,
                     end_date,
                     prescribed_drugs: vec![prescribed_drug],
-                    fill: None,
+                    fill,
                     created_at: prescription_created_at,
                     updated_at: prescription_updated_at,
                 });

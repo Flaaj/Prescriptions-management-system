@@ -78,8 +78,8 @@ pub async fn create_tables(pool: &sqlx::PgPool, drop: bool) -> Result<(), sqlx::
         r#"
         CREATE TABLE IF NOT EXISTS prescription_fills (
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            prescription_id UUID,
-            pharmacist_id UUID,
+            prescription_id UUID NOT NULL,
+            pharmacist_id UUID NOT NULL,
             created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
             updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
         );"#
