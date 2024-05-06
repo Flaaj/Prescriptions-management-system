@@ -118,30 +118,29 @@ impl<'a> PrescriptionsRepositoryTrait for PrescriptionsRepository<'a> {
 
         for row in prescriptions_from_db {
             let prescription_id: Uuid = row.get(0);
-            let patient_id: Uuid = row.get(1);
-            let doctor_id: Uuid = row.get(2);
-            let prescription_type: PrescriptionType = row.get(3);
-            let start_date: DateTime<Utc> = row.get(4);
-            let end_date: DateTime<Utc> = row.get(5);
+            let prescription_patient_id: Uuid = row.get(1);
+            let prescription_doctor_id: Uuid = row.get(2);
+            let prescription_prescription_type: PrescriptionType = row.get(3);
+            let prescription_start_date: DateTime<Utc> = row.get(4);
+            let prescription_end_date: DateTime<Utc> = row.get(5);
             let prescription_created_at: DateTime<Utc> = row.get(6);
             let prescription_updated_at: DateTime<Utc> = row.get(7);
             let prescribed_drug_id: Uuid = row.get(8);
-            let drug_id: Uuid = row.get(9);
-            let quantity: i32 = row.get(10);
+            let prescribed_drug_drug_id: Uuid = row.get(9);
+            let prescribed_drug_quantity: i32 = row.get(10);
             let prescribed_drug_created_at: DateTime<Utc> = row.get(11);
             let prescribed_drug_updated_at: DateTime<Utc> = row.get(12);
             let prescription_fill_id: Option<Uuid> = row.get(13);
-            let filling_pharmacist_id: Option<Uuid> = row.get(14);
+            let prescription_fill_pharmacist_id: Option<Uuid> = row.get(14);
             let prescription_fill_created_at: Option<DateTime<Utc>> = row.get(15);
             let prescription_fill_updated_at: Option<DateTime<Utc>> = row.get(16);
-
             let prescription = prescriptions.iter_mut().find(|p| p.id == prescription_id);
 
             let prescribed_drug = PrescribedDrug {
                 id: prescribed_drug_id,
                 prescription_id,
-                drug_id,
-                quantity,
+                drug_id: prescribed_drug_drug_id,
+                quantity: prescribed_drug_quantity,
                 created_at: prescribed_drug_created_at,
                 updated_at: prescribed_drug_updated_at,
             };
@@ -153,7 +152,7 @@ impl<'a> PrescriptionsRepositoryTrait for PrescriptionsRepository<'a> {
                     Some(PrescriptionFill {
                         id: prescription_fill_id,
                         prescription_id,
-                        pharmacist_id: filling_pharmacist_id.unwrap(),
+                        pharmacist_id: prescription_fill_pharmacist_id.unwrap(),
                         created_at: prescription_fill_created_at.unwrap(),
                         updated_at: prescription_fill_updated_at.unwrap(),
                     })
@@ -163,11 +162,11 @@ impl<'a> PrescriptionsRepositoryTrait for PrescriptionsRepository<'a> {
 
                 prescriptions.push(Prescription {
                     id: prescription_id,
-                    patient_id,
-                    doctor_id,
-                    prescription_type,
-                    start_date,
-                    end_date,
+                    patient_id: prescription_patient_id,
+                    doctor_id: prescription_doctor_id,
+                    prescription_type: prescription_prescription_type,
+                    start_date: prescription_start_date,
+                    end_date: prescription_end_date,
                     prescribed_drugs: vec![prescribed_drug],
                     fill,
                     created_at: prescription_created_at,
@@ -216,20 +215,20 @@ impl<'a> PrescriptionsRepositoryTrait for PrescriptionsRepository<'a> {
 
         for row in prescription_from_db {
             let prescription_id: Uuid = row.get(0);
-            let patient_id: Uuid = row.get(1);
-            let doctor_id: Uuid = row.get(2);
-            let prescription_type: PrescriptionType = row.get(3);
-            let start_date: DateTime<Utc> = row.get(4);
-            let end_date: DateTime<Utc> = row.get(5);
+            let prescription_patient_id: Uuid = row.get(1);
+            let prescription_doctor_id: Uuid = row.get(2);
+            let prescription_prescription_type: PrescriptionType = row.get(3);
+            let prescription_start_date: DateTime<Utc> = row.get(4);
+            let prescription_end_date: DateTime<Utc> = row.get(5);
             let prescription_created_at: DateTime<Utc> = row.get(6);
             let prescription_updated_at: DateTime<Utc> = row.get(7);
             let prescribed_drug_id: Uuid = row.get(8);
-            let drug_id: Uuid = row.get(9);
-            let quantity: i32 = row.get(10);
+            let prescribed_drug_drug_id: Uuid = row.get(9);
+            let prescribed_drug_quantity: i32 = row.get(10);
             let prescribed_drug_created_at: DateTime<Utc> = row.get(11);
             let prescribed_drug_updated_at: DateTime<Utc> = row.get(12);
             let prescription_fill_id: Option<Uuid> = row.get(13);
-            let filling_pharmacist_id: Option<Uuid> = row.get(14);
+            let prescription_fill_pharmacist_id: Option<Uuid> = row.get(14);
             let prescription_fill_created_at: Option<DateTime<Utc>> = row.get(15);
             let prescription_fill_updated_at: Option<DateTime<Utc>> = row.get(16);
 
@@ -238,8 +237,8 @@ impl<'a> PrescriptionsRepositoryTrait for PrescriptionsRepository<'a> {
             let prescribed_drug = PrescribedDrug {
                 id: prescribed_drug_id,
                 prescription_id,
-                drug_id,
-                quantity,
+                drug_id: prescribed_drug_drug_id,
+                quantity: prescribed_drug_quantity,
                 created_at: prescribed_drug_created_at,
                 updated_at: prescribed_drug_updated_at,
             };
@@ -251,7 +250,7 @@ impl<'a> PrescriptionsRepositoryTrait for PrescriptionsRepository<'a> {
                     Some(PrescriptionFill {
                         id: prescription_fill_id,
                         prescription_id,
-                        pharmacist_id: filling_pharmacist_id.unwrap(),
+                        pharmacist_id: prescription_fill_pharmacist_id.unwrap(),
                         created_at: prescription_fill_created_at.unwrap(),
                         updated_at: prescription_fill_updated_at.unwrap(),
                     })
@@ -261,11 +260,11 @@ impl<'a> PrescriptionsRepositoryTrait for PrescriptionsRepository<'a> {
 
                 prescriptions.push(Prescription {
                     id: prescription_id,
-                    patient_id,
-                    doctor_id,
-                    prescription_type,
-                    start_date,
-                    end_date,
+                    patient_id: prescription_patient_id,
+                    doctor_id: prescription_doctor_id,
+                    prescription_type: prescription_prescription_type,
+                    start_date: prescription_start_date,
+                    end_date: prescription_end_date,
                     prescribed_drugs: vec![prescribed_drug],
                     fill,
                     created_at: prescription_created_at,
