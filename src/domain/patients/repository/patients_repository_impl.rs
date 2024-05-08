@@ -1,7 +1,10 @@
 use async_trait::async_trait;
 use uuid::Uuid;
 
-use crate::domain::patients::models::{NewPatient, Patient};
+use crate::{
+    domain::patients::models::{NewPatient, Patient},
+    utils::pagination::get_pagination_params,
+};
 
 use super::patients_repository_trait::PatientsRepositoryTrait;
 
@@ -30,9 +33,17 @@ impl<'a> PatientsRepositoryTrait for PatientsRepository<'a> {
         Ok(())
     }
 
-    async fn get_patients(&self) -> anyhow::Result<Vec<Patient>> {
+    async fn get_patients(
+        &self,
+        page: Option<i64>,
+        page_size: Option<i64>,
+    ) -> anyhow::Result<Vec<Patient>> {
+        let (page_size, offset) = get_pagination_params(page, page_size)?;
+
         let patients_from_db = sqlx::query!(
-            r#"SELECT id, name, pesel_number, created_at, updated_at FROM patients"#,
+            r#"SELECT id, name, pesel_number, created_at, updated_at FROM patients LIMIT $1 OFFSET $2"#,
+            page_size,
+            offset
         )
         .fetch_all(self.pool)
         .await?;
@@ -87,15 +98,30 @@ mod integration_tests {
         create_tables(&pool, true).await.unwrap();
         let repo = PatientsRepository::new(&pool);
 
-        let patient = NewPatient::new("John Doe".into(), "96021817257".into()).unwrap();
+        repo.create_patient(NewPatient::new("John Doe".into(), "96021817257".into()).unwrap())
+            .await
+            .unwrap();
+        repo.create_patient(NewPatient::new("John Doe".into(), "99031301347".into()).unwrap())
+            .await
+            .unwrap();
+        repo.create_patient(NewPatient::new("John Doe".into(), "92022900002".into()).unwrap())
+            .await
+            .unwrap();
+        repo.create_patient(NewPatient::new("John Doe".into(), "96021807250".into()).unwrap())
+            .await
+            .unwrap();
 
-        repo.create_patient(patient).await.unwrap();
+        let patients = repo.get_patients(None, Some(2)).await.unwrap();
+        assert_eq!(patients.len(), 2);
 
-        let patients = repo.get_patients().await.unwrap();
-        let first_patient = patients.first().unwrap();
+        let patients = repo.get_patients(None, Some(10)).await.unwrap();
+        assert!(patients.len() == 4);
 
-        assert_eq!(first_patient.name, "John Doe");
-        assert_eq!(first_patient.pesel_number, "96021817257");
+        let patients = repo.get_patients(Some(1), Some(3)).await.unwrap();
+        assert!(patients.len() == 1);
+
+        let patients = repo.get_patients(Some(2), Some(3)).await.unwrap();
+        assert!(patients.len() == 0);
     }
 
     #[sqlx::test]
@@ -110,5 +136,21 @@ mod integration_tests {
         let patient_from_repo = repo.get_patient_by_id(patient.id).await.unwrap();
 
         assert_eq!(patient_from_repo.id, patient.id);
+    }
+
+    #[sqlx::test]
+    async fn doesnt_create_patient_if_pesel_number_is_duplicated(pool: sqlx::PgPool) {
+        create_tables(&pool, true).await.unwrap();
+        let repo = PatientsRepository::new(&pool);
+
+        let patient = NewPatient::new("John Doe".into(), "96021817257".into()).unwrap();
+        assert!(repo.create_patient(patient).await.is_ok());
+
+        let patient_with_duplicated_pesel_number =
+            NewPatient::new("John Doe".into(), "96021817257".into()).unwrap();
+        assert!(repo
+            .create_patient(patient_with_duplicated_pesel_number)
+            .await
+            .is_err());
     }
 }

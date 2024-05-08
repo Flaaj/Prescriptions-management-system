@@ -41,14 +41,7 @@ impl<'a> PharmacistsRepositoryTrait for PharmacistsRepository<'a> {
         let (page_size, offset) = get_pagination_params(page, page_size)?;
 
         let pharmacists_from_db = sqlx::query!(
-            r#"SELECT 
-                id, 
-                name, 
-                pesel_number, 
-                created_at, 
-                updated_at 
-            FROM pharmacists
-            LIMIT $1 OFFSET $2"#,
+            r#"SELECT id, name, pesel_number, created_at, updated_at FROM pharmacists LIMIT $1 OFFSET $2"#,
             page_size,
             offset
         )
