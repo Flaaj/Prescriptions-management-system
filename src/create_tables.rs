@@ -15,6 +15,12 @@ pub async fn create_tables(pool: &sqlx::PgPool, drop: bool) -> Result<(), sqlx::
         sqlx::query!(r#"DROP TABLE IF EXISTS prescription_fills;"#)
             .execute(pool)
             .await?;
+        sqlx::query!(r#"DROP TABLE IF EXISTS prescription_fills;"#)
+            .execute(pool)
+            .await?;
+        sqlx::query!(r#"DROP TABLE IF EXISTS prescription_fills;"#)
+            .execute(pool)
+            .await?;
     }
 
     sqlx::query!(
@@ -29,36 +35,6 @@ pub async fn create_tables(pool: &sqlx::PgPool, drop: bool) -> Result<(), sqlx::
     )
         .execute(pool)
         .await?;
-
-    sqlx::query!(
-        r#"
-        CREATE TABLE IF NOT EXISTS prescriptions (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            patient_id UUID NOT NULL,
-            doctor_id UUID NOT NULL,
-            prescription_type prescription_type NOT NULL,
-            start_date TIMESTAMPTZ NOT NULL,
-            end_date TIMESTAMPTZ NOT NULL,
-            created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
-            updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
-        );"#
-    )
-    .execute(pool)
-    .await?;
-
-    sqlx::query!(
-        r#"
-        CREATE TABLE IF NOT EXISTS prescribed_drugs (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            prescription_id UUID NOT NULL,
-            drug_id UUID NOT NULL,
-            quantity INT NOT NULL,
-            created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
-            updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
-        );"#
-    )
-    .execute(pool)
-    .await?;
 
     sqlx::query!(
         r#"
@@ -102,10 +78,40 @@ pub async fn create_tables(pool: &sqlx::PgPool, drop: bool) -> Result<(), sqlx::
 
     sqlx::query!(
         r#"
+        CREATE TABLE IF NOT EXISTS prescriptions (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            patient_id UUID NOT NULL REFERENCES patients(id),
+            doctor_id UUID NOT NULL REFERENCES doctors(id),
+            prescription_type prescription_type NOT NULL,
+            start_date TIMESTAMPTZ NOT NULL,
+            end_date TIMESTAMPTZ NOT NULL,
+            created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+            updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
+        );"#
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query!(
+        r#"
+        CREATE TABLE IF NOT EXISTS prescribed_drugs (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            prescription_id UUID NOT NULL REFERENCES prescriptions(id),
+            drug_id UUID NOT NULL,
+            quantity INT NOT NULL,
+            created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+            updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
+        );"#
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query!(
+        r#"
         CREATE TABLE IF NOT EXISTS prescription_fills (
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            prescription_id UUID NOT NULL,
-            pharmacist_id UUID NOT NULL,
+            prescription_id UUID NOT NULL REFERENCES prescriptions(id),
+            pharmacist_id UUID NOT NULL REFERENCES pharmacists(id),
             created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
             updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
         );"#

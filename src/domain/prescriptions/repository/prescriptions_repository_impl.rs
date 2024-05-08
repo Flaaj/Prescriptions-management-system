@@ -296,18 +296,72 @@ mod integration_tests {
     use super::{GetPrescriptionError, PrescriptionsRepository};
     use crate::{
         create_tables::create_tables,
-        domain::prescriptions::{
-            models::NewPrescription,
-            repository::prescriptions_repository_trait::PrescriptionsRepositoryTrait,
+        domain::{
+            doctors::{
+                models::NewDoctor,
+                repository::{
+                    doctors_repository_impl::DoctorsRepository,
+                    doctors_repository_trait::DoctorsRepositoryTrait,
+                },
+            },
+            patients::{
+                models::NewPatient,
+                repository::{
+                    patients_repository_impl::PatientsRepository,
+                    patients_repository_trait::PatientsRepositoryTrait,
+                },
+            },
+            pharmacists::{
+                models::NewPharmacist,
+                repository::{
+                    pharmacists_repository_impl::PharmacistsRepository,
+                    pharmacists_repository_trait::PharmacistsRepositoryTrait,
+                },
+            },
+            prescriptions::{
+                models::NewPrescription,
+                repository::prescriptions_repository_trait::PrescriptionsRepositoryTrait,
+            },
         },
     };
+
+    async fn seed_database(pool: &sqlx::PgPool) -> anyhow::Result<(Uuid, Uuid, Uuid)> {
+        let pharmacists_repo = PharmacistsRepository::new(&pool);
+        let pharmacist = NewPharmacist::new(
+            "John Pharmacist".into(), //
+            "96021807250".into(),
+        )?;
+        let pharmacist_result = pharmacists_repo.create_pharmacist(pharmacist.clone());
+
+        let patients_repo = PatientsRepository::new(&pool);
+        let patient = NewPatient::new(
+            "John Patient".into(), //
+            "96021807250".into(),
+        )?;
+        let patient_result = patients_repo.create_patient(patient.clone());
+
+        let doctors_repo = DoctorsRepository::new(&pool);
+        let doctor = NewDoctor::new(
+            "John Doctor".into(), //
+            "3123456".into(),
+            "96021807250".into(),
+        )?;
+        let doctor_result = doctors_repo.create_doctor(doctor.clone());
+
+        pharmacist_result.await?;
+        patient_result.await?;
+        doctor_result.await?;
+
+        Ok((doctor.id, pharmacist.id, patient.id))
+    }
 
     #[sqlx::test]
     async fn create_and_read_prescriptions_from_database(pool: sqlx::PgPool) {
         create_tables(&pool, true).await.unwrap();
+        let (doctor_id, _, patient_id) = seed_database(&pool).await.unwrap();
         let repo = PrescriptionsRepository::new(&pool);
 
-        let mut prescription = NewPrescription::new(Uuid::new_v4(), Uuid::new_v4(), None, None);
+        let mut prescription = NewPrescription::new(doctor_id, patient_id, None, None);
         prescription.add_drug(Uuid::new_v4(), 1).unwrap();
         prescription.add_drug(Uuid::new_v4(), 1).unwrap();
         prescription.add_drug(Uuid::new_v4(), 1).unwrap();
@@ -318,8 +372,7 @@ mod integration_tests {
             .unwrap();
 
         for _ in 0..10 {
-            let mut another_prescription =
-                NewPrescription::new(Uuid::new_v4(), Uuid::new_v4(), None, None);
+            let mut another_prescription = NewPrescription::new(doctor_id, patient_id, None, None);
             another_prescription.add_drug(Uuid::new_v4(), 1).unwrap();
             repo.create_prescription(another_prescription)
                 .await
@@ -341,8 +394,9 @@ mod integration_tests {
     async fn create_and_read_prescription_by_id(pool: sqlx::PgPool) {
         create_tables(&pool, true).await.unwrap();
         let repo = PrescriptionsRepository::new(&pool);
+        let (doctor_id, _, patient_id) = seed_database(&pool).await.unwrap();
 
-        let mut prescription = NewPrescription::new(Uuid::new_v4(), Uuid::new_v4(), None, None);
+        let mut prescription = NewPrescription::new(doctor_id, patient_id, None, None);
         prescription.add_drug(Uuid::new_v4(), 1).unwrap();
         prescription.add_drug(Uuid::new_v4(), 1).unwrap();
 
@@ -373,8 +427,9 @@ mod integration_tests {
     async fn fills_prescription_and_saves_to_database(pool: sqlx::PgPool) {
         create_tables(&pool, true).await.unwrap();
         let repo = PrescriptionsRepository::new(&pool);
+        let (doctor_id, pharmacist_id, patient_id) = seed_database(&pool).await.unwrap();
 
-        let mut prescription = NewPrescription::new(Uuid::new_v4(), Uuid::new_v4(), None, None);
+        let mut prescription = NewPrescription::new(doctor_id, patient_id, None, None);
         prescription.add_drug(Uuid::new_v4(), 1).unwrap();
 
         repo.create_prescription(prescription.clone())
@@ -385,7 +440,7 @@ mod integration_tests {
 
         assert!(prescription_from_db.fill.is_none());
 
-        let prescription_fill = prescription_from_db.fill(Uuid::new_v4()).unwrap();
+        let prescription_fill = prescription_from_db.fill(pharmacist_id).unwrap();
         repo.fill_prescription(prescription_fill).await.unwrap();
 
         let prescription_from_db = repo.get_prescription_by_id(prescription.id).await.unwrap();
