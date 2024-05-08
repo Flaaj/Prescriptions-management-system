@@ -1,38 +1,35 @@
 use uuid::Uuid;
 
-use crate::utils::validators::{
-    validate_name::validate_name, validate_pesel_number::validate_pesel_number,
+use crate::{
+    domain::patients::models::NewPatient,
+    utils::validators::{
+        validate_name::validate_name, validate_pesel_number::validate_pesel_number,
+    },
 };
 
-pub struct NewPatient {
-    pub id: Uuid,
-    pub name: String,
-    pub pesel: String,
-}
-
 impl NewPatient {
-    pub fn new(name: String, pesel: String) -> anyhow::Result<Self> {
+    pub fn new(name: String, pesel_number: String) -> anyhow::Result<Self> {
         validate_name(&name)?;
-        validate_pesel_number(&pesel)?;
+        validate_pesel_number(&pesel_number)?;
 
         Ok(NewPatient {
             id: Uuid::new_v4(),
             name,
-            pesel,
+            pesel_number,
         })
     }
 }
 
 #[cfg(test)]
 mod unit_tests {
-    use super::NewPatient;
+    use crate::domain::patients::models::NewPatient;
 
     #[test]
     fn creates_patient() {
         let sut = NewPatient::new("John Doe".into(), "96021817257".into()).unwrap();
 
         assert_eq!(sut.name, "John Doe");
-        assert_eq!(sut.pesel, "96021817257");
+        assert_eq!(sut.pesel_number, "96021817257");
     }
 
     #[test]
