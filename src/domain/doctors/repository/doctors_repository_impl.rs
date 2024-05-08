@@ -156,6 +156,9 @@ mod integration_tests {
 
         let doctors = repo.get_doctors(Some(1), Some(3)).await.unwrap();
         assert!(doctors.len() == 1);
+
+        let doctors = repo.get_doctors(Some(2), Some(3)).await.unwrap();
+        assert!(doctors.len() == 0);
     }
 
     #[sqlx::test]
