@@ -15,10 +15,10 @@ pub async fn create_tables(pool: &sqlx::PgPool, drop: bool) -> Result<(), sqlx::
         sqlx::query!(r#"DROP TABLE IF EXISTS prescription_fills;"#)
             .execute(pool)
             .await?;
-        sqlx::query!(r#"DROP TABLE IF EXISTS prescription_fills;"#)
+        sqlx::query!(r#"DROP TABLE IF EXISTS patients;"#)
             .execute(pool)
             .await?;
-        sqlx::query!(r#"DROP TABLE IF EXISTS prescription_fills;"#)
+        sqlx::query!(r#"DROP TABLE IF EXISTS pharmacists;"#)
             .execute(pool)
             .await?;
     }
