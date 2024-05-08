@@ -3,9 +3,12 @@ use chrono::{DateTime, Utc};
 use sqlx::Row;
 use uuid::Uuid;
 
-use crate::domain::prescriptions::models::{
-    NewPrescription, NewPrescriptionFill, PrescribedDrug, Prescription, PrescriptionFill,
-    PrescriptionType,
+use crate::{
+    domain::prescriptions::models::{
+        NewPrescription, NewPrescriptionFill, PrescribedDrug, Prescription, PrescriptionFill,
+        PrescriptionType,
+    },
+    utils::pagination::get_pagination_params,
 };
 
 use super::prescriptions_repository_trait::PrescriptionsRepositoryTrait;
@@ -18,12 +21,6 @@ impl<'a> PrescriptionsRepository<'a> {
     pub fn new(pool: &'a sqlx::PgPool) -> Self {
         Self { pool }
     }
-}
-
-#[derive(thiserror::Error, Debug)]
-enum PaginationError {
-    #[error("Invalid page or page_size: page must be at least 0 and page_size must be at least 1")]
-    InvalidPageOrPageSize,
 }
 
 #[derive(thiserror::Error, Debug, PartialEq)]
@@ -70,15 +67,10 @@ impl<'a> PrescriptionsRepositoryTrait for PrescriptionsRepository<'a> {
 
     async fn get_prescriptions(
         &self,
-        page: Option<i16>,
-        page_size: Option<i16>,
+        page: Option<i64>,
+        page_size: Option<i64>,
     ) -> anyhow::Result<Vec<Prescription>> {
-        let page = page.unwrap_or(0);
-        let page_size = page_size.unwrap_or(10);
-        if page_size < 1 || page < 0 {
-            Err(PaginationError::InvalidPageOrPageSize)?;
-        }
-        let offset = page * page_size;
+        let (page_size, offset) = get_pagination_params(page, page_size)?;
 
         let prescriptions_from_db = sqlx::query(
             r#"
@@ -134,7 +126,7 @@ impl<'a> PrescriptionsRepositoryTrait for PrescriptionsRepository<'a> {
             let prescription_fill_pharmacist_id: Option<Uuid> = row.get(14);
             let prescription_fill_created_at: Option<DateTime<Utc>> = row.get(15);
             let prescription_fill_updated_at: Option<DateTime<Utc>> = row.get(16);
-            
+
             let prescription = prescriptions.iter_mut().find(|p| p.id == prescription_id);
 
             let prescribed_drug = PrescribedDrug {

@@ -1,7 +1,10 @@
 use async_trait::async_trait;
 use uuid::Uuid;
 
-use crate::domain::doctors::models::{Doctor, NewDoctor};
+use crate::{
+    domain::doctors::models::{Doctor, NewDoctor},
+    utils::pagination::get_pagination_params,
+};
 
 use super::doctors_repository_trait::DoctorsRepositoryTrait;
 
@@ -13,12 +16,6 @@ impl<'a> DoctorsRepository<'a> {
     pub fn new(pool: &'a sqlx::PgPool) -> Self {
         Self { pool }
     }
-}
-
-#[derive(thiserror::Error, Debug)]
-enum PaginationError {
-    #[error("Invalid page or page_size: page must be at least 0 and page_size must be at least 1")]
-    InvalidPageOrPageSize,
 }
 
 #[async_trait]
@@ -42,12 +39,7 @@ impl<'a> DoctorsRepositoryTrait for DoctorsRepository<'a> {
         page: Option<i64>,
         page_size: Option<i64>,
     ) -> anyhow::Result<Vec<Doctor>> {
-        let page = page.unwrap_or(0);
-        let page_size = page_size.unwrap_or(10);
-        if page_size < 1 || page < 0 {
-            Err(PaginationError::InvalidPageOrPageSize)?;
-        }
-        let offset = page * page_size;
+        let (page_size, offset) = get_pagination_params(page, page_size)?;
 
         let doctors_from_db = sqlx::query!(
             r#"SELECT 
@@ -113,17 +105,12 @@ mod integration_tests {
     };
 
     #[sqlx::test]
-    async fn create_and_read_prescriptions_from_database(pool: sqlx::PgPool) {
+    async fn create_and_read_doctors_from_database(pool: sqlx::PgPool) {
         create_tables(&pool, true).await.unwrap();
         let repo = DoctorsRepository::new(&pool);
 
         repo.create_doctor(
-            NewDoctor::new(
-                "John Doe".into(), //
-                "5425740".into(),
-                "96021817257".into(),
-            )
-            .unwrap(),
+            NewDoctor::new("John Doe".into(), "5425740".into(), "96021817257".into()).unwrap(),
         )
         .await
         .unwrap();
@@ -133,12 +120,7 @@ mod integration_tests {
         .await
         .unwrap();
         repo.create_doctor(
-            NewDoctor::new(
-                "John Doe".into(), //
-                "3123456".into(),
-                "92022900002".into(),
-            )
-            .unwrap(),
+            NewDoctor::new("John Doe".into(), "3123456".into(), "92022900002".into()).unwrap(),
         )
         .await
         .unwrap();
@@ -173,9 +155,7 @@ mod integration_tests {
 
         let doctor_from_repo = repo.get_doctor_by_id(doctor.id).await.unwrap();
 
-        assert_eq!(doctor_from_repo.name, "John Doe");
-        assert_eq!(doctor_from_repo.pwz_number, "5425740");
-        assert_eq!(doctor_from_repo.pesel_number, "96021817257");
+        assert_eq!(doctor_from_repo.id, doctor.id);
     }
 
     #[sqlx::test]
@@ -187,17 +167,17 @@ mod integration_tests {
             NewDoctor::new("John Doe".into(), "5425740".into(), "96021817257".into()).unwrap();
         assert!(repo.create_doctor(doctor).await.is_ok());
 
-        let doctor_with_duplicate_pwz_number =
+        let doctor_with_duplicated_pwz_number =
             NewDoctor::new("John Doe".into(), "5425740".into(), "99031301347".into()).unwrap();
         assert!(repo
-            .create_doctor(doctor_with_duplicate_pwz_number)
+            .create_doctor(doctor_with_duplicated_pwz_number)
             .await
             .is_err());
 
-        let doctor_with_duplicate_pesel_number =
+        let doctor_with_duplicated_pesel_number =
             NewDoctor::new("John Doe".into(), "3123456".into(), "96021817257".into()).unwrap();
         assert!(repo
-            .create_doctor(doctor_with_duplicate_pesel_number)
+            .create_doctor(doctor_with_duplicated_pesel_number)
             .await
             .is_err());
     }

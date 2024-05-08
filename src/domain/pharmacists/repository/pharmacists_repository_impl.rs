@@ -1,7 +1,10 @@
 use async_trait::async_trait;
 use uuid::Uuid;
 
-use crate::domain::pharmacists::models::{NewPharmacist, Pharmacist};
+use crate::{
+    domain::pharmacists::models::{NewPharmacist, Pharmacist},
+    utils::pagination::get_pagination_params,
+};
 
 use super::pharmacists_repository_trait::PharmacistsRepositoryTrait;
 
@@ -30,9 +33,24 @@ impl<'a> PharmacistsRepositoryTrait for PharmacistsRepository<'a> {
         Ok(())
     }
 
-    async fn get_pharmacists(&self) -> anyhow::Result<Vec<Pharmacist>> {
+    async fn get_pharmacists(
+        &self,
+        page: Option<i64>,
+        page_size: Option<i64>,
+    ) -> anyhow::Result<Vec<Pharmacist>> {
+        let (page_size, offset) = get_pagination_params(page, page_size)?;
+
         let pharmacists_from_db = sqlx::query!(
-            r#"SELECT id, name, pesel_number, created_at, updated_at FROM pharmacists"#,
+            r#"SELECT 
+                id, 
+                name, 
+                pesel_number, 
+                created_at, 
+                updated_at 
+            FROM pharmacists
+            LIMIT $1 OFFSET $2"#,
+            page_size,
+            offset
         )
         .fetch_all(self.pool)
         .await?;
@@ -87,15 +105,38 @@ mod integration_tests {
         create_tables(&pool, true).await.unwrap();
         let repo = PharmacistsRepository::new(&pool);
 
-        let pharmacist = NewPharmacist::new("John Doe".into(), "96021817257".into()).unwrap();
+        repo.create_pharmacist(
+            NewPharmacist::new("John Doe".into(), "96021817257".into()).unwrap(),
+        )
+        .await
+        .unwrap();
+        repo.create_pharmacist(
+            NewPharmacist::new("John Doe".into(), "99031301347".into()).unwrap(),
+        )
+        .await
+        .unwrap();
+        repo.create_pharmacist(
+            NewPharmacist::new("John Doe".into(), "92022900002".into()).unwrap(),
+        )
+        .await
+        .unwrap();
+        repo.create_pharmacist(
+            NewPharmacist::new("John Doe".into(), "96021807250".into()).unwrap(),
+        )
+        .await
+        .unwrap();
 
-        repo.create_pharmacist(pharmacist).await.unwrap();
+        let pharmacists = repo.get_pharmacists(None, Some(2)).await.unwrap();
+        assert_eq!(pharmacists.len(), 2);
 
-        let pharmacists = repo.get_pharmacists().await.unwrap();
-        let first_pharmacist = pharmacists.first().unwrap();
+        let pharmacists = repo.get_pharmacists(None, Some(10)).await.unwrap();
+        assert!(pharmacists.len() == 4);
 
-        assert_eq!(first_pharmacist.name, "John Doe");
-        assert_eq!(first_pharmacist.pesel_number, "96021817257");
+        let pharmacists = repo.get_pharmacists(Some(1), Some(3)).await.unwrap();
+        assert!(pharmacists.len() == 1);
+
+        let pharmacists = repo.get_pharmacists(Some(2), Some(3)).await.unwrap();
+        assert!(pharmacists.len() == 0);
     }
 
     #[sqlx::test]
@@ -110,5 +151,21 @@ mod integration_tests {
         let pharmacist_from_repo = repo.get_pharmacist_by_id(pharmacist.id).await.unwrap();
 
         assert_eq!(pharmacist_from_repo.id, pharmacist.id);
+    }
+
+    #[sqlx::test]
+    async fn doesnt_create_pharmacist_if_pesel_number_is_duplicated(pool: sqlx::PgPool) {
+        create_tables(&pool, true).await.unwrap();
+        let repo = PharmacistsRepository::new(&pool);
+
+        let pharmacist = NewPharmacist::new("John Doe".into(), "96021817257".into()).unwrap();
+        assert!(repo.create_pharmacist(pharmacist).await.is_ok());
+
+        let pharmacist_with_duplicated_pesel_number =
+            NewPharmacist::new("John Doe".into(), "96021817257".into()).unwrap();
+        assert!(repo
+            .create_pharmacist(pharmacist_with_duplicated_pesel_number)
+            .await
+            .is_err());
     }
 }

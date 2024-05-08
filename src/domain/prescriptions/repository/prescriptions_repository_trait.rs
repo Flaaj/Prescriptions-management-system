@@ -8,8 +8,8 @@ pub trait PrescriptionsRepositoryTrait {
     async fn create_prescription(&self, prescription: NewPrescription) -> anyhow::Result<()>;
     async fn get_prescriptions(
         &self,
-        page: Option<i16>,
-        page_size: Option<i16>,
+        page: Option<i64>,
+        page_size: Option<i64>,
     ) -> anyhow::Result<Vec<Prescription>>;
     async fn get_prescription_by_id(&self, prescription_id: Uuid) -> anyhow::Result<Prescription>;
     async fn fill_prescription(&self, prescription_fill: NewPrescriptionFill) -> anyhow::Result<()>;
