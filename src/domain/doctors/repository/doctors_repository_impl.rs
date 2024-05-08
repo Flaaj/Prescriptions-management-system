@@ -15,6 +15,12 @@ impl<'a> DoctorsRepository<'a> {
     }
 }
 
+#[derive(thiserror::Error, Debug)]
+enum PaginationError {
+    #[error("Invalid page or page_size: page must be at least 0 and page_size must be at least 1")]
+    InvalidPageOrPageSize,
+}
+
 #[async_trait]
 impl<'a> DoctorsRepositoryTrait for DoctorsRepository<'a> {
     async fn create_doctor(&self, doctor: NewDoctor) -> anyhow::Result<()> {
@@ -33,11 +39,28 @@ impl<'a> DoctorsRepositoryTrait for DoctorsRepository<'a> {
 
     async fn get_doctors(
         &self,
-        page: Option<i16>,
-        page_size: Option<i16>,
+        page: Option<i64>,
+        page_size: Option<i64>,
     ) -> anyhow::Result<Vec<Doctor>> {
+        let page = page.unwrap_or(0);
+        let page_size = page_size.unwrap_or(10);
+        if page_size < 1 || page < 0 {
+            Err(PaginationError::InvalidPageOrPageSize)?;
+        }
+        let offset = page * page_size;
+
         let doctors_from_db = sqlx::query!(
-            r#"SELECT id, name, pwz_number, pesel_number, created_at, updated_at FROM doctors"#,
+            r#"SELECT 
+                id, 
+                name, 
+                pwz_number, 
+                pesel_number, 
+                created_at, 
+                updated_at 
+            FROM doctors 
+            LIMIT $1 OFFSET $2"#,
+            page_size,
+            offset
         )
         .fetch_all(self.pool)
         .await?;
@@ -105,12 +128,7 @@ mod integration_tests {
         .await
         .unwrap();
         repo.create_doctor(
-            NewDoctor::new(
-                "John Doe".into(),
-                "8463856".into(),
-                "99031301347".into(),
-            )
-            .unwrap(),
+            NewDoctor::new("John Doe".into(), "8463856".into(), "99031301347".into()).unwrap(),
         )
         .await
         .unwrap();
@@ -125,12 +143,7 @@ mod integration_tests {
         .await
         .unwrap();
         repo.create_doctor(
-            NewDoctor::new(
-                "John Doe".into(),
-                "5425751".into(),
-                "96021807250".into(),
-            )
-            .unwrap(),
+            NewDoctor::new("John Doe".into(), "5425751".into(), "96021807250".into()).unwrap(),
         )
         .await
         .unwrap();
