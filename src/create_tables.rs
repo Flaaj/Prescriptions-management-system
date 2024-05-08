@@ -65,8 +65,8 @@ pub async fn create_tables(pool: &sqlx::PgPool, drop: bool) -> Result<(), sqlx::
         CREATE TABLE IF NOT EXISTS doctors (
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
             name VARCHAR(100) NOT NULL,
-            pesel_number VARCHAR(11) NOT NULL,
-            pwz_number VARCHAR(7) NOT NULL,
+            pesel_number VARCHAR(11) UNIQUE NOT NULL,
+            pwz_number VARCHAR(7) UNIQUE NOT NULL,
             created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
             updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
         );"#
@@ -79,7 +79,7 @@ pub async fn create_tables(pool: &sqlx::PgPool, drop: bool) -> Result<(), sqlx::
         CREATE TABLE IF NOT EXISTS pharmacists (
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
             name VARCHAR(100) NOT NULL,
-            pesel_number VARCHAR(11) NOT NULL,
+            pesel_number VARCHAR(11) UNIQUE NOT NULL,
             created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
             updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
         );"#
@@ -92,7 +92,7 @@ pub async fn create_tables(pool: &sqlx::PgPool, drop: bool) -> Result<(), sqlx::
         CREATE TABLE IF NOT EXISTS patients (
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
             name VARCHAR(100) NOT NULL,
-            pesel_number VARCHAR(11) NOT NULL,
+            pesel_number VARCHAR(11) UNIQUE NOT NULL,
             created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
             updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
         );"#

@@ -31,7 +31,11 @@ impl<'a> DoctorsRepositoryTrait for DoctorsRepository<'a> {
         Ok(())
     }
 
-    async fn get_doctors(&self) -> anyhow::Result<Vec<Doctor>> {
+    async fn get_doctors(
+        &self,
+        page: Option<i16>,
+        page_size: Option<i16>,
+    ) -> anyhow::Result<Vec<Doctor>> {
         let doctors_from_db = sqlx::query!(
             r#"SELECT id, name, pwz_number, pesel_number, created_at, updated_at FROM doctors"#,
         )
@@ -76,28 +80,69 @@ impl<'a> DoctorsRepositoryTrait for DoctorsRepository<'a> {
 mod integration_tests {
     use crate::{
         create_tables::create_tables,
-        domain::doctors::{models::NewDoctor, repository::{
-            doctors_repository_impl::DoctorsRepository,
-            doctors_repository_trait::DoctorsRepositoryTrait,
-        }},
+        domain::doctors::{
+            models::NewDoctor,
+            repository::{
+                doctors_repository_impl::DoctorsRepository,
+                doctors_repository_trait::DoctorsRepositoryTrait,
+            },
+        },
     };
 
     #[sqlx::test]
-    async fn create_and_read_doctors_from_database(pool: sqlx::PgPool) {
+    async fn create_and_read_prescriptions_from_database(pool: sqlx::PgPool) {
         create_tables(&pool, true).await.unwrap();
         let repo = DoctorsRepository::new(&pool);
 
-        let doctor =
-            NewDoctor::new("John Doe".into(), "5425740".into(), "96021817257".into()).unwrap();
+        repo.create_doctor(
+            NewDoctor::new(
+                "John Doe".into(), //
+                "5425740".into(),
+                "96021817257".into(),
+            )
+            .unwrap(),
+        )
+        .await
+        .unwrap();
+        repo.create_doctor(
+            NewDoctor::new(
+                "John Doe".into(),
+                "8463856".into(),
+                "99031301347".into(),
+            )
+            .unwrap(),
+        )
+        .await
+        .unwrap();
+        repo.create_doctor(
+            NewDoctor::new(
+                "John Doe".into(), //
+                "3123456".into(),
+                "92022900002".into(),
+            )
+            .unwrap(),
+        )
+        .await
+        .unwrap();
+        repo.create_doctor(
+            NewDoctor::new(
+                "John Doe".into(),
+                "5425751".into(),
+                "96021807250".into(),
+            )
+            .unwrap(),
+        )
+        .await
+        .unwrap();
 
-        repo.create_doctor(doctor).await.unwrap();
+        let doctors = repo.get_doctors(None, Some(2)).await.unwrap();
+        assert_eq!(doctors.len(), 2);
 
-        let doctors = repo.get_doctors().await.unwrap();
-        let first_doctor = doctors.first().unwrap();
+        let doctors = repo.get_doctors(None, Some(10)).await.unwrap();
+        assert!(doctors.len() == 4);
 
-        assert_eq!(first_doctor.name, "John Doe");
-        assert_eq!(first_doctor.pwz_number, "5425740");
-        assert_eq!(first_doctor.pesel_number, "96021817257");
+        let doctors = repo.get_doctors(Some(1), Some(3)).await.unwrap();
+        assert!(doctors.len() == 1);
     }
 
     #[sqlx::test]
@@ -115,5 +160,29 @@ mod integration_tests {
         assert_eq!(doctor_from_repo.name, "John Doe");
         assert_eq!(doctor_from_repo.pwz_number, "5425740");
         assert_eq!(doctor_from_repo.pesel_number, "96021817257");
+    }
+
+    #[sqlx::test]
+    async fn doesnt_create_doctor_if_pwz_or_pesel_numbers_are_duplicated(pool: sqlx::PgPool) {
+        create_tables(&pool, true).await.unwrap();
+        let repo = DoctorsRepository::new(&pool);
+
+        let doctor =
+            NewDoctor::new("John Doe".into(), "5425740".into(), "96021817257".into()).unwrap();
+        assert!(repo.create_doctor(doctor).await.is_ok());
+
+        let doctor_with_duplicate_pwz_number =
+            NewDoctor::new("John Doe".into(), "5425740".into(), "99031301347".into()).unwrap();
+        assert!(repo
+            .create_doctor(doctor_with_duplicate_pwz_number)
+            .await
+            .is_err());
+
+        let doctor_with_duplicate_pesel_number =
+            NewDoctor::new("John Doe".into(), "3123456".into(), "96021817257".into()).unwrap();
+        assert!(repo
+            .create_doctor(doctor_with_duplicate_pesel_number)
+            .await
+            .is_err());
     }
 }
