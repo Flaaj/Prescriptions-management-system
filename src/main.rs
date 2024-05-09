@@ -14,7 +14,7 @@ use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
 extern crate dotenv_codegen;
 
 #[derive(Clone)]
-struct Context {
+pub struct Context {
     pub pool: Arc<Pool<Postgres>>,
 }
 pub type Ctx = rocket::State<Context>;
