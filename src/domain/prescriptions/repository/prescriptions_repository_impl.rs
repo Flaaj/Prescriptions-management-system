@@ -359,7 +359,7 @@ mod integration_tests {
 
         let drugs_repo = DrugsRepository::new(&pool);
         let mut drug_ids = vec![];
-        for _ in 0..10 {
+        for _ in 0..4 {
             let drug = NewDrug::new(
                 "Gripex".into(),
                 DrugContentType::SolidPills,
@@ -390,10 +390,10 @@ mod integration_tests {
             .await
             .unwrap();
 
-        for i in 0..10 {
+        for _ in 0..10 {
             let mut another_prescription = NewPrescription::new(doctor_id, patient_id, None, None);
             another_prescription
-                .add_drug(*drug_ids.get(i).unwrap(), 1)
+                .add_drug(*drug_ids.get(0).unwrap(), 1)
                 .unwrap();
             repo.create_prescription(another_prescription)
                 .await
