@@ -1,27 +1,30 @@
 pub async fn create_tables(pool: &sqlx::PgPool, drop: bool) -> Result<(), sqlx::Error> {
     if drop {
+        sqlx::query!(r#"DROP TABLE IF EXISTS prescription_fills;"#)
+            .execute(pool)
+            .await?;
         sqlx::query!(r#"DROP TABLE IF EXISTS prescribed_drugs;"#)
             .execute(pool)
             .await?;
+        sqlx::query!(r#"DROP TABLE IF EXISTS drugs;"#)
+            .execute(pool)
+            .await?;
         sqlx::query!(r#"DROP TABLE IF EXISTS prescriptions;"#)
-            .execute(pool)
-            .await?;
-        sqlx::query!(r#"DROP TYPE IF EXISTS prescription_type;"#)
-            .execute(pool)
-            .await?;
-        sqlx::query!(r#"DROP TYPE IF EXISTS drug_content_type;"#)
-            .execute(pool)
-            .await?;
-        sqlx::query!(r#"DROP TABLE IF EXISTS doctors;"#)
-            .execute(pool)
-            .await?;
-        sqlx::query!(r#"DROP TABLE IF EXISTS prescription_fills;"#)
             .execute(pool)
             .await?;
         sqlx::query!(r#"DROP TABLE IF EXISTS patients;"#)
             .execute(pool)
             .await?;
         sqlx::query!(r#"DROP TABLE IF EXISTS pharmacists;"#)
+            .execute(pool)
+            .await?;
+        sqlx::query!(r#"DROP TABLE IF EXISTS doctors;"#)
+            .execute(pool)
+            .await?;
+        sqlx::query!(r#"DROP TYPE IF EXISTS prescription_type;"#)
+            .execute(pool)
+            .await?;
+        sqlx::query!(r#"DROP TYPE IF EXISTS drug_content_type;"#)
             .execute(pool)
             .await?;
     }

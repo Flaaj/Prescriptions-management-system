@@ -1,4 +1,5 @@
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 #[derive(Clone, Debug)]
@@ -9,7 +10,7 @@ pub struct NewDoctor {
     pub pesel_number: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct Doctor {
     pub id: Uuid,
     pub name: String,

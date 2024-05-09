@@ -1,15 +1,15 @@
 #[derive(thiserror::Error, Debug)]
 pub enum NameValidationError {
     #[error("Name must be between {0} and {1} characters long")]
-    InvalidLength(u16, u16),
+    InvalidLength(usize, usize),
     #[error("Name must be in format: Firstname Lastname")]
     InvalidFormat,
 }
 
 pub fn validate_name(name: &str) -> anyhow::Result<()> {
-    let min_len: u16 = 4;
-    let max_len: u16 = 100;
-    if name.len() < min_len.into() || name.len() > max_len.into() {
+    let min_len: usize = 4;
+    let max_len: usize = 100;
+    if name.len() < min_len || name.len() > max_len {
         Err(NameValidationError::InvalidLength(min_len, max_len))?;
     }
 

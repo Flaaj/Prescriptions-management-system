@@ -20,18 +20,25 @@ impl<'a> DoctorsRepository<'a> {
 
 #[async_trait]
 impl<'a> DoctorsRepositoryTrait for DoctorsRepository<'a> {
-    async fn create_doctor(&self, doctor: NewDoctor) -> anyhow::Result<()> {
-        sqlx::query!(
-            r#"INSERT INTO doctors (id, name, pwz_number, pesel_number) VALUES ($1, $2, $3, $4)"#,
+    async fn create_doctor(&self, doctor: NewDoctor) -> anyhow::Result<Doctor> {
+        let result = sqlx::query!(
+            r#"INSERT INTO doctors (id, name, pwz_number, pesel_number) VALUES ($1, $2, $3, $4) RETURNING id, name, pwz_number, pesel_number, created_at, updated_at"#,
             doctor.id,
             doctor.name,
             doctor.pwz_number,
             doctor.pesel_number
         )
-        .execute(self.pool)
+        .fetch_one(self.pool)
         .await?;
 
-        Ok(())
+        Ok(Doctor {
+            id: result.id,
+            name: result.name,
+            pwz_number: result.pwz_number,
+            pesel_number: result.pesel_number,
+            created_at: result.created_at,
+            updated_at: result.updated_at,
+        })
     }
 
     async fn get_doctors(

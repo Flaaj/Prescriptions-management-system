@@ -5,7 +5,7 @@ use crate::domain::doctors::models::{Doctor, NewDoctor};
 
 #[async_trait]
 pub trait DoctorsRepositoryTrait {
-    async fn create_doctor(&self, doctor: NewDoctor) -> anyhow::Result<()>;
+    async fn create_doctor(&self, doctor: NewDoctor) -> anyhow::Result<Doctor>;
     async fn get_doctors(
         &self,
         page: Option<i64>,

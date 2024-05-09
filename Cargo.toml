@@ -6,12 +6,18 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+chrono = { version = "0.4.31", features = ["serde"]  }
 cargo-watch = "8.4.1"
-chrono = "0.4.31"
 rand = "0.8.5"
 mini-redis = "0.4"
 tokio = { version = "1", features = ["full"] }
-sqlx = { version = "0.7", features = ["runtime-tokio", "postgres", "uuid", "time", "chrono"] }
+sqlx = { version = "0.7", features = [
+    "runtime-tokio",
+    "postgres",
+    "uuid",
+    "time",
+    "chrono",
+] }
 dotenv = "0.15.0"
 dotenv_codegen = "0.15.0"
 anyhow = "1.0.80"
@@ -19,6 +25,7 @@ regex = "1.10.3"
 rstest = "0.18.2"
 thiserror = "1.0.57"
 async-trait = "0.1.79"
+serde = { version = "1.0.130", features = ["derive"] }
 
 [dependencies.uuid]
 version = "1.6.1"
@@ -26,4 +33,10 @@ features = [
     "v4",                # Lets you generate random UUIDs
     "fast-rng",          # Use a faster (but still sufficiently random) RNG
     "macro-diagnostics", # Enable better diagnostics for compile-time UUIDs
+    "serde",
 ]
+
+
+[dependencies.rocket]
+version = "0.5.0-rc.1"
+features = ["json"]
