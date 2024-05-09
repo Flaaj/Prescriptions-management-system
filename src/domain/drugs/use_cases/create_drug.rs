@@ -6,7 +6,7 @@ use crate::domain::drugs::models::{DrugContentType, NewDrug};
 pub enum NewDrugValidationError {
     #[error("Pills count and mg per pill must be provided for solid pills")]
     InvalidSolidPillsDescription,
-    #[error("Pills ciount and ml per pill must be provided for liquid pills")]
+    #[error("Pills count and ml per pill must be provided for liquid pills")]
     InvalidLiquidPillsDescription,
     #[error("Volume in ml must be provided for bottle of liquid")]
     InvalidBottleOfLiquidDescription,
@@ -16,17 +16,17 @@ impl NewDrug {
     pub fn new(
         name: String,
         content_type: DrugContentType,
-        pills_count: Option<u32>,
-        mg_per_pill: Option<u32>,
-        ml_per_pill: Option<u32>,
-        volume_ml: Option<u32>,
+        pills_count: Option<i32>,
+        mg_per_pill: Option<i32>,
+        ml_per_pill: Option<i32>,
+        volume_ml: Option<i32>,
     ) -> anyhow::Result<NewDrug> {
         match content_type {
             DrugContentType::SolidPills => {
                 if pills_count.is_none()
-                    || pills_count.unwrap() == 0
+                    || pills_count.unwrap() <= 0
                     || mg_per_pill.is_none()
-                    || mg_per_pill.unwrap() == 0
+                    || mg_per_pill.unwrap() <= 0
                 {
                     Err(NewDrugValidationError::InvalidSolidPillsDescription)?;
                 }
@@ -43,9 +43,9 @@ impl NewDrug {
             }
             DrugContentType::LiquidPills => {
                 if pills_count.is_none()
-                    || pills_count.unwrap() == 0
+                    || pills_count.unwrap() <= 0
                     || ml_per_pill.is_none()
-                    || ml_per_pill.unwrap() == 0
+                    || ml_per_pill.unwrap() <= 0
                 {
                     Err(NewDrugValidationError::InvalidLiquidPillsDescription)?;
                 }
@@ -61,7 +61,7 @@ impl NewDrug {
                 })
             }
             DrugContentType::BottleOfLiquid => {
-                if volume_ml.is_none() || volume_ml.unwrap() == 0 {
+                if volume_ml.is_none() || volume_ml.unwrap() <= 0 {
                     Err(NewDrugValidationError::InvalidBottleOfLiquidDescription)?;
                 }
 

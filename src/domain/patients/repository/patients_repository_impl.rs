@@ -115,13 +115,13 @@ mod integration_tests {
         assert_eq!(patients.len(), 2);
 
         let patients = repo.get_patients(None, Some(10)).await.unwrap();
-        assert!(patients.len() == 4);
+        assert_eq!(patients.len(), 4);
 
         let patients = repo.get_patients(Some(1), Some(3)).await.unwrap();
-        assert!(patients.len() == 1);
+        assert_eq!(patients.len(), 1);
 
         let patients = repo.get_patients(Some(2), Some(3)).await.unwrap();
-        assert!(patients.len() == 0);
+        assert_eq!(patients.len(), 0);
     }
 
     #[sqlx::test]

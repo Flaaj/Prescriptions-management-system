@@ -9,24 +9,25 @@ pub enum DrugContentType {
     LiquidPills,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct NewDrug {
     pub id: Uuid,
     pub name: String,
     pub content_type: DrugContentType,
-    pub pills_count: Option<u32>,
-    pub mg_per_pill: Option<u32>,
-    pub ml_per_pill: Option<u32>,
-    pub volume_ml: Option<u32>,
+    pub pills_count: Option<i32>,
+    pub mg_per_pill: Option<i32>,
+    pub ml_per_pill: Option<i32>,
+    pub volume_ml: Option<i32>,
 }
 
 pub struct Drug {
-    id: Uuid,
-    name: String,
-    content_type: DrugContentType,
-    pills_count: Option<u32>,
-    mg_per_pill: Option<u32>,
-    volume_ml: Option<u32>,
-    created_at: DateTime<Utc>,
-    updated_at: DateTime<Utc>,
+    pub id: Uuid,
+    pub name: String,
+    pub content_type: DrugContentType,
+    pub pills_count: Option<i32>,
+    pub mg_per_pill: Option<i32>,
+    pub ml_per_pill: Option<i32>,
+    pub volume_ml: Option<i32>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
