@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-chrono = { version = "0.4.31", features = ["serde"]  }
+chrono = { version = "0.4.31", features = ["serde"] }
 cargo-watch = "8.4.1"
 rand = "0.8.5"
 mini-redis = "0.4"
@@ -26,6 +26,9 @@ rstest = "0.18.2"
 thiserror = "1.0.57"
 async-trait = "0.1.79"
 serde = { version = "1.0.130", features = ["derive"] }
+rocket_okapi = { version = "0.8.0", features = ["swagger"] }
+schemars = { version = "0.8", features = ["uuid1", "chrono"] }
+okapi = "0.7.0"
 
 [dependencies.uuid]
 version = "1.6.1"

@@ -2,13 +2,12 @@ pub mod api;
 mod create_tables;
 pub mod domain;
 pub mod utils;
-
-use std::sync::Arc;
-
 use api::doctors_controller;
 use create_tables::create_tables;
 use rocket::{launch, Build, Rocket};
+use rocket_okapi::swagger_ui::{make_swagger_ui, SwaggerUIConfig};
 use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
+use std::sync::Arc;
 
 #[macro_use]
 extern crate dotenv_codegen;
@@ -34,4 +33,11 @@ async fn rocket() -> Rocket<Build> {
     rocket::build()
         .manage(Context { pool })
         .mount("/doctors", doctors_controller::get_routes())
+        .mount(
+            "/swagger-ui/",
+            make_swagger_ui(&SwaggerUIConfig {
+                url: "../doctors/openapi.json".to_owned(),
+                ..Default::default()
+            }),
+        )
 }

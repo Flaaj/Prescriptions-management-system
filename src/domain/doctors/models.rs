@@ -1,7 +1,8 @@
 use chrono::{DateTime, Utc};
+use rocket_okapi::okapi::schemars;
+use rocket_okapi::JsonSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-
 #[derive(Clone, Debug)]
 pub struct NewDoctor {
     pub id: Uuid,
@@ -10,11 +11,24 @@ pub struct NewDoctor {
     pub pesel_number: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+fn example_name() -> &'static str {
+    "John Doe"
+}
+fn example_pesel_number() -> &'static str {
+    "96021807250"
+}
+fn example_pwz_number() -> &'static str {
+    "5425740"
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone, JsonSchema)]
 pub struct Doctor {
     pub id: Uuid,
+    #[schemars(example = "example_name")]
     pub name: String,
+    #[schemars(example = "example_pwz_number")]
     pub pwz_number: String,
+    #[schemars(example = "example_pesel_number")]
     pub pesel_number: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,

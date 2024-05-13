@@ -111,32 +111,97 @@ mod integration_tests {
         create_tables(&pool, true).await.unwrap();
         let repo = DrugsRepository::new(&pool);
 
-        for _ in 0..4 {
-            repo.create_drug(
-                NewDrug::new(
-                    "Gripex".into(),
-                    DrugContentType::SolidPills,
-                    Some(20),
-                    Some(300),
-                    None,
-                    None,
-                )
-                .unwrap(),
+        repo.create_drug(
+            NewDrug::new(
+                "Gripex".into(),
+                DrugContentType::SolidPills,
+                Some(20),
+                Some(300),
+                None,
+                None,
             )
-            .await
-            .unwrap();
-        }
-
-        let drugs = repo.get_drugs(None, Some(2)).await.unwrap();
-        assert_eq!(drugs.len(), 2);
+            .unwrap(),
+        )
+        .await
+        .unwrap();
+        repo.create_drug(
+            NewDrug::new(
+                "Apap".into(),
+                DrugContentType::SolidPills,
+                Some(10),
+                Some(400),
+                None,
+                None,
+            )
+            .unwrap(),
+        )
+        .await
+        .unwrap();
+        repo.create_drug(
+            NewDrug::new(
+                "Aspirin".into(),
+                DrugContentType::SolidPills,
+                Some(30),
+                Some(200),
+                None,
+                None,
+            )
+            .unwrap(),
+        )
+        .await
+        .unwrap();
+        repo.create_drug(
+            NewDrug::new(
+                "Flegamax".into(),
+                DrugContentType::BottleOfLiquid,
+                None,
+                None,
+                None,
+                Some(400),
+            )
+            .unwrap(),
+        )
+        .await
+        .unwrap();
 
         let drugs = repo.get_drugs(None, Some(10)).await.unwrap();
+
         assert_eq!(drugs.len(), 4);
+        assert_eq!(drugs[0].name, "Gripex");
+        assert_eq!(drugs[0].content_type, DrugContentType::SolidPills);
+        assert_eq!(drugs[0].pills_count, Some(20));
+        assert_eq!(drugs[0].mg_per_pill, Some(300));
+        assert_eq!(drugs[0].ml_per_pill, None);
+        assert_eq!(drugs[0].volume_ml, None);
+        assert_eq!(drugs[1].name, "Apap");
+        assert_eq!(drugs[1].content_type, DrugContentType::SolidPills);
+        assert_eq!(drugs[1].pills_count, Some(10));
+        assert_eq!(drugs[1].mg_per_pill, Some(400));
+        assert_eq!(drugs[1].ml_per_pill, None);
+        assert_eq!(drugs[1].volume_ml, None);
+        assert_eq!(drugs[2].name, "Aspirin");
+        assert_eq!(drugs[2].content_type, DrugContentType::SolidPills);
+        assert_eq!(drugs[2].pills_count, Some(30));
+        assert_eq!(drugs[2].mg_per_pill, Some(200));
+        assert_eq!(drugs[2].ml_per_pill, None);
+        assert_eq!(drugs[2].volume_ml, None);
+        assert_eq!(drugs[3].name, "Flegamax");
+        assert_eq!(drugs[3].content_type, DrugContentType::BottleOfLiquid);
+        assert_eq!(drugs[3].pills_count, None);
+        assert_eq!(drugs[3].mg_per_pill, None);
+        assert_eq!(drugs[3].ml_per_pill, None);
+        assert_eq!(drugs[3].volume_ml, Some(400));
+
+        let drugs = repo.get_drugs(None, Some(2)).await.unwrap();
+
+        assert_eq!(drugs.len(), 2);
 
         let drugs = repo.get_drugs(Some(1), Some(3)).await.unwrap();
+
         assert_eq!(drugs.len(), 1);
 
         let drugs = repo.get_drugs(Some(2), Some(3)).await.unwrap();
+
         assert_eq!(drugs.len(), 0);
     }
 
@@ -146,7 +211,7 @@ mod integration_tests {
         let repo = DrugsRepository::new(&pool);
 
         let drug = NewDrug::new(
-            "Gripex".into(),
+            "Gripex Max".into(),
             DrugContentType::SolidPills,
             Some(20),
             Some(300),
@@ -159,6 +224,11 @@ mod integration_tests {
 
         let drug_from_repo = repo.get_drug_by_id(drug.id).await.unwrap();
 
-        assert_eq!(drug_from_repo.id, drug.id);
+        assert_eq!(drug_from_repo.name, "Gripex Max");
+        assert_eq!(drug_from_repo.content_type, DrugContentType::SolidPills);
+        assert_eq!(drug_from_repo.pills_count, Some(20));
+        assert_eq!(drug_from_repo.mg_per_pill, Some(300));
+        assert_eq!(drug_from_repo.ml_per_pill, None);
+        assert_eq!(drug_from_repo.volume_ml, None);
     }
 }
