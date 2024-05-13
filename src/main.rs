@@ -32,11 +32,11 @@ async fn rocket() -> Rocket<Build> {
 
     rocket::build()
         .manage(Context { pool })
-        .mount("/doctors", doctors_controller::get_routes())
+        .mount("/", doctors_controller::get_routes())
         .mount(
             "/swagger-ui/",
             make_swagger_ui(&SwaggerUIConfig {
-                url: "../doctors/openapi.json".to_owned(),
+                url: "../openapi.json".to_owned(),
                 ..Default::default()
             }),
         )
