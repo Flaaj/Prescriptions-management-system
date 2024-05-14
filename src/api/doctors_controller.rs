@@ -220,10 +220,12 @@ mod integration_tests {
             .header(ContentType::JSON)
             .dispatch()
             .await;
+
         assert_eq!(create_doctor_response.status(), Status::Created);
 
         let created_doctor: Doctor =
             json::from_str(&create_doctor_response.into_string().await.unwrap()).unwrap();
+
         assert_eq!(created_doctor.name, "John Doex");
         assert_eq!(created_doctor.pesel_number, "96021807250");
         assert_eq!(created_doctor.pwz_number, "5425740");
@@ -234,8 +236,11 @@ mod integration_tests {
             .dispatch()
             .await;
 
+        assert_eq!(get_doctor_by_id_response.status(), Status::Ok);
+
         let doctor: Doctor =
             json::from_str(&get_doctor_by_id_response.into_string().await.unwrap()).unwrap();
+
         assert_eq!(doctor.name, "John Doex");
         assert_eq!(doctor.pesel_number, "96021807250");
         assert_eq!(doctor.pwz_number, "5425740");
