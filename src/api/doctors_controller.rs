@@ -38,13 +38,10 @@ fn example_pwz_number() -> &'static str {
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CreateDoctorDto {
-    /// Doctor's name
     #[schemars(example = "example_name")]
     pub name: String,
-    /// Doctor's PESEL number
     #[schemars(example = "example_pesel_number")]
     pub pesel_number: String,
-    /// Doctor's PWZ number
     #[schemars(example = "example_pwz_number")]
     pub pwz_number: String,
 }
