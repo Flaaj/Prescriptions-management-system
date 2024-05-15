@@ -23,6 +23,7 @@ use rocket_okapi::{
 use rocket_okapi::{openapi, openapi_get_routes, JsonSchema};
 use schemars::Map;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 use std::borrow::Borrow;
 
 fn example_name() -> &'static str {
@@ -119,7 +120,6 @@ pub enum GetDoctorByIdErrorStatus {
     InputError,
     DatabaseError(String),
 }
-
 impl<'r> Responder<'r, 'static> for GetDoctorByIdErrorStatus {
     fn respond_to(self, _: &'r Request<'_>) -> rocket::response::Result<'static> {
         match self {
@@ -172,11 +172,8 @@ impl OpenApiResponderInner for GetDoctorByIdErrorStatus {
 #[get("/doctors/<doctor_id>", format = "application/json")]
 pub async fn get_doctor_by_id(
     ctx: &Ctx,
-    doctor_id: String,
+    doctor_id: Uuid,
 ) -> Result<Json<Doctor>, GetDoctorByIdErrorStatus> {
-    let doctor_id = doctor_id
-        .parse()
-        .map_err(|_| GetDoctorByIdErrorStatus::InputError)?;
     let doctor = DoctorsRepository::new(ctx.pool.borrow())
         .get_doctor_by_id(doctor_id)
         .await
@@ -185,8 +182,58 @@ pub async fn get_doctor_by_id(
     Ok(Json(doctor))
 }
 
+pub enum GetDoctorWithPaginationErrorStatus {
+    InputError(String),
+}
+
+impl<'r> Responder<'r, 'static> for GetDoctorWithPaginationErrorStatus {
+    fn respond_to(self, _: &'r Request<'_>) -> rocket::response::Result<'static> {
+        match self {
+            GetDoctorWithPaginationErrorStatus::InputError(message) => Response::build()
+                .sized_body(message.len(), std::io::Cursor::new(message))
+                .header(ContentType::JSON)
+                .status(Status::BadRequest)
+                .ok(),
+        }
+    }
+}
+
+impl OpenApiResponderInner for GetDoctorWithPaginationErrorStatus {
+    fn responses(_generator: &mut OpenApiGenerator) -> Result<Responses, OpenApiError> {
+        use rocket_okapi::okapi::openapi3::{RefOr, Response as OpenApiReponse};
+
+        let mut responses = Map::new();
+        responses.insert(
+            "400".to_string(),
+            RefOr::Object(OpenApiReponse {
+                description: "Returned when the the page < 0 or page_size < 1".to_string(),
+                ..Default::default()
+            }),
+        );
+        Ok(Responses {
+            responses,
+            ..Default::default()
+        })
+    }
+}
+
+#[openapi(tag = "Doctors")]
+#[get("/doctors?<page>&<page_size>", format = "application/json")]
+pub async fn get_doctors_with_pagination(
+    ctx: &Ctx,
+    page: Option<i64>,
+    page_size: Option<i64>,
+) -> Result<Json<Vec<Doctor>>, GetDoctorWithPaginationErrorStatus> {
+    let doctor = DoctorsRepository::new(ctx.pool.borrow())
+        .get_doctors(page, page_size)
+        .await
+        .map_err(|err| GetDoctorWithPaginationErrorStatus::InputError(err.to_string()))?;
+
+    Ok(Json(doctor))
+}
+
 pub fn get_routes() -> Vec<Route> {
-    openapi_get_routes![create_doctor, get_doctor_by_id]
+    openapi_get_routes![create_doctor, get_doctor_by_id, get_doctors_with_pagination]
 }
 
 #[cfg(test)]
@@ -316,6 +363,116 @@ mod integration_tests {
             .get("/doctors/00000000-0000-0000-0000-000000000000")
             .header(ContentType::JSON);
         let response = request.dispatch().await;
+
+        assert_eq!(response.status(), Status::BadRequest);
+    }
+
+    #[sqlx::test]
+    async fn gets_doctors_with_pagination(pool: sqlx::PgPool) {
+        let client = create_api_client(pool).await;
+        client
+            .post("/doctors")
+            .body(r#"{"name":"John Doex", "pesel_number":"96021817257", "pwz_number":"5425740"}"#)
+            .header(ContentType::JSON)
+            .dispatch()
+            .await;
+        client
+            .post("/doctors")
+            .body(r#"{"name":"John Doey", "pesel_number":"99031301347", "pwz_number":"8463856"}"#)
+            .header(ContentType::JSON)
+            .dispatch()
+            .await;
+        client
+            .post("/doctors")
+            .body(r#"{"name":"John Doez", "pesel_number":"92022900002", "pwz_number":"3123456"}"#)
+            .header(ContentType::JSON)
+            .dispatch()
+            .await;
+        client
+            .post("/doctors")
+            .body(r#"{"name":"John Doeq", "pesel_number":"96021807250", "pwz_number":"5425751"}"#)
+            .header(ContentType::JSON)
+            .dispatch()
+            .await;
+
+        let response = client
+            .get("/doctors?page=1&page_size=2")
+            .header(ContentType::JSON)
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::Ok);
+
+        let doctors: Vec<Doctor> = json::from_str(&response.into_string().await.unwrap()).unwrap();
+
+        assert_eq!(doctors.len(), 2);
+
+        let response = client
+            .get("/doctors?page=1&page_size=3")
+            .header(ContentType::JSON)
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::Ok);
+
+        let doctors: Vec<Doctor> = json::from_str(&response.into_string().await.unwrap()).unwrap();
+
+        assert_eq!(doctors.len(), 1);
+
+        let response = client
+            .get("/doctors?page_size=10")
+            .header(ContentType::JSON)
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::Ok);
+
+        let doctors: Vec<Doctor> = json::from_str(&response.into_string().await.unwrap()).unwrap();
+
+        assert_eq!(doctors.len(), 4);
+
+        let response = client
+            .get("/doctors?page=1")
+            .header(ContentType::JSON)
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::Ok);
+
+        let doctors: Vec<Doctor> = json::from_str(&response.into_string().await.unwrap()).unwrap();
+
+        assert_eq!(doctors.len(), 0);
+
+        let response = client
+            .get("/doctors")
+            .header(ContentType::JSON)
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::Ok);
+
+        let doctors: Vec<Doctor> = json::from_str(&response.into_string().await.unwrap()).unwrap();
+
+        assert_eq!(doctors.len(), 4);
+    }
+
+    #[sqlx::test]
+    async fn get_doctors_with_pagination_returns_error_if_params_are_invalid(pool: sqlx::PgPool) {
+        let client = create_api_client(pool).await;
+
+        let response = client
+            .get("/doctors?page=-1")
+            .header(ContentType::JSON)
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::BadRequest);
+
+        let response = client
+            .get("/doctors?page_size=0")
+            .header(ContentType::JSON)
+            .dispatch()
+            .await;
 
         assert_eq!(response.status(), Status::BadRequest);
     }
