@@ -4,16 +4,19 @@ use crate::domain::doctors::{
 };
 use uuid::Uuid;
 
+#[derive(Debug)]
 pub enum CreateDoctorError {
     ValidationError(String),
     DatabaseError(String),
 }
 
+#[derive(Debug)]
 pub enum GetDoctorByIdError {
     InputError,
     DatabaseError(String),
 }
 
+#[derive(Debug)]
 pub enum GetDoctorWithPaginationError {
     InputError(String),
 }
@@ -71,245 +74,174 @@ impl<R: DoctorsRepositoryTrait> DoctorsService<R> {
     }
 }
 
-// TODO: Add tests
-// #[cfg(test)]
-// mod integration_tests {
-//     use crate::{create_tables::create_tables, domain::doctors::models::Doctor, Context};
-//     use rocket::{
-//         http::{ContentType, Status},
-//         local::asynchronous::Client,
-//         serde::json,
-//     };
-//     use std::sync::Arc;
+#[cfg(test)]
+mod integration_tests {
+    use crate::{
+        create_tables::create_tables,
+        domain::doctors::repository::{
+            doctors_repository_impl::DoctorsRepository,
+            doctors_repository_trait::DoctorsRepositoryTrait,
+        },
+    };
+    use uuid::Uuid;
 
-//     async fn create_api_client(pool: sqlx::PgPool) -> Client {
-//         create_tables(&pool, true).await.unwrap();
+    use super::DoctorsService;
 
-//         let pool = Arc::new(pool);
-//         let rocket = rocket::build()
-//             .manage(Context { pool })
-//             .mount("/", super::get_routes());
+    async fn create_doctors_service<'a>(
+        pool: &'a sqlx::PgPool,
+    ) -> DoctorsService<impl DoctorsRepositoryTrait + 'a> {
+        create_tables(&pool, true).await.unwrap();
+        DoctorsService::new(DoctorsRepository::new(pool))
+    }
 
-//         Client::tracked(rocket).await.unwrap()
-//     }
+    #[sqlx::test]
+    async fn creates_doctor_and_reads_by_id(pool: sqlx::PgPool) {
+        let service = create_doctors_service(&pool).await;
 
-//     #[sqlx::test]
-//     async fn creates_doctor_and_reads_by_id(pool: sqlx::PgPool) {
-//         let client = create_api_client(pool).await;
+        let create_doctor_result = service
+            .create_doctor("John Doex".into(), "96021807250".into(), "5425740".into())
+            .await;
 
-//         let create_doctor_response = client
-//             .post("/doctors")
-//             .body(r#"{"name":"John Doex", "pesel_number":"96021807250", "pwz_number":"5425740"}"#)
-//             .header(ContentType::JSON)
-//             .dispatch()
-//             .await;
+        assert!(create_doctor_result.is_ok());
 
-//         assert_eq!(create_doctor_response.status(), Status::Created);
+        let created_doctor = create_doctor_result.unwrap();
 
-//         let created_doctor: Doctor =
-//             json::from_str(&create_doctor_response.into_string().await.unwrap()).unwrap();
+        assert_eq!(created_doctor.name, "John Doex");
+        assert_eq!(created_doctor.pesel_number, "96021807250");
+        assert_eq!(created_doctor.pwz_number, "5425740");
 
-//         assert_eq!(created_doctor.name, "John Doex");
-//         assert_eq!(created_doctor.pesel_number, "96021807250");
-//         assert_eq!(created_doctor.pwz_number, "5425740");
+        let get_doctor_by_id_result = service.get_doctor_by_id(created_doctor.id).await;
 
-//         let get_doctor_by_id_response = client
-//             .get(format!("/doctors/{}", created_doctor.id))
-//             .header(ContentType::JSON)
-//             .dispatch()
-//             .await;
+        assert!(get_doctor_by_id_result.is_ok());
 
-//         assert_eq!(get_doctor_by_id_response.status(), Status::Ok);
+        let doctor = get_doctor_by_id_result.unwrap();
 
-//         let doctor: Doctor =
-//             json::from_str(&get_doctor_by_id_response.into_string().await.unwrap()).unwrap();
+        assert_eq!(doctor.name, "John Doex");
+        assert_eq!(doctor.pesel_number, "96021807250");
+        assert_eq!(doctor.pwz_number, "5425740");
+    }
 
-//         assert_eq!(doctor.name, "John Doex");
-//         assert_eq!(doctor.pesel_number, "96021807250");
-//         assert_eq!(doctor.pwz_number, "5425740");
-//     }
+    #[sqlx::test]
+    async fn create_doctor_returns_error_if_body_is_incorrect(pool: sqlx::PgPool) {
+        let service = create_doctors_service(&pool).await;
 
-//     #[sqlx::test]
-//     async fn create_doctor_returns_error_if_body_is_incorrect(pool: sqlx::PgPool) {
-//         let client = create_api_client(pool).await;
+        let result = service
+            .create_doctor("John Doex".into(), "96021807251".into(), "5425740".into()) // invalid pesel
+            .await;
 
-//         let request_with_wrong_key = client
-//             .post("/doctors")
-//             .body(r#"{"name":"John Doex", "pesel_numberr":"96021807250", "pwz_number":"5425740"}"#)
-//             .header(ContentType::JSON);
-//         let response = request_with_wrong_key.dispatch().await;
+        assert!(result.is_err());
+    }
 
-//         assert_eq!(response.status(), Status::UnprocessableEntity);
+    #[sqlx::test]
+    async fn create_doctor_returns_error_if_pwz_or_pesel_numbers_are_duplicated(
+        pool: sqlx::PgPool,
+    ) {
+        let service = create_doctors_service(&pool).await;
 
-//         let mut request_with_incorrect_value = client
-//             .post("/doctors")
-//             .body(r#"{"name":"John Doex", "pesel_number":"96021807251", "pwz_number":"5425740"}"#);
-//         request_with_incorrect_value.add_header(ContentType::JSON);
-//         let response = request_with_incorrect_value.dispatch().await;
+        let result = service
+            .create_doctor("John Doex".into(), "96021807250".into(), "5425740".into())
+            .await;
 
-//         assert_eq!(response.status(), Status::BadRequest);
-//     }
+        assert!(result.is_ok());
 
-//     #[sqlx::test]
-//     async fn create_doctor_returns_error_if_pwz_or_pesel_numbers_are_duplicated(
-//         pool: sqlx::PgPool,
-//     ) {
-//         let client = create_api_client(pool).await;
+        let duplicated_pesel_number_result = service
+            .create_doctor("John Doex".into(), "96021807250".into(), "5425740".into())
+            .await;
 
-//         let request = client
-//             .post("/doctors")
-//             .body(r#"{"name":"John Doex", "pesel_number":"96021807250", "pwz_number":"5425740"}"#)
-//             .header(ContentType::JSON);
-//         let response = request.dispatch().await;
+        assert!(duplicated_pesel_number_result.is_err());
 
-//         assert_eq!(response.status(), Status::Created);
+        let duplicated_pwz_number_result = service
+            .create_doctor("John Doex".into(), "96021807251".into(), "5425740".into())
+            .await;
 
-//         let request_with_duplicated_pesel = client
-//             .post("/doctors")
-//             .body(r#"{"name":"John Doex", "pesel_number":"96021807250", "pwz_number":"8463856"}"#)
-//             .header(ContentType::JSON);
-//         let response = request_with_duplicated_pesel.dispatch().await;
+        assert!(duplicated_pwz_number_result.is_err());
+    }
 
-//         assert_eq!(response.status(), Status::BadRequest);
+    #[sqlx::test]
+    async fn get_doctor_by_id_returns_error_if_such_doctor_does_not_exist(pool: sqlx::PgPool) {
+        let service = create_doctors_service(&pool).await;
 
-//         let request_with_duplicated_pwz = client
-//             .post("/doctors")
-//             .body(r#"{"name":"John Doex", "pesel_number":"99031301347", "pwz_number":"5425740"}"#)
-//             .header(ContentType::JSON);
-//         let response = request_with_duplicated_pwz.dispatch().await;
+        let result = service.get_doctor_by_id(Uuid::new_v4()).await;
 
-//         assert_eq!(response.status(), Status::BadRequest);
-//     }
+        assert!(result.is_err());
+    }
 
-//     #[sqlx::test]
-//     async fn get_doctor_by_id_returns_error_if_id_param_is_invalid(pool: sqlx::PgPool) {
-//         let client = create_api_client(pool).await;
+    #[sqlx::test]
+    async fn gets_doctors_with_pagination(pool: sqlx::PgPool) {
+        let service = create_doctors_service(&pool).await;
 
-//         let request = client.get("/doctors/10").header(ContentType::JSON);
-//         let response = request.dispatch().await;
+        service
+            .create_doctor("John Doex".into(), "96021817257".into(), "5425740".into())
+            .await
+            .unwrap();
+        service
+            .create_doctor("John Doey".into(), "99031301347".into(), "8463856".into())
+            .await
+            .unwrap();
+        service
+            .create_doctor("John Doez".into(), "92022900002".into(), "3123456".into())
+            .await
+            .unwrap();
+        service
+            .create_doctor("John Doeq".into(), "96021807250".into(), "5425751".into())
+            .await
+            .unwrap();
 
-//         assert_eq!(response.status(), Status::UnprocessableEntity);
-//     }
+        let doctors = service
+            .get_doctors_with_pagination(Some(1), Some(2))
+            .await
+            .unwrap();
 
-//     #[sqlx::test]
-//     async fn get_doctor_by_id_returns_error_if_such_doctor_does_not_exist(pool: sqlx::PgPool) {
-//         let client = create_api_client(pool).await;
+        assert_eq!(doctors.len(), 2);
 
-//         let request = client
-//             .get("/doctors/00000000-0000-0000-0000-000000000000")
-//             .header(ContentType::JSON);
-//         let response = request.dispatch().await;
+        let doctors = service
+            .get_doctors_with_pagination(Some(1), Some(3))
+            .await
+            .unwrap();
 
-//         assert_eq!(response.status(), Status::BadRequest);
-//     }
+        assert_eq!(doctors.len(), 1);
 
-//     #[sqlx::test]
-//     async fn gets_doctors_with_pagination(pool: sqlx::PgPool) {
-//         let client = create_api_client(pool).await;
-//         client
-//             .post("/doctors")
-//             .body(r#"{"name":"John Doex", "pesel_number":"96021817257", "pwz_number":"5425740"}"#)
-//             .header(ContentType::JSON)
-//             .dispatch()
-//             .await;
-//         client
-//             .post("/doctors")
-//             .body(r#"{"name":"John Doey", "pesel_number":"99031301347", "pwz_number":"8463856"}"#)
-//             .header(ContentType::JSON)
-//             .dispatch()
-//             .await;
-//         client
-//             .post("/doctors")
-//             .body(r#"{"name":"John Doez", "pesel_number":"92022900002", "pwz_number":"3123456"}"#)
-//             .header(ContentType::JSON)
-//             .dispatch()
-//             .await;
-//         client
-//             .post("/doctors")
-//             .body(r#"{"name":"John Doeq", "pesel_number":"96021807250", "pwz_number":"5425751"}"#)
-//             .header(ContentType::JSON)
-//             .dispatch()
-//             .await;
+        let doctors = service
+            .get_doctors_with_pagination(None, Some(10))
+            .await
+            .unwrap();
 
-//         let response = client
-//             .get("/doctors?page=1&page_size=2")
-//             .header(ContentType::JSON)
-//             .dispatch()
-//             .await;
+        assert_eq!(doctors.len(), 4);
 
-//         assert_eq!(response.status(), Status::Ok);
+        let doctors = service
+            .get_doctors_with_pagination(Some(1), None)
+            .await
+            .unwrap();
 
-//         let doctors: Vec<Doctor> = json::from_str(&response.into_string().await.unwrap()).unwrap();
+        assert_eq!(doctors.len(), 0);
 
-//         assert_eq!(doctors.len(), 2);
+        let doctors = service
+            .get_doctors_with_pagination(None, None)
+            .await
+            .unwrap();
 
-//         let response = client
-//             .get("/doctors?page=1&page_size=3")
-//             .header(ContentType::JSON)
-//             .dispatch()
-//             .await;
+        assert_eq!(doctors.len(), 4);
 
-//         assert_eq!(response.status(), Status::Ok);
+        let doctors = service
+            .get_doctors_with_pagination(Some(2), Some(3))
+            .await
+            .unwrap();
 
-//         let doctors: Vec<Doctor> = json::from_str(&response.into_string().await.unwrap()).unwrap();
+        assert_eq!(doctors.len(), 0);
+    }
 
-//         assert_eq!(doctors.len(), 1);
+    #[sqlx::test]
+    async fn get_doctors_with_pagination_returns_error_if_params_are_invalid(pool: sqlx::PgPool) {
+        let service = create_doctors_service(&pool).await;
 
-//         let response = client
-//             .get("/doctors?page_size=10")
-//             .header(ContentType::JSON)
-//             .dispatch()
-//             .await;
+        assert!(service
+            .get_doctors_with_pagination(Some(-1), None)
+            .await
+            .is_err());
 
-//         assert_eq!(response.status(), Status::Ok);
-
-//         let doctors: Vec<Doctor> = json::from_str(&response.into_string().await.unwrap()).unwrap();
-
-//         assert_eq!(doctors.len(), 4);
-
-//         let response = client
-//             .get("/doctors?page=1")
-//             .header(ContentType::JSON)
-//             .dispatch()
-//             .await;
-
-//         assert_eq!(response.status(), Status::Ok);
-
-//         let doctors: Vec<Doctor> = json::from_str(&response.into_string().await.unwrap()).unwrap();
-
-//         assert_eq!(doctors.len(), 0);
-
-//         let response = client
-//             .get("/doctors")
-//             .header(ContentType::JSON)
-//             .dispatch()
-//             .await;
-
-//         assert_eq!(response.status(), Status::Ok);
-
-//         let doctors: Vec<Doctor> = json::from_str(&response.into_string().await.unwrap()).unwrap();
-
-//         assert_eq!(doctors.len(), 4);
-//     }
-
-//     #[sqlx::test]
-//     async fn get_doctors_with_pagination_returns_error_if_params_are_invalid(pool: sqlx::PgPool) {
-//         let client = create_api_client(pool).await;
-
-//         let response = client
-//             .get("/doctors?page=-1")
-//             .header(ContentType::JSON)
-//             .dispatch()
-//             .await;
-
-//         assert_eq!(response.status(), Status::BadRequest);
-
-//         let response = client
-//             .get("/doctors?page_size=0")
-//             .header(ContentType::JSON)
-//             .dispatch()
-//             .await;
-
-//         assert_eq!(response.status(), Status::BadRequest);
-//     }
-// }
+        assert!(service
+            .get_doctors_with_pagination(None, Some(0))
+            .await
+            .is_err());
+    }
+}

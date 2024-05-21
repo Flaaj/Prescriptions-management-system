@@ -129,7 +129,7 @@ impl<'r> Responder<'r, 'static> for GetDoctorByIdError {
             GetDoctorByIdError::DatabaseError(message) => Response::build()
                 .sized_body(message.len(), std::io::Cursor::new(message))
                 .header(ContentType::JSON)
-                .status(Status::BadRequest)
+                .status(Status::NotFound)
                 .ok(),
         }
     }
@@ -285,7 +285,9 @@ mod integration_tests {
     }
 
     #[sqlx::test]
-    async fn create_doctor_returns_error_if_body_is_incorrect(pool: sqlx::PgPool) {
+    async fn create_doctor_returns_unprocessable_entity_if_body_has_incorrect_keys(
+        pool: sqlx::PgPool,
+    ) {
         let client = create_api_client(pool).await;
 
         let request_with_wrong_key = client
@@ -295,6 +297,13 @@ mod integration_tests {
         let response = request_with_wrong_key.dispatch().await;
 
         assert_eq!(response.status(), Status::UnprocessableEntity);
+    }
+
+    #[sqlx::test]
+    async fn create_doctor_returns_bad_request_if_body_has_incorrect_value_incorrect(
+        pool: sqlx::PgPool,
+    ) {
+        let client = create_api_client(pool).await;
 
         let mut request_with_incorrect_value = client
             .post("/doctors")
@@ -306,7 +315,7 @@ mod integration_tests {
     }
 
     #[sqlx::test]
-    async fn create_doctor_returns_error_if_pwz_or_pesel_numbers_are_duplicated(
+    async fn create_doctor_returns_bad_request_if_pwz_or_pesel_numbers_are_duplicated(
         pool: sqlx::PgPool,
     ) {
         let client = create_api_client(pool).await;
@@ -315,9 +324,7 @@ mod integration_tests {
             .post("/doctors")
             .body(r#"{"name":"John Doex", "pesel_number":"96021807250", "pwz_number":"5425740"}"#)
             .header(ContentType::JSON);
-        let response = request.dispatch().await;
-
-        assert_eq!(response.status(), Status::Created);
+        request.dispatch().await;
 
         let request_with_duplicated_pesel = client
             .post("/doctors")
@@ -337,7 +344,9 @@ mod integration_tests {
     }
 
     #[sqlx::test]
-    async fn get_doctor_by_id_returns_error_if_id_param_is_invalid(pool: sqlx::PgPool) {
+    async fn get_doctor_by_id_returns_unprocessable_entity_if_id_param_is_invalid(
+        pool: sqlx::PgPool,
+    ) {
         let client = create_api_client(pool).await;
 
         let request = client.get("/doctors/10").header(ContentType::JSON);
@@ -347,7 +356,7 @@ mod integration_tests {
     }
 
     #[sqlx::test]
-    async fn get_doctor_by_id_returns_error_if_such_doctor_does_not_exist(pool: sqlx::PgPool) {
+    async fn get_doctor_by_id_returns_not_found_if_such_doctor_does_not_exist(pool: sqlx::PgPool) {
         let client = create_api_client(pool).await;
 
         let request = client
@@ -355,7 +364,7 @@ mod integration_tests {
             .header(ContentType::JSON);
         let response = request.dispatch().await;
 
-        assert_eq!(response.status(), Status::BadRequest);
+        assert_eq!(response.status(), Status::NotFound);
     }
 
     #[sqlx::test]
@@ -397,74 +406,5 @@ mod integration_tests {
         let doctors: Vec<Doctor> = json::from_str(&response.into_string().await.unwrap()).unwrap();
 
         assert_eq!(doctors.len(), 2);
-
-        let response = client
-            .get("/doctors?page=1&page_size=3")
-            .header(ContentType::JSON)
-            .dispatch()
-            .await;
-
-        assert_eq!(response.status(), Status::Ok);
-
-        let doctors: Vec<Doctor> = json::from_str(&response.into_string().await.unwrap()).unwrap();
-
-        assert_eq!(doctors.len(), 1);
-
-        let response = client
-            .get("/doctors?page_size=10")
-            .header(ContentType::JSON)
-            .dispatch()
-            .await;
-
-        assert_eq!(response.status(), Status::Ok);
-
-        let doctors: Vec<Doctor> = json::from_str(&response.into_string().await.unwrap()).unwrap();
-
-        assert_eq!(doctors.len(), 4);
-
-        let response = client
-            .get("/doctors?page=1")
-            .header(ContentType::JSON)
-            .dispatch()
-            .await;
-
-        assert_eq!(response.status(), Status::Ok);
-
-        let doctors: Vec<Doctor> = json::from_str(&response.into_string().await.unwrap()).unwrap();
-
-        assert_eq!(doctors.len(), 0);
-
-        let response = client
-            .get("/doctors")
-            .header(ContentType::JSON)
-            .dispatch()
-            .await;
-
-        assert_eq!(response.status(), Status::Ok);
-
-        let doctors: Vec<Doctor> = json::from_str(&response.into_string().await.unwrap()).unwrap();
-
-        assert_eq!(doctors.len(), 4);
-    }
-
-    #[sqlx::test]
-    async fn get_doctors_with_pagination_returns_error_if_params_are_invalid(pool: sqlx::PgPool) {
-        let client = create_api_client(pool).await;
-
-        let response = client
-            .get("/doctors?page=-1")
-            .header(ContentType::JSON)
-            .dispatch()
-            .await;
-
-        assert_eq!(response.status(), Status::BadRequest);
-
-        let response = client
-            .get("/doctors?page_size=0")
-            .header(ContentType::JSON)
-            .dispatch()
-            .await;
-
-        assert_eq!(response.status(), Status::BadRequest);
     }
 }
