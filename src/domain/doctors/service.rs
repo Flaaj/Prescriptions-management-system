@@ -144,13 +144,13 @@ mod integration_tests {
         assert!(result.is_ok());
 
         let duplicated_pesel_number_result = service
-            .create_doctor("John Doex".into(), "96021807250".into(), "5425740".into())
+            .create_doctor("John Doex".into(), "96021807250".into(), "8463856".into())
             .await;
 
         assert!(duplicated_pesel_number_result.is_err());
 
         let duplicated_pwz_number_result = service
-            .create_doctor("John Doex".into(), "96021807251".into(), "5425740".into())
+            .create_doctor("John Doex".into(), "99031301347".into(), "5425740".into())
             .await;
 
         assert!(duplicated_pwz_number_result.is_err());
