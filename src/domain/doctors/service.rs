@@ -61,16 +61,17 @@ impl<R: DoctorsRepositoryTrait> DoctorsService<R> {
         page: Option<i64>,
         page_size: Option<i64>,
     ) -> Result<Vec<Doctor>, GetDoctorWithPaginationError> {
-        let doctor = self
+        let doctors = self
             .repo
             .get_doctors(page, page_size)
             .await
             .map_err(|err| GetDoctorWithPaginationError::InputError(err.to_string()))?;
 
-        Ok(doctor)
+        Ok(doctors)
     }
 }
 
+// TODO: Add tests
 // #[cfg(test)]
 // mod integration_tests {
 //     use crate::{create_tables::create_tables, domain::doctors::models::Doctor, Context};
