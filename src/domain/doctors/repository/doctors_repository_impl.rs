@@ -8,6 +8,7 @@ use crate::{
 
 use super::doctors_repository_trait::DoctorsRepositoryTrait;
 
+#[derive(Clone)]
 pub struct DoctorsRepository<'a> {
     pool: &'a sqlx::PgPool,
 }

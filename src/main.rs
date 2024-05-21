@@ -4,6 +4,9 @@ pub mod domain;
 pub mod utils;
 use api::doctors_controller;
 use create_tables::create_tables;
+use domain::doctors::{
+    repository::doctors_repository_impl::DoctorsRepository, service::DoctorsService,
+};
 use rocket::{launch, Build, Rocket};
 use rocket_okapi::swagger_ui::{make_swagger_ui, SwaggerUIConfig};
 use sqlx::{postgres::PgPoolOptions, Pool, Postgres};

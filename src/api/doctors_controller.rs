@@ -1,9 +1,12 @@
 use crate::{
     domain::doctors::{
-        models::{Doctor, NewDoctor},
+        models::Doctor,
         repository::{
             doctors_repository_impl::DoctorsRepository,
             doctors_repository_trait::DoctorsRepositoryTrait,
+        },
+        service::{
+            CreateDoctorError, DoctorsService, GetDoctorByIdError, GetDoctorWithPaginationError,
         },
     },
     Ctx,
@@ -23,8 +26,14 @@ use rocket_okapi::{
 use rocket_okapi::{openapi, openapi_get_routes, JsonSchema};
 use schemars::Map;
 use serde::{Deserialize, Serialize};
+use sqlx::PgPool;
 use uuid::Uuid;
-use std::borrow::Borrow;
+
+pub fn create_doctors_service<'a>(
+    pool: &'a PgPool,
+) -> DoctorsService<impl DoctorsRepositoryTrait + 'a> {
+    DoctorsService::new(DoctorsRepository::new(pool))
+}
 
 fn example_name() -> &'static str {
     "John Doe"
@@ -46,20 +55,15 @@ pub struct CreateDoctorDto {
     pub pwz_number: String,
 }
 
-pub enum CreateDoctorErrorStatus {
-    ValidationError(String),
-    DatabaseError(String),
-}
-
-impl<'r> Responder<'r, 'static> for CreateDoctorErrorStatus {
+impl<'r> Responder<'r, 'static> for CreateDoctorError {
     fn respond_to(self, _: &'r Request<'_>) -> rocket::response::Result<'static> {
         match self {
-            CreateDoctorErrorStatus::ValidationError(message) => Response::build()
+            CreateDoctorError::ValidationError(message) => Response::build()
                 .sized_body(message.len(), std::io::Cursor::new(message))
                 .header(ContentType::JSON)
                 .status(Status::BadRequest)
                 .ok(),
-            CreateDoctorErrorStatus::DatabaseError(message) => Response::build()
+            CreateDoctorError::DatabaseError(message) => Response::build()
                 .sized_body(message.len(), std::io::Cursor::new(message))
                 .header(ContentType::JSON)
                 .status(Status::BadRequest)
@@ -68,7 +72,7 @@ impl<'r> Responder<'r, 'static> for CreateDoctorErrorStatus {
     }
 }
 
-impl OpenApiResponderInner for CreateDoctorErrorStatus {
+impl OpenApiResponderInner for CreateDoctorError {
     fn responses(_generator: &mut OpenApiGenerator) -> Result<Responses, OpenApiError> {
         use rocket_okapi::okapi::openapi3::{RefOr, Response as OpenApiReponse};
 
@@ -100,27 +104,21 @@ impl OpenApiResponderInner for CreateDoctorErrorStatus {
 pub async fn create_doctor(
     ctx: &Ctx,
     dto: Json<CreateDoctorDto>,
-) -> Result<Created<Json<Doctor>>, CreateDoctorErrorStatus> {
-    let new_doctor = NewDoctor::new(dto.0.name, dto.0.pwz_number, dto.0.pesel_number)
-        .map_err(|err| CreateDoctorErrorStatus::ValidationError(err.to_string()))?;
+) -> Result<Created<Json<Doctor>>, CreateDoctorError> {
+    let doctors_service = create_doctors_service(&ctx.pool);
 
-    let created_doctor = DoctorsRepository::new(ctx.pool.borrow())
-        .create_doctor(new_doctor)
-        .await
-        .map_err(|err| CreateDoctorErrorStatus::DatabaseError(err.to_string()))?;
+    let created_doctor = doctors_service
+        .create_doctor(dto.0.name, dto.0.pesel_number, dto.0.pwz_number)
+        .await?;
 
     let location = format!("/doctors/{}", created_doctor.id); // assuming you have a route like this
     Ok(Created::new(location).body(Json(created_doctor)))
 }
 
-pub enum GetDoctorByIdErrorStatus {
-    InputError,
-    DatabaseError(String),
-}
-impl<'r> Responder<'r, 'static> for GetDoctorByIdErrorStatus {
+impl<'r> Responder<'r, 'static> for GetDoctorByIdError {
     fn respond_to(self, _: &'r Request<'_>) -> rocket::response::Result<'static> {
         match self {
-            GetDoctorByIdErrorStatus::InputError => {
+            GetDoctorByIdError::InputError => {
                 let message = "Doctor id is incorrect - it must be provided in UUID format";
                 Response::build()
                     .sized_body(message.len(), std::io::Cursor::new(message))
@@ -128,7 +126,7 @@ impl<'r> Responder<'r, 'static> for GetDoctorByIdErrorStatus {
                     .status(Status::UnprocessableEntity)
                     .ok()
             }
-            GetDoctorByIdErrorStatus::DatabaseError(message) => Response::build()
+            GetDoctorByIdError::DatabaseError(message) => Response::build()
                 .sized_body(message.len(), std::io::Cursor::new(message))
                 .header(ContentType::JSON)
                 .status(Status::BadRequest)
@@ -137,7 +135,7 @@ impl<'r> Responder<'r, 'static> for GetDoctorByIdErrorStatus {
     }
 }
 
-impl OpenApiResponderInner for GetDoctorByIdErrorStatus {
+impl OpenApiResponderInner for GetDoctorByIdError {
     fn responses(_generator: &mut OpenApiGenerator) -> Result<Responses, OpenApiError> {
         use rocket_okapi::okapi::openapi3::{RefOr, Response as OpenApiReponse};
 
@@ -170,23 +168,18 @@ impl OpenApiResponderInner for GetDoctorByIdErrorStatus {
 pub async fn get_doctor_by_id(
     ctx: &Ctx,
     doctor_id: Uuid,
-) -> Result<Json<Doctor>, GetDoctorByIdErrorStatus> {
-    let doctor = DoctorsRepository::new(ctx.pool.borrow())
-        .get_doctor_by_id(doctor_id)
-        .await
-        .map_err(|err| GetDoctorByIdErrorStatus::DatabaseError(err.to_string()))?;
+) -> Result<Json<Doctor>, GetDoctorByIdError> {
+    let doctors_service = create_doctors_service(&ctx.pool);
+
+    let doctor = doctors_service.get_doctor_by_id(doctor_id).await?;
 
     Ok(Json(doctor))
 }
 
-pub enum GetDoctorWithPaginationErrorStatus {
-    InputError(String),
-}
-
-impl<'r> Responder<'r, 'static> for GetDoctorWithPaginationErrorStatus {
+impl<'r> Responder<'r, 'static> for GetDoctorWithPaginationError {
     fn respond_to(self, _: &'r Request<'_>) -> rocket::response::Result<'static> {
         match self {
-            GetDoctorWithPaginationErrorStatus::InputError(message) => Response::build()
+            GetDoctorWithPaginationError::InputError(message) => Response::build()
                 .sized_body(message.len(), std::io::Cursor::new(message))
                 .header(ContentType::JSON)
                 .status(Status::BadRequest)
@@ -195,7 +188,7 @@ impl<'r> Responder<'r, 'static> for GetDoctorWithPaginationErrorStatus {
     }
 }
 
-impl OpenApiResponderInner for GetDoctorWithPaginationErrorStatus {
+impl OpenApiResponderInner for GetDoctorWithPaginationError {
     fn responses(_generator: &mut OpenApiGenerator) -> Result<Responses, OpenApiError> {
         use rocket_okapi::okapi::openapi3::{RefOr, Response as OpenApiReponse};
 
@@ -220,13 +213,14 @@ pub async fn get_doctors_with_pagination(
     ctx: &Ctx,
     page: Option<i64>,
     page_size: Option<i64>,
-) -> Result<Json<Vec<Doctor>>, GetDoctorWithPaginationErrorStatus> {
-    let doctor = DoctorsRepository::new(ctx.pool.borrow())
-        .get_doctors(page, page_size)
-        .await
-        .map_err(|err| GetDoctorWithPaginationErrorStatus::InputError(err.to_string()))?;
+) -> Result<Json<Vec<Doctor>>, GetDoctorWithPaginationError> {
+    let doctors_service = create_doctors_service(&ctx.pool);
 
-    Ok(Json(doctor))
+    let doctors = doctors_service
+        .get_doctors_with_pagination(page, page_size)
+        .await?;
+
+    Ok(Json(doctors))
 }
 
 pub fn get_routes() -> Vec<Route> {
