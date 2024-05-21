@@ -111,7 +111,7 @@ pub async fn create_doctor(
         .create_doctor(dto.0.name, dto.0.pesel_number, dto.0.pwz_number)
         .await?;
 
-    let location = format!("/doctors/{}", created_doctor.id); // assuming you have a route like this
+    let location = format!("/doctors/{}", created_doctor.id);
     Ok(Created::new(location).body(Json(created_doctor)))
 }
 
