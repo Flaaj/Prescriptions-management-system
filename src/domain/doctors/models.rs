@@ -3,6 +3,7 @@ use rocket_okapi::okapi::schemars;
 use rocket_okapi::JsonSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+
 #[derive(Clone, Debug)]
 pub struct NewDoctor {
     pub id: Uuid,

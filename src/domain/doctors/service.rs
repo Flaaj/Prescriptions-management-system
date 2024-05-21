@@ -76,6 +76,7 @@ impl<R: DoctorsRepositoryTrait> DoctorsService<R> {
 
 #[cfg(test)]
 mod integration_tests {
+    use super::DoctorsService;
     use crate::{
         create_tables::create_tables,
         domain::doctors::repository::{
@@ -84,8 +85,6 @@ mod integration_tests {
         },
     };
     use uuid::Uuid;
-
-    use super::DoctorsService;
 
     async fn create_doctors_service<'a>(
         pool: &'a sqlx::PgPool,
