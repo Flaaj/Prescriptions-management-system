@@ -19,12 +19,12 @@ pub enum GetDoctorWithPaginationError {
 }
 
 #[derive(Clone)]
-pub struct DoctorsService<T: DoctorsRepositoryTrait> {
-    repo: T,
+pub struct DoctorsService<R: DoctorsRepositoryTrait> {
+    repo: R,
 }
 
-impl<T: DoctorsRepositoryTrait> DoctorsService<T> {
-    pub fn new(repo: T) -> Self {
+impl<R: DoctorsRepositoryTrait> DoctorsService<R> {
+    pub fn new(repo: R) -> Self {
         Self { repo }
     }
 
