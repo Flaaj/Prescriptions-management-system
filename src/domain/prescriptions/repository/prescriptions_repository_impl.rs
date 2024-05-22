@@ -108,9 +108,9 @@ impl PrescriptionsRepositoryTrait for PrescriptionsRepository {
             LIMIT $1 OFFSET $2
         ) AS prescriptions
         LEFT JOIN prescription_fills ON prescriptions.id = prescription_fills.prescription_id
-        JOIN prescribed_drugs ON prescriptions.id = prescribed_drugs.prescription_id
-        JOIN doctors ON prescriptions.doctor_id = doctors.id
-        JOIN patients ON prescriptions.patient_id = patients.id
+        INNER JOIN prescribed_drugs ON prescriptions.id = prescribed_drugs.prescription_id
+        INNER JOIN doctors ON prescriptions.doctor_id = doctors.id
+        INNER JOIN patients ON prescriptions.patient_id = patients.id
     "#,
         )
         .bind(page_size)
@@ -121,28 +121,28 @@ impl PrescriptionsRepositoryTrait for PrescriptionsRepository {
         let mut prescriptions: Vec<Prescription> = vec![];
 
         for row in prescriptions_from_db {
-            let prescription_id: Uuid = row.get(0);
-            let prescription_prescription_type: PrescriptionType = row.get(1);
-            let prescription_start_date: DateTime<Utc> = row.get(2);
-            let prescription_end_date: DateTime<Utc> = row.get(3);
-            let prescription_created_at: DateTime<Utc> = row.get(4);
-            let prescription_updated_at: DateTime<Utc> = row.get(5);
-            let doctor_id: Uuid = row.get(6);
-            let doctor_name: String = row.get(7);
-            let doctor_pesel_number: String = row.get(8);
-            let doctor_pwz_number: String = row.get(9);
-            let patient_id: Uuid = row.get(10);
-            let patient_name: String = row.get(11);
-            let patient_pesel_number: String = row.get(12);
-            let prescribed_drug_id: Uuid = row.get(13);
-            let prescribed_drug_drug_id: Uuid = row.get(14);
-            let prescribed_drug_quantity: i32 = row.get(15);
-            let prescribed_drug_created_at: DateTime<Utc> = row.get(16);
-            let prescribed_drug_updated_at: DateTime<Utc> = row.get(17);
-            let prescription_fill_id: Option<Uuid> = row.get(18);
-            let prescription_fill_pharmacist_id: Option<Uuid> = row.get(19);
-            let prescription_fill_created_at: Option<DateTime<Utc>> = row.get(20);
-            let prescription_fill_updated_at: Option<DateTime<Utc>> = row.get(21);
+            let prescription_id: Uuid = row.try_get(0)?;
+            let prescription_prescription_type: PrescriptionType = row.try_get(1)?;
+            let prescription_start_date: DateTime<Utc> = row.try_get(2)?;
+            let prescription_end_date: DateTime<Utc> = row.try_get(3)?;
+            let prescription_created_at: DateTime<Utc> = row.try_get(4)?;
+            let prescription_updated_at: DateTime<Utc> = row.try_get(5)?;
+            let doctor_id: Uuid = row.try_get(6)?;
+            let doctor_name: String = row.try_get(7)?;
+            let doctor_pesel_number: String = row.try_get(8)?;
+            let doctor_pwz_number: String = row.try_get(9)?;
+            let patient_id: Uuid = row.try_get(10)?;
+            let patient_name: String = row.try_get(11)?;
+            let patient_pesel_number: String = row.try_get(12)?;
+            let prescribed_drug_id: Uuid = row.try_get(13)?;
+            let prescribed_drug_drug_id: Uuid = row.try_get(14)?;
+            let prescribed_drug_quantity: i32 = row.try_get(15)?;
+            let prescribed_drug_created_at: DateTime<Utc> = row.try_get(16)?;
+            let prescribed_drug_updated_at: DateTime<Utc> = row.try_get(17)?;
+            let prescription_fill_id: Option<Uuid> = row.try_get(18)?;
+            let prescription_fill_pharmacist_id: Option<Uuid> = row.try_get(19)?;
+            let prescription_fill_created_at: Option<DateTime<Utc>> = row.try_get(20)?;
+            let prescription_fill_updated_at: Option<DateTime<Utc>> = row.try_get(21)?;
 
             let prescription = prescriptions.iter_mut().find(|p| p.id == prescription_id);
 
@@ -228,9 +228,9 @@ impl PrescriptionsRepositoryTrait for PrescriptionsRepository {
             WHERE id = $1
         ) AS prescriptions
         LEFT JOIN prescription_fills ON prescriptions.id = prescription_fills.prescription_id
-        JOIN prescribed_drugs ON prescriptions.id = prescribed_drugs.prescription_id
-        JOIN doctors ON prescriptions.doctor_id = doctors.id
-        JOIN patients ON prescriptions.patient_id = patients.id
+        INNER JOIN prescribed_drugs ON prescriptions.id = prescribed_drugs.prescription_id
+        INNER JOIN doctors ON prescriptions.doctor_id = doctors.id
+        INNER JOIN patients ON prescriptions.patient_id = patients.id
     "#,
         )
         .bind(id)
@@ -240,28 +240,28 @@ impl PrescriptionsRepositoryTrait for PrescriptionsRepository {
         let mut prescriptions: Vec<Prescription> = vec![];
 
         for row in prescription_from_db {
-            let prescription_id: Uuid = row.get(0);
-            let prescription_prescription_type: PrescriptionType = row.get(1);
-            let prescription_start_date: DateTime<Utc> = row.get(2);
-            let prescription_end_date: DateTime<Utc> = row.get(3);
-            let prescription_created_at: DateTime<Utc> = row.get(4);
-            let prescription_updated_at: DateTime<Utc> = row.get(5);
-            let doctor_id: Uuid = row.get(6);
-            let doctor_name: String = row.get(7);
-            let doctor_pesel_number: String = row.get(8);
-            let doctor_pwz_number: String = row.get(9);
-            let patient_id: Uuid = row.get(10);
-            let patient_name: String = row.get(11);
-            let patient_pesel_number: String = row.get(12);
-            let prescribed_drug_id: Uuid = row.get(13);
-            let prescribed_drug_drug_id: Uuid = row.get(14);
-            let prescribed_drug_quantity: i32 = row.get(15);
-            let prescribed_drug_created_at: DateTime<Utc> = row.get(16);
-            let prescribed_drug_updated_at: DateTime<Utc> = row.get(17);
-            let prescription_fill_id: Option<Uuid> = row.get(18);
-            let prescription_fill_pharmacist_id: Option<Uuid> = row.get(19);
-            let prescription_fill_created_at: Option<DateTime<Utc>> = row.get(20);
-            let prescription_fill_updated_at: Option<DateTime<Utc>> = row.get(21);
+            let prescription_id: Uuid = row.try_get(0)?;
+            let prescription_prescription_type: PrescriptionType = row.try_get(1)?;
+            let prescription_start_date: DateTime<Utc> = row.try_get(2)?;
+            let prescription_end_date: DateTime<Utc> = row.try_get(3)?;
+            let prescription_created_at: DateTime<Utc> = row.try_get(4)?;
+            let prescription_updated_at: DateTime<Utc> = row.try_get(5)?;
+            let doctor_id: Uuid = row.try_get(6)?;
+            let doctor_name: String = row.try_get(7)?;
+            let doctor_pesel_number: String = row.try_get(8)?;
+            let doctor_pwz_number: String = row.try_get(9)?;
+            let patient_id: Uuid = row.try_get(10)?;
+            let patient_name: String = row.try_get(11)?;
+            let patient_pesel_number: String = row.try_get(12)?;
+            let prescribed_drug_id: Uuid = row.try_get(13)?;
+            let prescribed_drug_drug_id: Uuid = row.try_get(14)?;
+            let prescribed_drug_quantity: i32 = row.try_get(15)?;
+            let prescribed_drug_created_at: DateTime<Utc> = row.try_get(16)?;
+            let prescribed_drug_updated_at: DateTime<Utc> = row.try_get(17)?;
+            let prescription_fill_id: Option<Uuid> = row.try_get(18)?;
+            let prescription_fill_pharmacist_id: Option<Uuid> = row.try_get(19)?;
+            let prescription_fill_created_at: Option<DateTime<Utc>> = row.try_get(20)?;
+            let prescription_fill_updated_at: Option<DateTime<Utc>> = row.try_get(21)?;
 
             let prescription = prescriptions.iter_mut().find(|p| p.id == prescription_id);
 

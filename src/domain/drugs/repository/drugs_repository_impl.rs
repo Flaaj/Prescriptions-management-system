@@ -36,15 +36,15 @@ impl<'a> DrugsRepositoryTrait for DrugsRepository {
         .await?;
 
         Ok(Drug {
-            id: result.get(0),
-            name: result.get(1),
-            content_type: result.get(2),
-            pills_count: result.get(3),
-            mg_per_pill: result.get(4),
-            ml_per_pill: result.get(5),
-            volume_ml: result.get(6),
-            created_at: result.get(7),
-            updated_at: result.get(8),
+            id: result.try_get(0)?,
+            name: result.try_get(1)?,
+            content_type: result.try_get(2)?,
+            pills_count: result.try_get(3)?,
+            mg_per_pill: result.try_get(4)?,
+            ml_per_pill: result.try_get(5)?,
+            volume_ml: result.try_get(6)?,
+            created_at: result.try_get(7)?,
+            updated_at: result.try_get(8)?,
         })
     }
 
