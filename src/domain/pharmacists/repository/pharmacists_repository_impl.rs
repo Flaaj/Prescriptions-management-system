@@ -20,17 +20,23 @@ impl<'a> PharmacistsRepository<'a> {
 
 #[async_trait]
 impl<'a> PharmacistsRepositoryTrait for PharmacistsRepository<'a> {
-    async fn create_pharmacist(&self, pharmacist: NewPharmacist) -> anyhow::Result<()> {
-        sqlx::query!(
-            r#"INSERT INTO pharmacists (id, name, pesel_number) VALUES ($1, $2, $3)"#,
+    async fn create_pharmacist(&self, pharmacist: NewPharmacist) -> anyhow::Result<Pharmacist> {
+        let result = sqlx::query!(
+            r#"INSERT INTO pharmacists (id, name, pesel_number) VALUES ($1, $2, $3) RETURNING id, name, pesel_number, created_at, updated_at"#,
             pharmacist.id,
             pharmacist.name,
             pharmacist.pesel_number
         )
-        .execute(self.pool)
+        .fetch_one(self.pool)
         .await?;
 
-        Ok(())
+        Ok(Pharmacist {
+            id: result.id,
+            name: result.name,
+            pesel_number: result.pesel_number,
+            created_at: result.created_at,
+            updated_at: result.updated_at,
+        })
     }
 
     async fn get_pharmacists(
@@ -96,67 +102,75 @@ mod integration_tests {
     #[sqlx::test]
     async fn create_and_read_pharmacists_from_database(pool: sqlx::PgPool) {
         create_tables(&pool, true).await.unwrap();
-        let repo = PharmacistsRepository::new(&pool);
+        let repository = PharmacistsRepository::new(&pool);
 
-        repo.create_pharmacist(
-            NewPharmacist::new("John Doe".into(), "96021817257".into()).unwrap(),
-        )
-        .await
-        .unwrap();
-        repo.create_pharmacist(
-            NewPharmacist::new("John Doe".into(), "99031301347".into()).unwrap(),
-        )
-        .await
-        .unwrap();
-        repo.create_pharmacist(
-            NewPharmacist::new("John Doe".into(), "92022900002".into()).unwrap(),
-        )
-        .await
-        .unwrap();
-        repo.create_pharmacist(
-            NewPharmacist::new("John Doe".into(), "96021807250".into()).unwrap(),
-        )
-        .await
-        .unwrap();
+        repository
+            .create_pharmacist(NewPharmacist::new("John Doe".into(), "96021817257".into()).unwrap())
+            .await
+            .unwrap();
+        repository
+            .create_pharmacist(NewPharmacist::new("John Doe".into(), "99031301347".into()).unwrap())
+            .await
+            .unwrap();
+        repository
+            .create_pharmacist(NewPharmacist::new("John Doe".into(), "92022900002".into()).unwrap())
+            .await
+            .unwrap();
+        repository
+            .create_pharmacist(NewPharmacist::new("John Doe".into(), "96021807250".into()).unwrap())
+            .await
+            .unwrap();
 
-        let pharmacists = repo.get_pharmacists(None, Some(2)).await.unwrap();
+        let pharmacists = repository.get_pharmacists(None, Some(2)).await.unwrap();
         assert_eq!(pharmacists.len(), 2);
 
-        let pharmacists = repo.get_pharmacists(None, Some(10)).await.unwrap();
+        let pharmacists = repository.get_pharmacists(None, Some(10)).await.unwrap();
         assert!(pharmacists.len() == 4);
 
-        let pharmacists = repo.get_pharmacists(Some(1), Some(3)).await.unwrap();
+        let pharmacists = repository.get_pharmacists(Some(1), Some(3)).await.unwrap();
         assert!(pharmacists.len() == 1);
 
-        let pharmacists = repo.get_pharmacists(Some(2), Some(3)).await.unwrap();
+        let pharmacists = repository.get_pharmacists(Some(2), Some(3)).await.unwrap();
         assert!(pharmacists.len() == 0);
     }
 
     #[sqlx::test]
     async fn create_and_read_pharmacist_by_id(pool: sqlx::PgPool) {
         create_tables(&pool, true).await.unwrap();
-        let repo = PharmacistsRepository::new(&pool);
+        let repository = PharmacistsRepository::new(&pool);
 
         let pharmacist = NewPharmacist::new("John Doe".into(), "96021817257".into()).unwrap();
 
-        repo.create_pharmacist(pharmacist.clone()).await.unwrap();
+        let created_pharmacist = repository
+            .create_pharmacist(pharmacist.clone())
+            .await
+            .unwrap();
 
-        let pharmacist_from_repo = repo.get_pharmacist_by_id(pharmacist.id).await.unwrap();
+        assert_eq!(created_pharmacist.name, "John Doe");
+        assert_eq!(created_pharmacist.pesel_number, "96021817257");
 
-        assert_eq!(pharmacist_from_repo.id, pharmacist.id);
+        let pharmacist_from_repo = repository
+            .get_pharmacist_by_id(pharmacist.id)
+            .await
+            .unwrap();
+
+        assert_eq!(pharmacist_from_repo.name, "John Doe");
+        assert_eq!(pharmacist_from_repo.pesel_number, "96021817257")
     }
 
     #[sqlx::test]
     async fn doesnt_create_pharmacist_if_pesel_number_is_duplicated(pool: sqlx::PgPool) {
         create_tables(&pool, true).await.unwrap();
-        let repo = PharmacistsRepository::new(&pool);
+        let repository = PharmacistsRepository::new(&pool);
 
         let pharmacist = NewPharmacist::new("John Doe".into(), "96021817257".into()).unwrap();
-        assert!(repo.create_pharmacist(pharmacist).await.is_ok());
+
+        assert!(repository.create_pharmacist(pharmacist).await.is_ok());
 
         let pharmacist_with_duplicated_pesel_number =
             NewPharmacist::new("John Doe".into(), "96021817257".into()).unwrap();
-        assert!(repo
+
+        assert!(repository
             .create_pharmacist(pharmacist_with_duplicated_pesel_number)
             .await
             .is_err());

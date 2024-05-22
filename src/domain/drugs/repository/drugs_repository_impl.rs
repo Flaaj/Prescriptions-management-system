@@ -21,21 +21,31 @@ impl<'a> DrugsRepository<'a> {
 
 #[async_trait]
 impl<'a> DrugsRepositoryTrait for DrugsRepository<'a> {
-    async fn create_drug(&self, drug: NewDrug) -> anyhow::Result<()> {
-        sqlx::query!(
-            r#"INSERT INTO drugs (id, name, content_type, pills_count, mg_per_pill, ml_per_pill, volume_ml) VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
-            drug.id,
-            drug.name,
-            drug.content_type as _,
-            drug.pills_count,
-            drug.mg_per_pill,
-            drug.ml_per_pill,
-            drug.volume_ml
+    async fn create_drug(&self, drug: NewDrug) -> anyhow::Result<Drug> {
+        let result = sqlx::query(
+            r#"INSERT INTO drugs (id, name, content_type, pills_count, mg_per_pill, ml_per_pill, volume_ml) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, name, content_type, pills_count, mg_per_pill, ml_per_pill, volume_ml, created_at, updated_at"#,
         )
-        .execute(self.pool)
+        .bind(drug.id)
+        .bind(drug.name)
+        .bind(drug.content_type)
+        .bind(drug.pills_count)
+        .bind(drug.mg_per_pill)
+        .bind(drug.ml_per_pill)
+        .bind(drug.volume_ml)
+        .fetch_one(self.pool)
         .await?;
 
-        Ok(())
+        Ok(Drug {
+            id: result.get(0),
+            name: result.get(1),
+            content_type: result.get(2),
+            pills_count: result.get(3),
+            mg_per_pill: result.get(4),
+            ml_per_pill: result.get(5),
+            volume_ml: result.get(6),
+            created_at: result.get(7),
+            updated_at: result.get(8),
+        })
     }
 
     async fn get_drugs(
@@ -109,62 +119,74 @@ mod integration_tests {
     #[sqlx::test]
     async fn create_and_read_drugs_from_database(pool: sqlx::PgPool) {
         create_tables(&pool, true).await.unwrap();
-        let repo = DrugsRepository::new(&pool);
+        let repository = DrugsRepository::new(&pool);
 
-        repo.create_drug(
-            NewDrug::new(
-                "Gripex".into(),
-                DrugContentType::SolidPills,
-                Some(20),
-                Some(300),
-                None,
-                None,
+        let result = repository
+            .create_drug(
+                NewDrug::new(
+                    "Gripex".into(),
+                    DrugContentType::SolidPills,
+                    Some(20),
+                    Some(300),
+                    None,
+                    None,
+                )
+                .unwrap(),
             )
-            .unwrap(),
-        )
-        .await
-        .unwrap();
-        repo.create_drug(
-            NewDrug::new(
-                "Apap".into(),
-                DrugContentType::SolidPills,
-                Some(10),
-                Some(400),
-                None,
-                None,
-            )
-            .unwrap(),
-        )
-        .await
-        .unwrap();
-        repo.create_drug(
-            NewDrug::new(
-                "Aspirin".into(),
-                DrugContentType::SolidPills,
-                Some(30),
-                Some(200),
-                None,
-                None,
-            )
-            .unwrap(),
-        )
-        .await
-        .unwrap();
-        repo.create_drug(
-            NewDrug::new(
-                "Flegamax".into(),
-                DrugContentType::BottleOfLiquid,
-                None,
-                None,
-                None,
-                Some(400),
-            )
-            .unwrap(),
-        )
-        .await
-        .unwrap();
+            .await
+            .unwrap();
 
-        let drugs = repo.get_drugs(None, Some(10)).await.unwrap();
+        assert_eq!(result.name, "Gripex");
+        assert_eq!(result.content_type, DrugContentType::SolidPills);
+        assert_eq!(result.pills_count, Some(20));
+        assert_eq!(result.mg_per_pill, Some(300));
+        assert_eq!(result.ml_per_pill, None);
+        assert_eq!(result.volume_ml, None);
+
+        repository
+            .create_drug(
+                NewDrug::new(
+                    "Apap".into(),
+                    DrugContentType::SolidPills,
+                    Some(10),
+                    Some(400),
+                    None,
+                    None,
+                )
+                .unwrap(),
+            )
+            .await
+            .unwrap();
+        repository
+            .create_drug(
+                NewDrug::new(
+                    "Aspirin".into(),
+                    DrugContentType::SolidPills,
+                    Some(30),
+                    Some(200),
+                    None,
+                    None,
+                )
+                .unwrap(),
+            )
+            .await
+            .unwrap();
+        repository
+            .create_drug(
+                NewDrug::new(
+                    "Flegamax".into(),
+                    DrugContentType::BottleOfLiquid,
+                    None,
+                    None,
+                    None,
+                    Some(400),
+                )
+                .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        let drugs = repository.get_drugs(None, Some(10)).await.unwrap();
 
         assert_eq!(drugs.len(), 4);
         assert_eq!(drugs[0].name, "Gripex");
@@ -192,15 +214,15 @@ mod integration_tests {
         assert_eq!(drugs[3].ml_per_pill, None);
         assert_eq!(drugs[3].volume_ml, Some(400));
 
-        let drugs = repo.get_drugs(None, Some(2)).await.unwrap();
+        let drugs = repository.get_drugs(None, Some(2)).await.unwrap();
 
         assert_eq!(drugs.len(), 2);
 
-        let drugs = repo.get_drugs(Some(1), Some(3)).await.unwrap();
+        let drugs = repository.get_drugs(Some(1), Some(3)).await.unwrap();
 
         assert_eq!(drugs.len(), 1);
 
-        let drugs = repo.get_drugs(Some(2), Some(3)).await.unwrap();
+        let drugs = repository.get_drugs(Some(2), Some(3)).await.unwrap();
 
         assert_eq!(drugs.len(), 0);
     }
@@ -208,7 +230,7 @@ mod integration_tests {
     #[sqlx::test]
     async fn create_and_read_drug_by_id(pool: sqlx::PgPool) {
         create_tables(&pool, true).await.unwrap();
-        let repo = DrugsRepository::new(&pool);
+        let repository = DrugsRepository::new(&pool);
 
         let drug = NewDrug::new(
             "Gripex Max".into(),
@@ -220,9 +242,16 @@ mod integration_tests {
         )
         .unwrap();
 
-        repo.create_drug(drug.clone()).await.unwrap();
+        let created_drug = repository.create_drug(drug.clone()).await.unwrap();
 
-        let drug_from_repo = repo.get_drug_by_id(drug.id).await.unwrap();
+        assert_eq!(created_drug.name, "Gripex Max");
+        assert_eq!(created_drug.content_type, DrugContentType::SolidPills);
+        assert_eq!(created_drug.pills_count, Some(20));
+        assert_eq!(created_drug.mg_per_pill, Some(300));
+        assert_eq!(created_drug.ml_per_pill, None);
+        assert_eq!(created_drug.volume_ml, None);
+
+        let drug_from_repo = repository.get_drug_by_id(drug.id).await.unwrap();
 
         assert_eq!(drug_from_repo.name, "Gripex Max");
         assert_eq!(drug_from_repo.content_type, DrugContentType::SolidPills);

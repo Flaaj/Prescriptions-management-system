@@ -20,17 +20,23 @@ impl<'a> PatientsRepository<'a> {
 
 #[async_trait]
 impl<'a> PatientsRepositoryTrait for PatientsRepository<'a> {
-    async fn create_patient(&self, patient: NewPatient) -> anyhow::Result<()> {
-        sqlx::query!(
-            r#"INSERT INTO patients (id, name, pesel_number) VALUES ($1, $2, $3)"#,
+    async fn create_patient(&self, patient: NewPatient) -> anyhow::Result<Patient> {
+        let result = sqlx::query!(
+            r#"INSERT INTO patients (id, name, pesel_number) VALUES ($1, $2, $3) RETURNING id, name, pesel_number, created_at, updated_at"#,
             patient.id,
             patient.name,
             patient.pesel_number
         )
-        .execute(self.pool)
+        .fetch_one(self.pool)
         .await?;
 
-        Ok(())
+        Ok(Patient {
+            id: result.id,
+            name: result.name,
+            pesel_number: result.pesel_number,
+            created_at: result.created_at,
+            updated_at: result.updated_at,
+        })
     }
 
     async fn get_patients(
@@ -96,44 +102,48 @@ mod integration_tests {
     #[sqlx::test]
     async fn create_and_read_patients_from_database(pool: sqlx::PgPool) {
         create_tables(&pool, true).await.unwrap();
-        let repo = PatientsRepository::new(&pool);
+        let repository = PatientsRepository::new(&pool);
 
-        repo.create_patient(NewPatient::new("John Doe".into(), "96021817257".into()).unwrap())
+        repository
+            .create_patient(NewPatient::new("John Doe".into(), "96021817257".into()).unwrap())
             .await
             .unwrap();
-        repo.create_patient(NewPatient::new("John Doe".into(), "99031301347".into()).unwrap())
+        repository
+            .create_patient(NewPatient::new("John Doe".into(), "99031301347".into()).unwrap())
             .await
             .unwrap();
-        repo.create_patient(NewPatient::new("John Doe".into(), "92022900002".into()).unwrap())
+        repository
+            .create_patient(NewPatient::new("John Doe".into(), "92022900002".into()).unwrap())
             .await
             .unwrap();
-        repo.create_patient(NewPatient::new("John Doe".into(), "96021807250".into()).unwrap())
+        repository
+            .create_patient(NewPatient::new("John Doe".into(), "96021807250".into()).unwrap())
             .await
             .unwrap();
 
-        let patients = repo.get_patients(None, Some(2)).await.unwrap();
+        let patients = repository.get_patients(None, Some(2)).await.unwrap();
         assert_eq!(patients.len(), 2);
 
-        let patients = repo.get_patients(None, Some(10)).await.unwrap();
+        let patients = repository.get_patients(None, Some(10)).await.unwrap();
         assert_eq!(patients.len(), 4);
 
-        let patients = repo.get_patients(Some(1), Some(3)).await.unwrap();
+        let patients = repository.get_patients(Some(1), Some(3)).await.unwrap();
         assert_eq!(patients.len(), 1);
 
-        let patients = repo.get_patients(Some(2), Some(3)).await.unwrap();
+        let patients = repository.get_patients(Some(2), Some(3)).await.unwrap();
         assert_eq!(patients.len(), 0);
     }
 
     #[sqlx::test]
     async fn create_and_read_patient_by_id(pool: sqlx::PgPool) {
         create_tables(&pool, true).await.unwrap();
-        let repo = PatientsRepository::new(&pool);
+        let repository = PatientsRepository::new(&pool);
 
         let patient = NewPatient::new("John Doe".into(), "96021817257".into()).unwrap();
 
-        repo.create_patient(patient.clone()).await.unwrap();
+        repository.create_patient(patient.clone()).await.unwrap();
 
-        let patient_from_repo = repo.get_patient_by_id(patient.id).await.unwrap();
+        let patient_from_repo = repository.get_patient_by_id(patient.id).await.unwrap();
 
         assert_eq!(patient_from_repo.id, patient.id);
     }
@@ -141,14 +151,14 @@ mod integration_tests {
     #[sqlx::test]
     async fn doesnt_create_patient_if_pesel_number_is_duplicated(pool: sqlx::PgPool) {
         create_tables(&pool, true).await.unwrap();
-        let repo = PatientsRepository::new(&pool);
+        let repository = PatientsRepository::new(&pool);
 
         let patient = NewPatient::new("John Doe".into(), "96021817257".into()).unwrap();
-        assert!(repo.create_patient(patient).await.is_ok());
+        assert!(repository.create_patient(patient).await.is_ok());
 
         let patient_with_duplicated_pesel_number =
             NewPatient::new("John Doe".into(), "96021817257".into()).unwrap();
-        assert!(repo
+        assert!(repository
             .create_patient(patient_with_duplicated_pesel_number)
             .await
             .is_err());

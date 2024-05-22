@@ -107,30 +107,30 @@ mod integration_tests {
     #[sqlx::test]
     async fn create_and_read_doctors_from_database(pool: sqlx::PgPool) {
         create_tables(&pool, true).await.unwrap();
-        let repo = DoctorsRepository::new(&pool);
+        let repository = DoctorsRepository::new(&pool);
 
-        repo.create_doctor(
+        repository.create_doctor(
             NewDoctor::new("John Doe".into(), "5425740".into(), "96021817257".into()).unwrap(),
         )
         .await
         .unwrap();
-        repo.create_doctor(
+        repository.create_doctor(
             NewDoctor::new("John Doe".into(), "8463856".into(), "99031301347".into()).unwrap(),
         )
         .await
         .unwrap();
-        repo.create_doctor(
+        repository.create_doctor(
             NewDoctor::new("John Doe".into(), "3123456".into(), "92022900002".into()).unwrap(),
         )
         .await
         .unwrap();
-        repo.create_doctor(
+        repository.create_doctor(
             NewDoctor::new("John Doe".into(), "5425751".into(), "96021807250".into()).unwrap(),
         )
         .await
         .unwrap();
 
-        let doctors = repo.get_doctors(None, Some(10)).await.unwrap();
+        let doctors = repository.get_doctors(None, Some(10)).await.unwrap();
 
         assert!(doctors.len() == 4);
         assert_eq!(doctors[0].pwz_number, "5425740");
@@ -142,15 +142,15 @@ mod integration_tests {
         assert_eq!(doctors[3].pwz_number, "5425751");
         assert_eq!(doctors[3].pesel_number, "96021807250");
 
-        let doctors = repo.get_doctors(None, Some(2)).await.unwrap();
+        let doctors = repository.get_doctors(None, Some(2)).await.unwrap();
 
         assert_eq!(doctors.len(), 2);
 
-        let doctors = repo.get_doctors(Some(1), Some(3)).await.unwrap();
+        let doctors = repository.get_doctors(Some(1), Some(3)).await.unwrap();
         
         assert!(doctors.len() == 1);
 
-        let doctors = repo.get_doctors(Some(2), Some(3)).await.unwrap();
+        let doctors = repository.get_doctors(Some(2), Some(3)).await.unwrap();
         
         assert!(doctors.len() == 0);
     }
@@ -158,14 +158,14 @@ mod integration_tests {
     #[sqlx::test]
     async fn create_and_read_doctor_by_id(pool: sqlx::PgPool) {
         create_tables(&pool, true).await.unwrap();
-        let repo = DoctorsRepository::new(&pool);
+        let repository = DoctorsRepository::new(&pool);
 
         let doctor =
             NewDoctor::new("John Does".into(), "5425740".into(), "96021817257".into()).unwrap();
 
-        repo.create_doctor(doctor.clone()).await.unwrap();
+        repository.create_doctor(doctor.clone()).await.unwrap();
 
-        let doctor_from_repo = repo.get_doctor_by_id(doctor.id).await.unwrap();
+        let doctor_from_repo = repository.get_doctor_by_id(doctor.id).await.unwrap();
 
         assert_eq!(doctor_from_repo.name, "John Does");
         assert_eq!(doctor_from_repo.pwz_number, "5425740");
@@ -175,17 +175,17 @@ mod integration_tests {
     #[sqlx::test]
     async fn doesnt_create_doctor_if_pwz_or_pesel_numbers_are_duplicated(pool: sqlx::PgPool) {
         create_tables(&pool, true).await.unwrap();
-        let repo = DoctorsRepository::new(&pool);
+        let repository = DoctorsRepository::new(&pool);
 
         let doctor =
             NewDoctor::new("John Doe".into(), "5425740".into(), "96021817257".into()).unwrap();
             
-        assert!(repo.create_doctor(doctor).await.is_ok());
+        assert!(repository.create_doctor(doctor).await.is_ok());
 
         let doctor_with_duplicated_pwz_number =
             NewDoctor::new("John Doe".into(), "5425740".into(), "99031301347".into()).unwrap();
 
-        assert!(repo
+        assert!(repository
             .create_doctor(doctor_with_duplicated_pwz_number)
             .await
             .is_err());
@@ -193,7 +193,7 @@ mod integration_tests {
         let doctor_with_duplicated_pesel_number =
             NewDoctor::new("John Doe".into(), "3123456".into(), "96021817257".into()).unwrap();
         
-        assert!(repo
+        assert!(repository
             .create_doctor(doctor_with_duplicated_pesel_number)
             .await
             .is_err());

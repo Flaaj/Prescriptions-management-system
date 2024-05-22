@@ -5,7 +5,7 @@ use crate::domain::drugs::models::{Drug, NewDrug};
 
 #[async_trait]
 pub trait DrugsRepositoryTrait {
-    async fn create_drug(&self, drug: NewDrug) -> anyhow::Result<()>;
+    async fn create_drug(&self, drug: NewDrug) -> anyhow::Result<Drug>;
     async fn get_drugs(
         &self,
         page: Option<i64>,
