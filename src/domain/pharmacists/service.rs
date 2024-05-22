@@ -99,22 +99,18 @@ mod integration_tests {
     async fn creates_pharmacist_and_reads_by_id(pool: sqlx::PgPool) {
         let service = setup_service(pool).await;
 
-        let create_pharmacist_result = service
+        let created_pharmacist = service
             .create_pharmacist("John Doex".into(), "96021807250".into())
-            .await;
-
-        assert!(create_pharmacist_result.is_ok());
-
-        let created_pharmacist = create_pharmacist_result.unwrap();
+            .await
+            .unwrap();
 
         assert_eq!(created_pharmacist.name, "John Doex");
         assert_eq!(created_pharmacist.pesel_number, "96021807250");
 
-        let get_pharmacist_by_id_result = service.get_pharmacist_by_id(created_pharmacist.id).await;
-
-        assert!(get_pharmacist_by_id_result.is_ok());
-
-        let pharmacist_from_repository = get_pharmacist_by_id_result.unwrap();
+        let pharmacist_from_repository = service
+            .get_pharmacist_by_id(created_pharmacist.id)
+            .await
+            .unwrap();
 
         assert_eq!(pharmacist_from_repository.name, "John Doex");
         assert_eq!(pharmacist_from_repository.pesel_number, "96021807250");
@@ -135,11 +131,10 @@ mod integration_tests {
     async fn create_pharmacist_returns_error_if_pesel_number_is_duplicated(pool: sqlx::PgPool) {
         let service = setup_service(pool).await;
 
-        let result = service
+        service
             .create_pharmacist("John Doex".into(), "96021807250".into())
-            .await;
-
-        assert!(result.is_ok());
+            .await
+            .unwrap();
 
         let duplicated_pesel_number_result = service
             .create_pharmacist("John Doex".into(), "96021807250".into())

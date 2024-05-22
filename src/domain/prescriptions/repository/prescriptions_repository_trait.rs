@@ -5,7 +5,7 @@ use crate::domain::prescriptions::models::{NewPrescription, NewPrescriptionFill,
 
 #[async_trait]
 pub trait PrescriptionsRepositoryTrait {
-    async fn create_prescription(&self, prescription: NewPrescription) -> anyhow::Result<()>;
+    async fn create_prescription(&self, prescription: NewPrescription) -> anyhow::Result<Prescription>;
     async fn get_prescriptions(
         &self,
         page: Option<i64>,

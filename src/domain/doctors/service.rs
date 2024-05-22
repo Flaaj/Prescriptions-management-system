@@ -86,9 +86,7 @@ mod integration_tests {
     };
     use uuid::Uuid;
 
-    async fn setup_service<'a>(
-        pool: sqlx::PgPool,
-    ) -> DoctorsService<impl DoctorsRepositoryTrait + 'a> {
+    async fn setup_service(pool: sqlx::PgPool) -> DoctorsService<impl DoctorsRepositoryTrait> {
         create_tables(&pool, true).await.unwrap();
         DoctorsService::new(DoctorsRepository::new(pool))
     }
@@ -97,23 +95,16 @@ mod integration_tests {
     async fn creates_doctor_and_reads_by_id(pool: sqlx::PgPool) {
         let service = setup_service(pool).await;
 
-        let create_doctor_result = service
+        let created_doctor = service
             .create_doctor("John Doex".into(), "96021807250".into(), "5425740".into())
-            .await;
-
-        assert!(create_doctor_result.is_ok());
-
-        let created_doctor = create_doctor_result.unwrap();
+            .await
+            .unwrap();
 
         assert_eq!(created_doctor.name, "John Doex");
         assert_eq!(created_doctor.pesel_number, "96021807250");
         assert_eq!(created_doctor.pwz_number, "5425740");
 
-        let get_doctor_by_id_result = service.get_doctor_by_id(created_doctor.id).await;
-
-        assert!(get_doctor_by_id_result.is_ok());
-
-        let doctor_from_repository = get_doctor_by_id_result.unwrap();
+        let doctor_from_repository = service.get_doctor_by_id(created_doctor.id).await.unwrap();
 
         assert_eq!(doctor_from_repository.name, "John Doex");
         assert_eq!(doctor_from_repository.pesel_number, "96021807250");
@@ -137,11 +128,10 @@ mod integration_tests {
     ) {
         let service = setup_service(pool).await;
 
-        let result = service
+        service
             .create_doctor("John Doex".into(), "96021807250".into(), "5425740".into())
-            .await;
-
-        assert!(result.is_ok());
+            .await
+            .unwrap();
 
         let duplicated_pesel_number_result = service
             .create_doctor("John Doex".into(), "96021807250".into(), "8463856".into())

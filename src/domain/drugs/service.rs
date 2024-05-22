@@ -110,7 +110,7 @@ mod integration_tests {
     async fn creates_drug_and_reads_by_id(pool: sqlx::PgPool) {
         let service = setup_service(pool).await;
 
-        let result = service
+        let created_drug = service
             .create_drug(
                 "Gripex".into(),
                 DrugContentType::SolidPills,
@@ -119,11 +119,8 @@ mod integration_tests {
                 None,
                 None,
             )
-            .await;
-
-        assert!(result.is_ok());
-
-        let created_drug = result.unwrap();
+            .await
+            .unwrap();
 
         assert_eq!(created_drug.name, "Gripex");
         assert_eq!(created_drug.content_type, DrugContentType::SolidPills);
@@ -132,11 +129,7 @@ mod integration_tests {
         assert_eq!(created_drug.ml_per_pill, None);
         assert_eq!(created_drug.volume_ml, None);
 
-        let get_drug_by_id_result = service.get_drug_by_id(created_drug.id).await;
-
-        assert!(get_drug_by_id_result.is_ok());
-
-        let drug_from_repository = get_drug_by_id_result.unwrap();
+        let drug_from_repository = service.get_drug_by_id(created_drug.id).await.unwrap();
 
         assert_eq!(drug_from_repository.name, "Gripex");
         assert_eq!(

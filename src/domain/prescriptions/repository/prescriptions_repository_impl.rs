@@ -31,7 +31,7 @@ pub enum GetPrescriptionError {
 
 #[async_trait]
 impl PrescriptionsRepositoryTrait for PrescriptionsRepository {
-    async fn create_prescription(&self, prescription: NewPrescription) -> anyhow::Result<()> {
+    async fn create_prescription(&self, prescription: NewPrescription) -> anyhow::Result<Prescription> {
         prescription.validate()?;
 
         let transaction = self.pool.begin().await?;
@@ -60,9 +60,11 @@ impl PrescriptionsRepositoryTrait for PrescriptionsRepository {
             .await?;
         }
 
+        let prescription = self.get_prescription_by_id(prescription.id).await?;
+
         transaction.commit().await?;
 
-        Ok(())
+        Ok(prescription)
     }
 
     async fn get_prescriptions(
@@ -375,14 +377,14 @@ mod integration_tests {
     }
 
     #[sqlx::test]
-    async fn create_and_read_prescriptions_from_database(pool: sqlx::PgPool) {
+    async fn creates_and_reads_prescriptions_from_database(pool: sqlx::PgPool) {
         create_tables(&pool, true).await.unwrap();
         let (doctor_id, _, patient_id, drug_ids) = seed_database(pool.clone()).await.unwrap();
         let repository = PrescriptionsRepository::new(pool);
 
         let mut prescription = NewPrescription::new(doctor_id, patient_id, None, None);
         for i in 0..4 {
-            prescription.add_drug(*drug_ids.get(i).unwrap(), 1).unwrap();
+            prescription.add_drug(drug_ids[i], 1).unwrap();
         }
 
         repository
@@ -393,7 +395,7 @@ mod integration_tests {
         for _ in 0..10 {
             let mut another_prescription = NewPrescription::new(doctor_id, patient_id, None, None);
             another_prescription
-                .add_drug(*drug_ids.get(0).unwrap(), 1)
+                .add_drug(drug_ids[0], 1)
                 .unwrap();
             repository
                 .create_prescription(another_prescription)
@@ -416,7 +418,7 @@ mod integration_tests {
     }
 
     #[sqlx::test]
-    async fn create_and_read_prescription_by_id(pool: sqlx::PgPool) {
+    async fn creates_and_reads_prescription_by_id(pool: sqlx::PgPool) {
         create_tables(&pool, true).await.unwrap();
         let repository = PrescriptionsRepository::new(pool.clone());
         let (doctor_id, _, patient_id, drug_ids) = seed_database(pool).await.unwrap();

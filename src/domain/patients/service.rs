@@ -97,22 +97,15 @@ mod integration_tests {
     async fn creates_patient_and_reads_by_id(pool: sqlx::PgPool) {
         let service = setup_service(pool).await;
 
-        let create_patient_result = service
+        let created_patient = service
             .create_patient("John Doex".into(), "96021807250".into())
-            .await;
-
-        assert!(create_patient_result.is_ok());
-
-        let created_patient = create_patient_result.unwrap();
+            .await
+            .unwrap();
 
         assert_eq!(created_patient.name, "John Doex");
         assert_eq!(created_patient.pesel_number, "96021807250");
 
-        let get_patient_by_id_result = service.get_patient_by_id(created_patient.id).await;
-
-        assert!(get_patient_by_id_result.is_ok());
-
-        let patient_from_repository = get_patient_by_id_result.unwrap();
+        let patient_from_repository = service.get_patient_by_id(created_patient.id).await.unwrap();
 
         assert_eq!(patient_from_repository.name, "John Doex");
         assert_eq!(patient_from_repository.pesel_number, "96021807250");
@@ -133,11 +126,10 @@ mod integration_tests {
     async fn create_patient_returns_error_if_pesel_number_is_duplicated(pool: sqlx::PgPool) {
         let service = setup_service(pool).await;
 
-        let result = service
+        service
             .create_patient("John Doex".into(), "96021807250".into())
-            .await;
-
-        assert!(result.is_ok());
+            .await
+            .unwrap();
 
         let duplicated_pesel_number_result = service
             .create_patient("John Doex".into(), "96021807250".into())
