@@ -5,8 +5,8 @@ use uuid::Uuid;
 
 use crate::{
     domain::prescriptions::models::{
-        NewPrescription, NewPrescriptionFill, PrescribedDrug, Prescription, PrescriptionFill,
-        PrescriptionType,
+        NewPrescription, NewPrescriptionFill, PrescribedDrug, Prescription, PrescriptionDoctor,
+        PrescriptionFill, PrescriptionPatient, PrescriptionType,
     },
     utils::pagination::get_pagination_params,
 };
@@ -31,7 +31,10 @@ pub enum GetPrescriptionError {
 
 #[async_trait]
 impl PrescriptionsRepositoryTrait for PrescriptionsRepository {
-    async fn create_prescription(&self, prescription: NewPrescription) -> anyhow::Result<Prescription> {
+    async fn create_prescription(
+        &self,
+        prescription: NewPrescription,
+    ) -> anyhow::Result<Prescription> {
         prescription.validate()?;
 
         let transaction = self.pool.begin().await?;
@@ -78,13 +81,18 @@ impl PrescriptionsRepositoryTrait for PrescriptionsRepository {
             r#"
         SELECT 
             prescriptions.id, 
-            prescriptions.patient_id, 
-            prescriptions.doctor_id, 
             prescriptions.prescription_type, 
             prescriptions.start_date, 
             prescriptions.end_date, 
             prescriptions.created_at,
             prescriptions.updated_at,
+            doctors.id,
+            doctors.name,
+            doctors.pesel_number,
+            doctors.pwz_number,
+            patients.id,
+            patients.name,
+            patients.pesel_number,
             prescribed_drugs.id, 
             prescribed_drugs.drug_id, 
             prescribed_drugs.quantity,
@@ -101,6 +109,8 @@ impl PrescriptionsRepositoryTrait for PrescriptionsRepository {
         ) AS prescriptions
         LEFT JOIN prescription_fills ON prescriptions.id = prescription_fills.prescription_id
         JOIN prescribed_drugs ON prescriptions.id = prescribed_drugs.prescription_id
+        JOIN doctors ON prescriptions.doctor_id = doctors.id
+        JOIN patients ON prescriptions.patient_id = patients.id
     "#,
         )
         .bind(page_size)
@@ -112,22 +122,27 @@ impl PrescriptionsRepositoryTrait for PrescriptionsRepository {
 
         for row in prescriptions_from_db {
             let prescription_id: Uuid = row.get(0);
-            let prescription_patient_id: Uuid = row.get(1);
-            let prescription_doctor_id: Uuid = row.get(2);
-            let prescription_prescription_type: PrescriptionType = row.get(3);
-            let prescription_start_date: DateTime<Utc> = row.get(4);
-            let prescription_end_date: DateTime<Utc> = row.get(5);
-            let prescription_created_at: DateTime<Utc> = row.get(6);
-            let prescription_updated_at: DateTime<Utc> = row.get(7);
-            let prescribed_drug_id: Uuid = row.get(8);
-            let prescribed_drug_drug_id: Uuid = row.get(9);
-            let prescribed_drug_quantity: i32 = row.get(10);
-            let prescribed_drug_created_at: DateTime<Utc> = row.get(11);
-            let prescribed_drug_updated_at: DateTime<Utc> = row.get(12);
-            let prescription_fill_id: Option<Uuid> = row.get(13);
-            let prescription_fill_pharmacist_id: Option<Uuid> = row.get(14);
-            let prescription_fill_created_at: Option<DateTime<Utc>> = row.get(15);
-            let prescription_fill_updated_at: Option<DateTime<Utc>> = row.get(16);
+            let prescription_prescription_type: PrescriptionType = row.get(1);
+            let prescription_start_date: DateTime<Utc> = row.get(2);
+            let prescription_end_date: DateTime<Utc> = row.get(3);
+            let prescription_created_at: DateTime<Utc> = row.get(4);
+            let prescription_updated_at: DateTime<Utc> = row.get(5);
+            let doctor_id: Uuid = row.get(6);
+            let doctor_name: String = row.get(7);
+            let doctor_pesel_number: String = row.get(8);
+            let doctor_pwz_number: String = row.get(9);
+            let patient_id: Uuid = row.get(10);
+            let patient_name: String = row.get(11);
+            let patient_pesel_number: String = row.get(12);
+            let prescribed_drug_id: Uuid = row.get(13);
+            let prescribed_drug_drug_id: Uuid = row.get(14);
+            let prescribed_drug_quantity: i32 = row.get(15);
+            let prescribed_drug_created_at: DateTime<Utc> = row.get(16);
+            let prescribed_drug_updated_at: DateTime<Utc> = row.get(17);
+            let prescription_fill_id: Option<Uuid> = row.get(18);
+            let prescription_fill_pharmacist_id: Option<Uuid> = row.get(19);
+            let prescription_fill_created_at: Option<DateTime<Utc>> = row.get(20);
+            let prescription_fill_updated_at: Option<DateTime<Utc>> = row.get(21);
 
             let prescription = prescriptions.iter_mut().find(|p| p.id == prescription_id);
 
@@ -157,8 +172,17 @@ impl PrescriptionsRepositoryTrait for PrescriptionsRepository {
 
                 prescriptions.push(Prescription {
                     id: prescription_id,
-                    patient_id: prescription_patient_id,
-                    doctor_id: prescription_doctor_id,
+                    patient: PrescriptionPatient {
+                        id: patient_id,
+                        name: patient_name,
+                        pesel_number: patient_pesel_number,
+                    },
+                    doctor: PrescriptionDoctor {
+                        id: doctor_id,
+                        name: doctor_name,
+                        pesel_number: doctor_pesel_number,
+                        pwz_number: doctor_pwz_number,
+                    },
                     prescription_type: prescription_prescription_type,
                     start_date: prescription_start_date,
                     end_date: prescription_end_date,
@@ -178,13 +202,18 @@ impl PrescriptionsRepositoryTrait for PrescriptionsRepository {
             r#"
         SELECT
             prescriptions.id, 
-            prescriptions.patient_id, 
-            prescriptions.doctor_id, 
             prescriptions.prescription_type, 
             prescriptions.start_date, 
             prescriptions.end_date, 
             prescriptions.created_at,
             prescriptions.updated_at,
+            doctors.id,
+            doctors.name,
+            doctors.pesel_number,
+            doctors.pwz_number,
+            patients.id,
+            patients.name,
+            patients.pesel_number,
             prescribed_drugs.id, 
             prescribed_drugs.drug_id, 
             prescribed_drugs.quantity,
@@ -200,6 +229,8 @@ impl PrescriptionsRepositoryTrait for PrescriptionsRepository {
         ) AS prescriptions
         LEFT JOIN prescription_fills ON prescriptions.id = prescription_fills.prescription_id
         JOIN prescribed_drugs ON prescriptions.id = prescribed_drugs.prescription_id
+        JOIN doctors ON prescriptions.doctor_id = doctors.id
+        JOIN patients ON prescriptions.patient_id = patients.id
     "#,
         )
         .bind(id)
@@ -210,22 +241,27 @@ impl PrescriptionsRepositoryTrait for PrescriptionsRepository {
 
         for row in prescription_from_db {
             let prescription_id: Uuid = row.get(0);
-            let prescription_patient_id: Uuid = row.get(1);
-            let prescription_doctor_id: Uuid = row.get(2);
-            let prescription_prescription_type: PrescriptionType = row.get(3);
-            let prescription_start_date: DateTime<Utc> = row.get(4);
-            let prescription_end_date: DateTime<Utc> = row.get(5);
-            let prescription_created_at: DateTime<Utc> = row.get(6);
-            let prescription_updated_at: DateTime<Utc> = row.get(7);
-            let prescribed_drug_id: Uuid = row.get(8);
-            let prescribed_drug_drug_id: Uuid = row.get(9);
-            let prescribed_drug_quantity: i32 = row.get(10);
-            let prescribed_drug_created_at: DateTime<Utc> = row.get(11);
-            let prescribed_drug_updated_at: DateTime<Utc> = row.get(12);
-            let prescription_fill_id: Option<Uuid> = row.get(13);
-            let prescription_fill_pharmacist_id: Option<Uuid> = row.get(14);
-            let prescription_fill_created_at: Option<DateTime<Utc>> = row.get(15);
-            let prescription_fill_updated_at: Option<DateTime<Utc>> = row.get(16);
+            let prescription_prescription_type: PrescriptionType = row.get(1);
+            let prescription_start_date: DateTime<Utc> = row.get(2);
+            let prescription_end_date: DateTime<Utc> = row.get(3);
+            let prescription_created_at: DateTime<Utc> = row.get(4);
+            let prescription_updated_at: DateTime<Utc> = row.get(5);
+            let doctor_id: Uuid = row.get(6);
+            let doctor_name: String = row.get(7);
+            let doctor_pesel_number: String = row.get(8);
+            let doctor_pwz_number: String = row.get(9);
+            let patient_id: Uuid = row.get(10);
+            let patient_name: String = row.get(11);
+            let patient_pesel_number: String = row.get(12);
+            let prescribed_drug_id: Uuid = row.get(13);
+            let prescribed_drug_drug_id: Uuid = row.get(14);
+            let prescribed_drug_quantity: i32 = row.get(15);
+            let prescribed_drug_created_at: DateTime<Utc> = row.get(16);
+            let prescribed_drug_updated_at: DateTime<Utc> = row.get(17);
+            let prescription_fill_id: Option<Uuid> = row.get(18);
+            let prescription_fill_pharmacist_id: Option<Uuid> = row.get(19);
+            let prescription_fill_created_at: Option<DateTime<Utc>> = row.get(20);
+            let prescription_fill_updated_at: Option<DateTime<Utc>> = row.get(21);
 
             let prescription = prescriptions.iter_mut().find(|p| p.id == prescription_id);
 
@@ -255,8 +291,17 @@ impl PrescriptionsRepositoryTrait for PrescriptionsRepository {
 
                 prescriptions.push(Prescription {
                     id: prescription_id,
-                    patient_id: prescription_patient_id,
-                    doctor_id: prescription_doctor_id,
+                    patient: PrescriptionPatient {
+                        id: patient_id,
+                        name: patient_name,
+                        pesel_number: patient_pesel_number,
+                    },
+                    doctor: PrescriptionDoctor {
+                        id: doctor_id,
+                        name: doctor_name,
+                        pesel_number: doctor_pesel_number,
+                        pwz_number: doctor_pwz_number,
+                    },
                     prescription_type: prescription_prescription_type,
                     start_date: prescription_start_date,
                     end_date: prescription_end_date,
@@ -328,13 +373,20 @@ mod integration_tests {
                 },
             },
             prescriptions::{
-                models::NewPrescription,
+                models::{NewPrescription, PrescriptionType},
                 repository::prescriptions_repository_trait::PrescriptionsRepositoryTrait,
             },
         },
     };
 
-    async fn seed_database(pool: sqlx::PgPool) -> anyhow::Result<(Uuid, Uuid, Uuid, Vec<Uuid>)> {
+    struct DatabaseSeedData {
+        doctor: NewDoctor,
+        pharmacist: NewPharmacist,
+        patient: NewPatient,
+        drugs: Vec<NewDrug>,
+    }
+
+    async fn seed_database(pool: sqlx::PgPool) -> anyhow::Result<DatabaseSeedData> {
         let pharmacists_repo = PharmacistsRepository::new(pool.clone());
         let pharmacist = NewPharmacist::new(
             "John Pharmacist".into(), //
@@ -351,7 +403,7 @@ mod integration_tests {
         )?;
         patients_repo.create_patient(patient.clone()).await?;
         let drugs_repo = DrugsRepository::new(pool.clone());
-        let mut drug_ids = vec![];
+        let mut drugs = vec![];
         for _ in 0..4 {
             let drug = NewDrug::new(
                 "Gripex".into(),
@@ -361,7 +413,7 @@ mod integration_tests {
                 None,
                 None,
             )?;
-            drug_ids.push(drug.id);
+            drugs.push(drug.clone());
             drugs_repo.create_drug(drug).await?;
         }
 
@@ -373,18 +425,24 @@ mod integration_tests {
         )?;
         doctors_repo.create_doctor(doctor.clone()).await?;
 
-        Ok((doctor.id, pharmacist.id, patient.id, drug_ids))
+        Ok(DatabaseSeedData {
+            doctor,
+            pharmacist,
+            patient,
+            drugs,
+        })
     }
 
     #[sqlx::test]
     async fn creates_and_reads_prescriptions_from_database(pool: sqlx::PgPool) {
         create_tables(&pool, true).await.unwrap();
-        let (doctor_id, _, patient_id, drug_ids) = seed_database(pool.clone()).await.unwrap();
+        let seed_data = seed_database(pool.clone()).await.unwrap();
         let repository = PrescriptionsRepository::new(pool);
 
-        let mut prescription = NewPrescription::new(doctor_id, patient_id, None, None);
+        let mut prescription =
+            NewPrescription::new(seed_data.doctor.id, seed_data.patient.id, None, None);
         for i in 0..4 {
-            prescription.add_drug(drug_ids[i], 1).unwrap();
+            prescription.add_drug(seed_data.drugs[i].id, 1).unwrap();
         }
 
         repository
@@ -393,9 +451,10 @@ mod integration_tests {
             .unwrap();
 
         for _ in 0..10 {
-            let mut another_prescription = NewPrescription::new(doctor_id, patient_id, None, None);
+            let mut another_prescription =
+                NewPrescription::new(seed_data.doctor.id, seed_data.patient.id, None, None);
             another_prescription
-                .add_drug(drug_ids[0], 1)
+                .add_drug(seed_data.drugs[0].id, 1)
                 .unwrap();
             repository
                 .create_prescription(another_prescription)
@@ -404,8 +463,26 @@ mod integration_tests {
         }
 
         let prescriptions = repository.get_prescriptions(None, Some(7)).await.unwrap();
+
         assert_eq!(prescriptions.len(), 7);
-        assert_eq!(prescriptions.first().unwrap().prescribed_drugs.len(), 4);
+
+        let first_prescription = prescriptions.first().unwrap();
+
+        assert_eq!(first_prescription.prescribed_drugs.len(), 4);
+        assert_eq!(
+            first_prescription.prescription_type,
+            PrescriptionType::Regular
+        );
+        assert_eq!(first_prescription.doctor.name, seed_data.doctor.name);
+        assert_eq!(
+            first_prescription.doctor.pwz_number,
+            seed_data.doctor.pwz_number
+        );
+        assert_eq!(first_prescription.patient.name, seed_data.patient.name);
+        assert_eq!(
+            first_prescription.patient.pesel_number,
+            seed_data.patient.pesel_number
+        );
 
         let prescriptions = repository.get_prescriptions(None, Some(20)).await.unwrap();
         assert!(prescriptions.len() == 11);
@@ -421,11 +498,12 @@ mod integration_tests {
     async fn creates_and_reads_prescription_by_id(pool: sqlx::PgPool) {
         create_tables(&pool, true).await.unwrap();
         let repository = PrescriptionsRepository::new(pool.clone());
-        let (doctor_id, _, patient_id, drug_ids) = seed_database(pool).await.unwrap();
+        let seed_data = seed_database(pool).await.unwrap();
 
-        let mut prescription = NewPrescription::new(doctor_id, patient_id, None, None);
+        let mut prescription =
+            NewPrescription::new(seed_data.doctor.id, seed_data.patient.id, None, None);
         for i in 0..2 {
-            prescription.add_drug(*drug_ids.get(i).unwrap(), 1).unwrap();
+            prescription.add_drug(seed_data.drugs[i].id, 1).unwrap();
         }
 
         repository
@@ -459,10 +537,11 @@ mod integration_tests {
     async fn fills_prescription_and_saves_to_database(pool: sqlx::PgPool) {
         create_tables(&pool, true).await.unwrap();
         let repository = PrescriptionsRepository::new(pool.clone());
-        let (doctor_id, pharmacist_id, patient_id, drug_ids) = seed_database(pool).await.unwrap();
+        let seed_data = seed_database(pool).await.unwrap();
 
-        let mut prescription = NewPrescription::new(doctor_id, patient_id, None, None);
-        prescription.add_drug(*drug_ids.get(0).unwrap(), 1).unwrap();
+        let mut prescription =
+            NewPrescription::new(seed_data.doctor.id, seed_data.patient.id, None, None);
+        prescription.add_drug(seed_data.drugs[0].id, 1).unwrap();
 
         repository
             .create_prescription(prescription.clone())
@@ -476,7 +555,7 @@ mod integration_tests {
 
         assert!(prescription_from_db.fill.is_none());
 
-        let prescription_fill = prescription_from_db.fill(pharmacist_id).unwrap();
+        let prescription_fill = prescription_from_db.fill(seed_data.pharmacist.id).unwrap();
         repository
             .fill_prescription(prescription_fill)
             .await

@@ -39,10 +39,25 @@ pub struct PrescribedDrug {
 }
 
 #[derive(Debug, PartialEq, Clone)]
+pub struct PrescriptionPatient {
+    pub id: Uuid,
+    pub name: String,
+    pub pesel_number: String,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct PrescriptionDoctor {
+    pub id: Uuid,
+    pub name: String,
+    pub pesel_number: String,
+    pub pwz_number: String,
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub struct Prescription {
     pub id: Uuid,
-    pub doctor_id: Uuid,
-    pub patient_id: Uuid,
+    pub doctor: PrescriptionDoctor,
+    pub patient: PrescriptionPatient,
     pub prescribed_drugs: Vec<PrescribedDrug>,
     pub prescription_type: PrescriptionType,
     pub fill: Option<PrescriptionFill>,

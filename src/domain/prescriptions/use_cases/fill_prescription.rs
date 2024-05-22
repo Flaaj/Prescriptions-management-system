@@ -35,7 +35,10 @@ mod unit_tests {
     use uuid::Uuid;
 
     use crate::domain::prescriptions::{
-        models::{PrescribedDrug, Prescription, PrescriptionFill, PrescriptionType},
+        models::{
+            PrescribedDrug, Prescription, PrescriptionDoctor, PrescriptionFill,
+            PrescriptionPatient, PrescriptionType,
+        },
         use_cases::fill_prescription::PrescriptionFillError,
     };
 
@@ -47,8 +50,17 @@ mod unit_tests {
 
         Prescription {
             id: prescription_id,
-            doctor_id: Uuid::new_v4(),
-            patient_id: Uuid::new_v4(),
+            doctor: PrescriptionDoctor {
+                id: Uuid::new_v4(),
+                name: "John Doctor".to_string(),
+                pesel_number: "99031301347".to_string(),
+                pwz_number: "8463856".to_string(),
+            },
+            patient: PrescriptionPatient {
+                id: Uuid::new_v4(),
+                name: "John Patient".to_string(),
+                pesel_number: "92022900002".to_string(),
+            },
             prescription_type,
             start_date,
             end_date,
