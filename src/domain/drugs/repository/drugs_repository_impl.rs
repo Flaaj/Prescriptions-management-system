@@ -9,18 +9,18 @@ use crate::{
 
 use super::drugs_repository_trait::DrugsRepositoryTrait;
 
-pub struct DrugsRepository<'a> {
-    pool: &'a sqlx::PgPool,
+pub struct DrugsRepository {
+    pool: sqlx::PgPool,
 }
 
-impl<'a> DrugsRepository<'a> {
-    pub fn new(pool: &'a sqlx::PgPool) -> Self {
+impl DrugsRepository {
+    pub fn new(pool: sqlx::PgPool) -> Self {
         Self { pool }
     }
 }
 
 #[async_trait]
-impl<'a> DrugsRepositoryTrait for DrugsRepository<'a> {
+impl<'a> DrugsRepositoryTrait for DrugsRepository {
     async fn create_drug(&self, drug: NewDrug) -> anyhow::Result<Drug> {
         let result = sqlx::query(
             r#"INSERT INTO drugs (id, name, content_type, pills_count, mg_per_pill, ml_per_pill, volume_ml) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, name, content_type, pills_count, mg_per_pill, ml_per_pill, volume_ml, created_at, updated_at"#,
@@ -32,7 +32,7 @@ impl<'a> DrugsRepositoryTrait for DrugsRepository<'a> {
         .bind(drug.mg_per_pill)
         .bind(drug.ml_per_pill)
         .bind(drug.volume_ml)
-        .fetch_one(self.pool)
+        .fetch_one(&self.pool)
         .await?;
 
         Ok(Drug {
@@ -60,7 +60,7 @@ impl<'a> DrugsRepositoryTrait for DrugsRepository<'a> {
         )
         .bind(page_size)
         .bind(offset)
-        .fetch_all(self.pool)
+        .fetch_all(&self.pool)
         .await?;
 
         let drugs = drugs_from_db
@@ -86,7 +86,7 @@ impl<'a> DrugsRepositoryTrait for DrugsRepository<'a> {
             r#"SELECT id, name, content_type, pills_count, mg_per_pill, ml_per_pill, volume_ml, created_at, updated_at FROM drugs WHERE id = $1"#,
         )
         .bind(drug_id)
-        .fetch_one(self.pool)
+        .fetch_one(&self.pool)
         .await?;
 
         Ok(Drug {
@@ -119,7 +119,7 @@ mod integration_tests {
     #[sqlx::test]
     async fn create_and_read_drugs_from_database(pool: sqlx::PgPool) {
         create_tables(&pool, true).await.unwrap();
-        let repository = DrugsRepository::new(&pool);
+        let repository = DrugsRepository::new(pool);
 
         let result = repository
             .create_drug(
@@ -230,7 +230,7 @@ mod integration_tests {
     #[sqlx::test]
     async fn create_and_read_drug_by_id(pool: sqlx::PgPool) {
         create_tables(&pool, true).await.unwrap();
-        let repository = DrugsRepository::new(&pool);
+        let repository = DrugsRepository::new(pool);
 
         let drug = NewDrug::new(
             "Gripex Max".into(),

@@ -13,12 +13,12 @@ use crate::{
 
 use super::prescriptions_repository_trait::PrescriptionsRepositoryTrait;
 
-pub struct PrescriptionsRepository<'a> {
-    pool: &'a sqlx::PgPool,
+pub struct PrescriptionsRepository {
+    pool: sqlx::PgPool,
 }
 
-impl<'a> PrescriptionsRepository<'a> {
-    pub fn new(pool: &'a sqlx::PgPool) -> Self {
+impl PrescriptionsRepository {
+    pub fn new(pool: sqlx::PgPool) -> Self {
         Self { pool }
     }
 }
@@ -30,7 +30,7 @@ pub enum GetPrescriptionError {
 }
 
 #[async_trait]
-impl<'a> PrescriptionsRepositoryTrait for PrescriptionsRepository<'a> {
+impl PrescriptionsRepositoryTrait for PrescriptionsRepository {
     async fn create_prescription(&self, prescription: NewPrescription) -> anyhow::Result<()> {
         prescription.validate()?;
 
@@ -45,7 +45,7 @@ impl<'a> PrescriptionsRepositoryTrait for PrescriptionsRepository<'a> {
             prescription.start_date,
             prescription.end_date
         )
-        .execute(self.pool)
+        .execute(&self.pool)
         .await?;
 
         for prescribed_drug in &prescription.prescribed_drugs {
@@ -56,7 +56,7 @@ impl<'a> PrescriptionsRepositoryTrait for PrescriptionsRepository<'a> {
                 prescribed_drug.drug_id,
                 prescribed_drug.quantity as i32
             )
-            .execute(self.pool)
+            .execute(&self.pool)
             .await?;
         }
 
@@ -103,7 +103,7 @@ impl<'a> PrescriptionsRepositoryTrait for PrescriptionsRepository<'a> {
         )
         .bind(page_size)
         .bind(offset)
-        .fetch_all(self.pool)
+        .fetch_all(&self.pool)
         .await?;
 
         let mut prescriptions: Vec<Prescription> = vec![];
@@ -201,7 +201,7 @@ impl<'a> PrescriptionsRepositoryTrait for PrescriptionsRepository<'a> {
     "#,
         )
         .bind(id)
-        .fetch_all(self.pool)
+        .fetch_all(&self.pool)
         .await?;
 
         let mut prescriptions: Vec<Prescription> = vec![];
@@ -282,7 +282,7 @@ impl<'a> PrescriptionsRepositoryTrait for PrescriptionsRepository<'a> {
             prescription_fill.prescription_id,
             prescription_fill.pharmacist_id
         )
-        .execute(self.pool)
+        .execute(&self.pool)
         .await?;
 
         Ok(())
@@ -332,8 +332,8 @@ mod integration_tests {
         },
     };
 
-    async fn seed_database(pool: &sqlx::PgPool) -> anyhow::Result<(Uuid, Uuid, Uuid, Vec<Uuid>)> {
-        let pharmacists_repo = PharmacistsRepository::new(&pool);
+    async fn seed_database(pool: sqlx::PgPool) -> anyhow::Result<(Uuid, Uuid, Uuid, Vec<Uuid>)> {
+        let pharmacists_repo = PharmacistsRepository::new(pool.clone());
         let pharmacist = NewPharmacist::new(
             "John Pharmacist".into(), //
             "96021807250".into(),
@@ -342,22 +342,13 @@ mod integration_tests {
             .create_pharmacist(pharmacist.clone())
             .await?;
 
-        let patients_repo = PatientsRepository::new(&pool);
+        let patients_repo = PatientsRepository::new(pool.clone());
         let patient = NewPatient::new(
             "John Patient".into(), //
             "96021807250".into(),
         )?;
         patients_repo.create_patient(patient.clone()).await?;
-
-        let doctors_repo = DoctorsRepository::new(&pool);
-        let doctor = NewDoctor::new(
-            "John Doctor".into(), //
-            "3123456".into(),
-            "96021807250".into(),
-        )?;
-        doctors_repo.create_doctor(doctor.clone()).await?;
-
-        let drugs_repo = DrugsRepository::new(&pool);
+        let drugs_repo = DrugsRepository::new(pool.clone());
         let mut drug_ids = vec![];
         for _ in 0..4 {
             let drug = NewDrug::new(
@@ -372,21 +363,30 @@ mod integration_tests {
             drugs_repo.create_drug(drug).await?;
         }
 
+        let doctors_repo = DoctorsRepository::new(pool);
+        let doctor = NewDoctor::new(
+            "John Doctor".into(), //
+            "3123456".into(),
+            "96021807250".into(),
+        )?;
+        doctors_repo.create_doctor(doctor.clone()).await?;
+
         Ok((doctor.id, pharmacist.id, patient.id, drug_ids))
     }
 
     #[sqlx::test]
     async fn create_and_read_prescriptions_from_database(pool: sqlx::PgPool) {
         create_tables(&pool, true).await.unwrap();
-        let (doctor_id, _, patient_id, drug_ids) = seed_database(&pool).await.unwrap();
-        let repository = PrescriptionsRepository::new(&pool);
+        let (doctor_id, _, patient_id, drug_ids) = seed_database(pool.clone()).await.unwrap();
+        let repository = PrescriptionsRepository::new(pool);
 
         let mut prescription = NewPrescription::new(doctor_id, patient_id, None, None);
         for i in 0..4 {
             prescription.add_drug(*drug_ids.get(i).unwrap(), 1).unwrap();
         }
 
-        repository.create_prescription(prescription.clone())
+        repository
+            .create_prescription(prescription.clone())
             .await
             .unwrap();
 
@@ -395,7 +395,8 @@ mod integration_tests {
             another_prescription
                 .add_drug(*drug_ids.get(0).unwrap(), 1)
                 .unwrap();
-            repository.create_prescription(another_prescription)
+            repository
+                .create_prescription(another_prescription)
                 .await
                 .unwrap();
         }
@@ -407,26 +408,33 @@ mod integration_tests {
         let prescriptions = repository.get_prescriptions(None, Some(20)).await.unwrap();
         assert!(prescriptions.len() == 11);
 
-        let prescriptions = repository.get_prescriptions(Some(1), Some(10)).await.unwrap();
+        let prescriptions = repository
+            .get_prescriptions(Some(1), Some(10))
+            .await
+            .unwrap();
         assert!(prescriptions.len() == 1);
     }
 
     #[sqlx::test]
     async fn create_and_read_prescription_by_id(pool: sqlx::PgPool) {
         create_tables(&pool, true).await.unwrap();
-        let repository = PrescriptionsRepository::new(&pool);
-        let (doctor_id, _, patient_id, drug_ids) = seed_database(&pool).await.unwrap();
+        let repository = PrescriptionsRepository::new(pool.clone());
+        let (doctor_id, _, patient_id, drug_ids) = seed_database(pool).await.unwrap();
 
         let mut prescription = NewPrescription::new(doctor_id, patient_id, None, None);
         for i in 0..2 {
             prescription.add_drug(*drug_ids.get(i).unwrap(), 1).unwrap();
         }
 
-        repository.create_prescription(prescription.clone())
+        repository
+            .create_prescription(prescription.clone())
             .await
             .unwrap();
 
-        let prescription_from_db = repository.get_prescription_by_id(prescription.id).await.unwrap();
+        let prescription_from_db = repository
+            .get_prescription_by_id(prescription.id)
+            .await
+            .unwrap();
         assert_eq!(prescription_from_db.id, prescription.id);
         assert_eq!(prescription_from_db.prescribed_drugs.len(), 2);
     }
@@ -434,7 +442,7 @@ mod integration_tests {
     #[sqlx::test]
     async fn returns_error_if_prescription_doesnt_exist(pool: sqlx::PgPool) {
         create_tables(&pool, true).await.unwrap();
-        let repository = PrescriptionsRepository::new(&pool);
+        let repository = PrescriptionsRepository::new(pool);
         let prescription_id = Uuid::new_v4();
 
         let prescription_from_db = repository.get_prescription_by_id(prescription_id).await;
@@ -448,24 +456,34 @@ mod integration_tests {
     #[sqlx::test]
     async fn fills_prescription_and_saves_to_database(pool: sqlx::PgPool) {
         create_tables(&pool, true).await.unwrap();
-        let repository = PrescriptionsRepository::new(&pool);
-        let (doctor_id, pharmacist_id, patient_id, drug_ids) = seed_database(&pool).await.unwrap();
+        let repository = PrescriptionsRepository::new(pool.clone());
+        let (doctor_id, pharmacist_id, patient_id, drug_ids) = seed_database(pool).await.unwrap();
 
         let mut prescription = NewPrescription::new(doctor_id, patient_id, None, None);
         prescription.add_drug(*drug_ids.get(0).unwrap(), 1).unwrap();
 
-        repository.create_prescription(prescription.clone())
+        repository
+            .create_prescription(prescription.clone())
             .await
             .unwrap();
 
-        let prescription_from_db = repository.get_prescription_by_id(prescription.id).await.unwrap();
+        let prescription_from_db = repository
+            .get_prescription_by_id(prescription.id)
+            .await
+            .unwrap();
 
         assert!(prescription_from_db.fill.is_none());
 
         let prescription_fill = prescription_from_db.fill(pharmacist_id).unwrap();
-        repository.fill_prescription(prescription_fill).await.unwrap();
+        repository
+            .fill_prescription(prescription_fill)
+            .await
+            .unwrap();
 
-        let prescription_from_db = repository.get_prescription_by_id(prescription.id).await.unwrap();
+        let prescription_from_db = repository
+            .get_prescription_by_id(prescription.id)
+            .await
+            .unwrap();
 
         assert!(prescription_from_db.fill.is_some());
     }

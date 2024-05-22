@@ -88,16 +88,14 @@ mod integration_tests {
     };
     use uuid::Uuid;
 
-    async fn setup_service<'a>(
-        pool: &'a sqlx::PgPool,
-    ) -> PatientsService<impl PatientsRepositoryTrait + 'a> {
+    async fn setup_service(pool: sqlx::PgPool) -> PatientsService<impl PatientsRepositoryTrait> {
         create_tables(&pool, true).await.unwrap();
         PatientsService::new(PatientsRepository::new(pool))
     }
 
     #[sqlx::test]
     async fn creates_patient_and_reads_by_id(pool: sqlx::PgPool) {
-        let service = setup_service(&pool).await;
+        let service = setup_service(pool).await;
 
         let create_patient_result = service
             .create_patient("John Doex".into(), "96021807250".into())
@@ -122,7 +120,7 @@ mod integration_tests {
 
     #[sqlx::test]
     async fn create_patient_returns_error_if_body_is_incorrect(pool: sqlx::PgPool) {
-        let service = setup_service(&pool).await;
+        let service = setup_service(pool).await;
 
         let result = service
             .create_patient("John Doex".into(), "96021807251".into()) // invalid pesel
@@ -133,7 +131,7 @@ mod integration_tests {
 
     #[sqlx::test]
     async fn create_patient_returns_error_if_pesel_number_is_duplicated(pool: sqlx::PgPool) {
-        let service = setup_service(&pool).await;
+        let service = setup_service(pool).await;
 
         let result = service
             .create_patient("John Doex".into(), "96021807250".into())
@@ -150,7 +148,7 @@ mod integration_tests {
 
     #[sqlx::test]
     async fn get_patient_by_id_returns_error_if_such_patient_does_not_exist(pool: sqlx::PgPool) {
-        let service = setup_service(&pool).await;
+        let service = setup_service(pool).await;
 
         let result = service.get_patient_by_id(Uuid::new_v4()).await;
 
@@ -159,7 +157,7 @@ mod integration_tests {
 
     #[sqlx::test]
     async fn gets_patients_with_pagination(pool: sqlx::PgPool) {
-        let service = setup_service(&pool).await;
+        let service = setup_service(pool).await;
 
         service
             .create_patient("John Doex".into(), "96021817257".into())
@@ -223,7 +221,7 @@ mod integration_tests {
 
     #[sqlx::test]
     async fn get_patients_with_pagination_returns_error_if_params_are_invalid(pool: sqlx::PgPool) {
-        let service = setup_service(&pool).await;
+        let service = setup_service(pool).await;
 
         assert!(service
             .get_patients_with_pagination(Some(-1), None)

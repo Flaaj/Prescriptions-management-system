@@ -88,16 +88,16 @@ mod integration_tests {
     };
     use uuid::Uuid;
 
-    async fn setup_service<'a>(
-        pool: &'a sqlx::PgPool,
-    ) -> PharmacistsService<impl PharmacistsRepositoryTrait + 'a> {
+    async fn setup_service(
+        pool: sqlx::PgPool,
+    ) -> PharmacistsService<impl PharmacistsRepositoryTrait> {
         create_tables(&pool, true).await.unwrap();
         PharmacistsService::new(PharmacistsRepository::new(pool))
     }
 
     #[sqlx::test]
     async fn creates_pharmacist_and_reads_by_id(pool: sqlx::PgPool) {
-        let service = setup_service(&pool).await;
+        let service = setup_service(pool).await;
 
         let create_pharmacist_result = service
             .create_pharmacist("John Doex".into(), "96021807250".into())
@@ -122,7 +122,7 @@ mod integration_tests {
 
     #[sqlx::test]
     async fn create_pharmacist_returns_error_if_body_is_incorrect(pool: sqlx::PgPool) {
-        let service = setup_service(&pool).await;
+        let service = setup_service(pool).await;
 
         let result = service
             .create_pharmacist("John Doex".into(), "96021807251".into()) // invalid pesel
@@ -133,7 +133,7 @@ mod integration_tests {
 
     #[sqlx::test]
     async fn create_pharmacist_returns_error_if_pesel_number_is_duplicated(pool: sqlx::PgPool) {
-        let service = setup_service(&pool).await;
+        let service = setup_service(pool).await;
 
         let result = service
             .create_pharmacist("John Doex".into(), "96021807250".into())
@@ -149,8 +149,10 @@ mod integration_tests {
     }
 
     #[sqlx::test]
-    async fn get_pharmacist_by_id_returns_error_if_such_pharmacist_does_not_exist(pool: sqlx::PgPool) {
-        let service = setup_service(&pool).await;
+    async fn get_pharmacist_by_id_returns_error_if_such_pharmacist_does_not_exist(
+        pool: sqlx::PgPool,
+    ) {
+        let service = setup_service(pool).await;
 
         let result = service.get_pharmacist_by_id(Uuid::new_v4()).await;
 
@@ -159,7 +161,7 @@ mod integration_tests {
 
     #[sqlx::test]
     async fn gets_pharmacists_with_pagination(pool: sqlx::PgPool) {
-        let service = setup_service(&pool).await;
+        let service = setup_service(pool).await;
 
         service
             .create_pharmacist("John Doex".into(), "96021817257".into())
@@ -222,8 +224,10 @@ mod integration_tests {
     }
 
     #[sqlx::test]
-    async fn get_pharmacists_with_pagination_returns_error_if_params_are_invalid(pool: sqlx::PgPool) {
-        let service = setup_service(&pool).await;
+    async fn get_pharmacists_with_pagination_returns_error_if_params_are_invalid(
+        pool: sqlx::PgPool,
+    ) {
+        let service = setup_service(pool).await;
 
         assert!(service
             .get_pharmacists_with_pagination(Some(-1), None)

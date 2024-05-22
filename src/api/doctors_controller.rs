@@ -1,13 +1,7 @@
 use crate::{
     domain::doctors::{
         models::Doctor,
-        repository::{
-            doctors_repository_impl::DoctorsRepository,
-            doctors_repository_trait::DoctorsRepositoryTrait,
-        },
-        service::{
-            CreateDoctorError, DoctorsService, GetDoctorByIdError, GetDoctorWithPaginationError,
-        },
+        service::{CreateDoctorError, GetDoctorByIdError, GetDoctorWithPaginationError},
     },
     Ctx,
 };
@@ -26,14 +20,7 @@ use rocket_okapi::{
 use rocket_okapi::{openapi, openapi_get_routes, JsonSchema};
 use schemars::Map;
 use serde::{Deserialize, Serialize};
-use sqlx::PgPool;
 use uuid::Uuid;
-
-pub fn create_doctors_service<'a>(
-    pool: &'a PgPool,
-) -> DoctorsService<impl DoctorsRepositoryTrait + 'a> {
-    DoctorsService::new(DoctorsRepository::new(pool))
-}
 
 fn example_name() -> &'static str {
     "John Doe"
@@ -105,9 +92,8 @@ pub async fn create_doctor(
     ctx: &Ctx,
     dto: Json<CreateDoctorDto>,
 ) -> Result<Created<Json<Doctor>>, CreateDoctorError> {
-    let doctors_service = create_doctors_service(&ctx.pool);
-
-    let created_doctor = doctors_service
+    let created_doctor = ctx
+        .doctors_service
         .create_doctor(dto.0.name, dto.0.pesel_number, dto.0.pwz_number)
         .await?;
 
@@ -169,9 +155,7 @@ pub async fn get_doctor_by_id(
     ctx: &Ctx,
     doctor_id: Uuid,
 ) -> Result<Json<Doctor>, GetDoctorByIdError> {
-    let doctors_service = create_doctors_service(&ctx.pool);
-
-    let doctor = doctors_service.get_doctor_by_id(doctor_id).await?;
+    let doctor = ctx.doctors_service.get_doctor_by_id(doctor_id).await?;
 
     Ok(Json(doctor))
 }
@@ -214,9 +198,8 @@ pub async fn get_doctors_with_pagination(
     page: Option<i64>,
     page_size: Option<i64>,
 ) -> Result<Json<Vec<Doctor>>, GetDoctorWithPaginationError> {
-    let doctors_service = create_doctors_service(&ctx.pool);
-
-    let doctors = doctors_service
+    let doctors = ctx
+        .doctors_service
         .get_doctors_with_pagination(page, page_size)
         .await?;
 
@@ -229,20 +212,19 @@ pub fn get_routes() -> Vec<Route> {
 
 #[cfg(test)]
 mod integration_tests {
-    use crate::{create_tables::create_tables, domain::doctors::models::Doctor, Context};
+    use crate::{create_tables::create_tables, domain::doctors::models::Doctor, setup_context};
     use rocket::{
         http::{ContentType, Status},
         local::asynchronous::Client,
         serde::json,
     };
-    use std::sync::Arc;
 
     async fn create_api_client(pool: sqlx::PgPool) -> Client {
         create_tables(&pool, true).await.unwrap();
 
-        let pool = Arc::new(pool);
+        let context = setup_context(pool);
         let rocket = rocket::build()
-            .manage(Context { pool })
+            .manage(context)
             .mount("/", super::get_routes());
 
         Client::tracked(rocket).await.unwrap()
