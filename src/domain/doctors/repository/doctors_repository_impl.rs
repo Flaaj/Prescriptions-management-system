@@ -105,22 +105,50 @@ mod integration_tests {
     };
 
     #[sqlx::test]
+    async fn create_and_read_doctor_by_id(pool: sqlx::PgPool) {
+        create_tables(&pool, true).await.unwrap();
+        let repository = DoctorsRepository::new(pool);
+
+        let new_doctor =
+            NewDoctor::new("John Does".into(), "5425740".into(), "96021817257".into()).unwrap();
+
+        repository.create_doctor(new_doctor.clone()).await.unwrap();
+
+        let doctor_from_repo = repository.get_doctor_by_id(new_doctor.id).await.unwrap();
+
+        assert_eq!(doctor_from_repo, new_doctor);
+    }
+
+    #[sqlx::test]
     async fn create_and_read_doctors_from_database(pool: sqlx::PgPool) {
         create_tables(&pool, true).await.unwrap();
         let repository = DoctorsRepository::new(pool);
 
         let new_doctor_0 =
-            NewDoctor::new("John Doe".into(), "5425740".into(), "96021817257".into()).unwrap();
-        repository.create_doctor(new_doctor_0.clone()).await.unwrap();
+            NewDoctor::new("John First".into(), "5425740".into(), "96021817257".into()).unwrap();
         let new_doctor_1 =
-            NewDoctor::new("John Doe".into(), "8463856".into(), "99031301347".into()).unwrap();
-        repository.create_doctor(new_doctor_1.clone()).await.unwrap();
+            NewDoctor::new("John Second".into(), "8463856".into(), "99031301347".into()).unwrap();
         let new_doctor_2 =
-            NewDoctor::new("John Doe".into(), "3123456".into(), "92022900002".into()).unwrap();
-        repository.create_doctor(new_doctor_2.clone()).await.unwrap();
+            NewDoctor::new("John Third".into(), "3123456".into(), "92022900002".into()).unwrap();
         let new_doctor_3 =
-            NewDoctor::new("John Doe".into(), "5425751".into(), "96021807250".into()).unwrap();
-        repository.create_doctor(new_doctor_3.clone()).await.unwrap();
+            NewDoctor::new("John Fourth".into(), "5425751".into(), "96021807250".into()).unwrap();
+
+        repository
+            .create_doctor(new_doctor_0.clone())
+            .await
+            .unwrap();
+        repository
+            .create_doctor(new_doctor_1.clone())
+            .await
+            .unwrap();
+        repository
+            .create_doctor(new_doctor_2.clone())
+            .await
+            .unwrap();
+        repository
+            .create_doctor(new_doctor_3.clone())
+            .await
+            .unwrap();
 
         let doctors = repository.get_doctors(None, Some(10)).await.unwrap();
 
@@ -144,21 +172,6 @@ mod integration_tests {
         let doctors = repository.get_doctors(Some(2), Some(3)).await.unwrap();
 
         assert!(doctors.len() == 0);
-    }
-
-    #[sqlx::test]
-    async fn create_and_read_doctor_by_id(pool: sqlx::PgPool) {
-        create_tables(&pool, true).await.unwrap();
-        let repository = DoctorsRepository::new(pool);
-
-        let new_doctor =
-            NewDoctor::new("John Does".into(), "5425740".into(), "96021817257".into()).unwrap();
-
-        repository.create_doctor(new_doctor.clone()).await.unwrap();
-
-        let doctor_from_repo = repository.get_doctor_by_id(new_doctor.id).await.unwrap();
-
-        assert_eq!(doctor_from_repo, new_doctor);
     }
 
     #[sqlx::test]

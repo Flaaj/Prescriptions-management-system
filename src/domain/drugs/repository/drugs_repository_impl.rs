@@ -117,6 +117,30 @@ mod integration_tests {
     };
 
     #[sqlx::test]
+    async fn create_and_read_drug_by_id(pool: sqlx::PgPool) {
+        create_tables(&pool, true).await.unwrap();
+        let repository = DrugsRepository::new(pool);
+
+        let drug = NewDrug::new(
+            "Gripex Max".into(),
+            DrugContentType::SolidPills,
+            Some(20),
+            Some(300),
+            None,
+            None,
+        )
+        .unwrap();
+
+        let created_drug = repository.create_drug(drug.clone()).await.unwrap();
+
+        assert_eq!(drug, created_drug);
+
+        let drug_from_repo = repository.get_drug_by_id(drug.id).await.unwrap();
+
+        assert_eq!(drug, drug_from_repo);
+    }
+
+    #[sqlx::test]
     async fn create_and_read_drugs_from_database(pool: sqlx::PgPool) {
         create_tables(&pool, true).await.unwrap();
         let repository = DrugsRepository::new(pool);
@@ -130,10 +154,6 @@ mod integration_tests {
             None,
         )
         .unwrap();
-        let created_drug = repository.create_drug(new_drug_0.clone()).await.unwrap();
-
-        assert_eq!(created_drug, new_drug_0);
-
         let new_drug_1 = NewDrug::new(
             "Apap".into(),
             DrugContentType::SolidPills,
@@ -143,7 +163,6 @@ mod integration_tests {
             None,
         )
         .unwrap();
-        repository.create_drug(new_drug_1.clone()).await.unwrap();
         let new_drug_2 = NewDrug::new(
             "Aspirin".into(),
             DrugContentType::SolidPills,
@@ -153,7 +172,6 @@ mod integration_tests {
             None,
         )
         .unwrap();
-        repository.create_drug(new_drug_2.clone()).await.unwrap();
         let new_drug_3 = NewDrug::new(
             "Flegamax".into(),
             DrugContentType::BottleOfLiquid,
@@ -163,6 +181,10 @@ mod integration_tests {
             Some(400),
         )
         .unwrap();
+
+        repository.create_drug(new_drug_0.clone()).await.unwrap();
+        repository.create_drug(new_drug_1.clone()).await.unwrap();
+        repository.create_drug(new_drug_2.clone()).await.unwrap();
         repository.create_drug(new_drug_3.clone()).await.unwrap();
 
         let drugs = repository.get_drugs(None, Some(10)).await.unwrap();
@@ -187,29 +209,5 @@ mod integration_tests {
         let drugs = repository.get_drugs(Some(2), Some(3)).await.unwrap();
 
         assert_eq!(drugs.len(), 0);
-    }
-
-    #[sqlx::test]
-    async fn create_and_read_drug_by_id(pool: sqlx::PgPool) {
-        create_tables(&pool, true).await.unwrap();
-        let repository = DrugsRepository::new(pool);
-
-        let drug = NewDrug::new(
-            "Gripex Max".into(),
-            DrugContentType::SolidPills,
-            Some(20),
-            Some(300),
-            None,
-            None,
-        )
-        .unwrap();
-
-        let created_drug = repository.create_drug(drug.clone()).await.unwrap();
-
-        assert_eq!(drug, created_drug);
-
-        let drug_from_repo = repository.get_drug_by_id(drug.id).await.unwrap();
-
-        assert_eq!(drug, drug_from_repo);
     }
 }

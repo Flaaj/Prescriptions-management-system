@@ -105,21 +105,22 @@ mod integration_tests {
         let repository = PharmacistsRepository::new(pool);
 
         let new_pharmacist_0 = NewPharmacist::new("John Doe".into(), "96021817257".into()).unwrap();
+        let new_pharmacist_1 = NewPharmacist::new("John Doe".into(), "99031301347".into()).unwrap();
+        let new_pharmacist_2 = NewPharmacist::new("John Doe".into(), "92022900002".into()).unwrap();
+        let new_pharmacist_3 = NewPharmacist::new("John Doe".into(), "96021807250".into()).unwrap();
+
         repository
             .create_pharmacist(new_pharmacist_0.clone())
             .await
             .unwrap();
-        let new_pharmacist_1 = NewPharmacist::new("John Doe".into(), "99031301347".into()).unwrap();
         repository
             .create_pharmacist(new_pharmacist_1.clone())
             .await
             .unwrap();
-        let new_pharmacist_2 = NewPharmacist::new("John Doe".into(), "92022900002".into()).unwrap();
         repository
             .create_pharmacist(new_pharmacist_2.clone())
             .await
             .unwrap();
-        let new_pharmacist_3 = NewPharmacist::new("John Doe".into(), "96021807250".into()).unwrap();
         repository
             .create_pharmacist(new_pharmacist_3.clone())
             .await
@@ -134,18 +135,18 @@ mod integration_tests {
         assert_eq!(pharmacists[3], new_pharmacist_3);
 
         let pharmacists = repository.get_pharmacists(None, Some(2)).await.unwrap();
-        
+
         assert_eq!(pharmacists.len(), 2);
         assert_eq!(pharmacists[0], new_pharmacist_0);
         assert_eq!(pharmacists[1], new_pharmacist_1);
 
         let pharmacists = repository.get_pharmacists(Some(1), Some(3)).await.unwrap();
-        
+
         assert!(pharmacists.len() == 1);
         assert_eq!(pharmacists[0], new_pharmacist_3);
 
         let pharmacists = repository.get_pharmacists(Some(2), Some(3)).await.unwrap();
-        
+
         assert!(pharmacists.len() == 0);
     }
 
