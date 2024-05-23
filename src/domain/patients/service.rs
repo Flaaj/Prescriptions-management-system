@@ -6,19 +6,19 @@ use uuid::Uuid;
 
 #[derive(Debug)]
 pub enum CreatePatientError {
-    ValidationError(String),
-    DatabaseError(String),
+    DomainError(String),
+    RepositoryError(String),
 }
 
 #[derive(Debug)]
 pub enum GetPatientByIdError {
-    InputError,
-    DatabaseError(String),
+    DomainError,
+    RepositoryError(String),
 }
 
 #[derive(Debug)]
 pub enum GetPatientWithPaginationError {
-    InputError(String),
+    DomainError(String),
 }
 
 #[derive(Clone)]
@@ -37,13 +37,13 @@ impl<R: PatientsRepositoryTrait> PatientsService<R> {
         pesel_number: String,
     ) -> Result<Patient, CreatePatientError> {
         let new_patient = NewPatient::new(name, pesel_number)
-            .map_err(|err| CreatePatientError::ValidationError(err.to_string()))?;
+            .map_err(|err| CreatePatientError::DomainError(err.to_string()))?;
 
         let created_patient = self
             .repository
             .create_patient(new_patient)
             .await
-            .map_err(|err| CreatePatientError::DatabaseError(err.to_string()))?;
+            .map_err(|err| CreatePatientError::RepositoryError(err.to_string()))?;
 
         Ok(created_patient)
     }
@@ -56,7 +56,7 @@ impl<R: PatientsRepositoryTrait> PatientsService<R> {
             .repository
             .get_patient_by_id(patient_id)
             .await
-            .map_err(|err| GetPatientByIdError::DatabaseError(err.to_string()))?;
+            .map_err(|err| GetPatientByIdError::RepositoryError(err.to_string()))?;
 
         Ok(patient)
     }
@@ -70,7 +70,7 @@ impl<R: PatientsRepositoryTrait> PatientsService<R> {
             .repository
             .get_patients(page, page_size)
             .await
-            .map_err(|err| GetPatientWithPaginationError::InputError(err.to_string()))?;
+            .map_err(|err| GetPatientWithPaginationError::DomainError(err.to_string()))?;
 
         Ok(patients)
     }

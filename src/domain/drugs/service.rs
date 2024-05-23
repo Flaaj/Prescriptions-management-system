@@ -11,19 +11,19 @@ pub struct DrugsService<R: DrugsRepositoryTrait> {
 
 #[derive(Debug)]
 pub enum CreateDrugError {
-    ValidationError(String),
-    DatabaseError(String),
+    DomainError(String),
+    RepositoryError(String),
 }
 
 #[derive(Debug)]
 pub enum GetDrugByIdError {
-    InputError,
-    DatabaseError(String),
+    DomainError,
+    RepositoryError(String),
 }
 
 #[derive(Debug)]
 pub enum GetDrugsWithPaginationError {
-    InputError(String),
+    DomainError(String),
 }
 
 impl<R: DrugsRepositoryTrait> DrugsService<R> {
@@ -48,13 +48,13 @@ impl<R: DrugsRepositoryTrait> DrugsService<R> {
             ml_per_pill,
             volume_ml,
         )
-        .map_err(|err| CreateDrugError::ValidationError(err.to_string()))?;
+        .map_err(|err| CreateDrugError::DomainError(err.to_string()))?;
 
         let created_drug = self
             .repository
             .create_drug(new_drug)
             .await
-            .map_err(|err| CreateDrugError::DatabaseError(err.to_string()))?;
+            .map_err(|err| CreateDrugError::RepositoryError(err.to_string()))?;
 
         Ok(created_drug)
     }
@@ -64,7 +64,7 @@ impl<R: DrugsRepositoryTrait> DrugsService<R> {
             .repository
             .get_drug_by_id(drug_id)
             .await
-            .map_err(|err| GetDrugByIdError::DatabaseError(err.to_string()))?;
+            .map_err(|err| GetDrugByIdError::RepositoryError(err.to_string()))?;
 
         Ok(doctor)
     }
@@ -78,7 +78,7 @@ impl<R: DrugsRepositoryTrait> DrugsService<R> {
             .repository
             .get_drugs(page, page_size)
             .await
-            .map_err(|err| GetDrugsWithPaginationError::InputError(err.to_string()))?;
+            .map_err(|err| GetDrugsWithPaginationError::DomainError(err.to_string()))?;
 
         Ok(result)
     }

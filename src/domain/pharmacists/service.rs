@@ -6,19 +6,19 @@ use uuid::Uuid;
 
 #[derive(Debug)]
 pub enum CreatePharmacistError {
-    ValidationError(String),
-    DatabaseError(String),
+    DomainError(String),
+    RepositoryError(String),
 }
 
 #[derive(Debug)]
 pub enum GetPharmacistByIdError {
-    InputError,
-    DatabaseError(String),
+    DomainError,
+    RepositoryError(String),
 }
 
 #[derive(Debug)]
 pub enum GetPharmacistWithPaginationError {
-    InputError(String),
+    DomainError(String),
 }
 
 #[derive(Clone)]
@@ -37,13 +37,13 @@ impl<R: PharmacistsRepositoryTrait> PharmacistsService<R> {
         pesel_number: String,
     ) -> Result<Pharmacist, CreatePharmacistError> {
         let new_pharmacist = NewPharmacist::new(name, pesel_number)
-            .map_err(|err| CreatePharmacistError::ValidationError(err.to_string()))?;
+            .map_err(|err| CreatePharmacistError::DomainError(err.to_string()))?;
 
         let created_pharmacist = self
             .repository
             .create_pharmacist(new_pharmacist)
             .await
-            .map_err(|err| CreatePharmacistError::DatabaseError(err.to_string()))?;
+            .map_err(|err| CreatePharmacistError::RepositoryError(err.to_string()))?;
 
         Ok(created_pharmacist)
     }
@@ -56,7 +56,7 @@ impl<R: PharmacistsRepositoryTrait> PharmacistsService<R> {
             .repository
             .get_pharmacist_by_id(pharmacist_id)
             .await
-            .map_err(|err| GetPharmacistByIdError::DatabaseError(err.to_string()))?;
+            .map_err(|err| GetPharmacistByIdError::RepositoryError(err.to_string()))?;
 
         Ok(pharmacist)
     }
@@ -70,7 +70,7 @@ impl<R: PharmacistsRepositoryTrait> PharmacistsService<R> {
             .repository
             .get_pharmacists(page, page_size)
             .await
-            .map_err(|err| GetPharmacistWithPaginationError::InputError(err.to_string()))?;
+            .map_err(|err| GetPharmacistWithPaginationError::DomainError(err.to_string()))?;
 
         Ok(pharmacists)
     }

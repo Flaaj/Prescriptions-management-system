@@ -45,12 +45,12 @@ pub struct CreateDoctorDto {
 impl<'r> Responder<'r, 'static> for CreateDoctorError {
     fn respond_to(self, _: &'r Request<'_>) -> rocket::response::Result<'static> {
         match self {
-            CreateDoctorError::ValidationError(message) => Response::build()
+            CreateDoctorError::DomainError(message) => Response::build()
                 .sized_body(message.len(), std::io::Cursor::new(message))
                 .header(ContentType::JSON)
                 .status(Status::BadRequest)
                 .ok(),
-            CreateDoctorError::DatabaseError(message) => Response::build()
+            CreateDoctorError::RepositoryError(message) => Response::build()
                 .sized_body(message.len(), std::io::Cursor::new(message))
                 .header(ContentType::JSON)
                 .status(Status::BadRequest)
@@ -104,7 +104,7 @@ pub async fn create_doctor(
 impl<'r> Responder<'r, 'static> for GetDoctorByIdError {
     fn respond_to(self, _: &'r Request<'_>) -> rocket::response::Result<'static> {
         match self {
-            GetDoctorByIdError::InputError => {
+            GetDoctorByIdError::DomainError => {
                 let message = "Doctor id is incorrect - it must be provided in UUID format";
                 Response::build()
                     .sized_body(message.len(), std::io::Cursor::new(message))
@@ -112,7 +112,7 @@ impl<'r> Responder<'r, 'static> for GetDoctorByIdError {
                     .status(Status::UnprocessableEntity)
                     .ok()
             }
-            GetDoctorByIdError::DatabaseError(message) => Response::build()
+            GetDoctorByIdError::RepositoryError(message) => Response::build()
                 .sized_body(message.len(), std::io::Cursor::new(message))
                 .header(ContentType::JSON)
                 .status(Status::NotFound)
@@ -163,7 +163,7 @@ pub async fn get_doctor_by_id(
 impl<'r> Responder<'r, 'static> for GetDoctorWithPaginationError {
     fn respond_to(self, _: &'r Request<'_>) -> rocket::response::Result<'static> {
         match self {
-            GetDoctorWithPaginationError::InputError(message) => Response::build()
+            GetDoctorWithPaginationError::DomainError(message) => Response::build()
                 .sized_body(message.len(), std::io::Cursor::new(message))
                 .header(ContentType::JSON)
                 .status(Status::BadRequest)

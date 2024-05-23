@@ -329,17 +329,23 @@ impl PrescriptionsRepositoryTrait for PrescriptionsRepository {
     async fn fill_prescription(
         &self,
         prescription_fill: NewPrescriptionFill,
-    ) -> anyhow::Result<()> {
-        sqlx::query!(
-            r#"INSERT INTO prescription_fills (id, prescription_id, pharmacist_id) VALUES ($1, $2, $3)"#,
+    ) -> anyhow::Result<PrescriptionFill> {
+        let result = sqlx::query!(
+            r#"INSERT INTO prescription_fills (id, prescription_id, pharmacist_id) VALUES ($1, $2, $3) RETURNING id, prescription_id, pharmacist_id, created_at, updated_at"#,
             prescription_fill.id,
             prescription_fill.prescription_id,
             prescription_fill.pharmacist_id
         )
-        .execute(&self.pool)
+        .fetch_one(&self.pool)
         .await?;
 
-        Ok(())
+        Ok(PrescriptionFill {
+            id: result.id,
+            prescription_id: result.prescription_id,
+            pharmacist_id: result.pharmacist_id,
+            created_at: result.created_at,
+            updated_at: result.updated_at,
+        })
     }
 }
 
@@ -546,10 +552,12 @@ mod integration_tests {
         assert!(prescription_from_db.fill.is_none());
 
         let new_prescription_fill = prescription_from_db.fill(seed_data.pharmacist.id).unwrap();
-        repository
+        let created_prescription_fill = repository
             .fill_prescription(new_prescription_fill.clone())
             .await
             .unwrap();
+
+        assert_eq!(created_prescription_fill, new_prescription_fill);
 
         let prescription_from_db = repository
             .get_prescription_by_id(prescription.id)

@@ -13,8 +13,8 @@ pub struct PrescriptionsService<R: PrescriptionsRepositoryTrait> {
 
 #[derive(Debug)]
 pub enum CreatePrescriptionError {
-    DatabaseError(String),
-    ValidationError(String),
+    RepositoryError(String),
+    DomainError(String),
 }
 
 impl<R: PrescriptionsRepositoryTrait> PrescriptionsService<R> {
@@ -36,16 +36,41 @@ impl<R: PrescriptionsRepositoryTrait> PrescriptionsService<R> {
         for (drug_id, quantity) in prescribed_drug_ids {
             new_prescription
                 .add_drug(drug_id, quantity)
-                .map_err(|err| CreatePrescriptionError::ValidationError(err.to_string()))?;
+                .map_err(|err| CreatePrescriptionError::DomainError(err.to_string()))?;
         }
 
         let created_prescription = self
             .repository
             .create_prescription(new_prescription)
             .await
-            .map_err(|err| CreatePrescriptionError::DatabaseError(err.to_string()))?;
+            .map_err(|err| CreatePrescriptionError::RepositoryError(err.to_string()))?;
 
         Ok(created_prescription)
+    }
+
+    pub async fn fill_prescription(
+        &self,
+        prescription_id: Uuid,
+        pharmacist_id: Uuid,
+    ) -> Result<Prescription, CreatePrescriptionError> {
+        let mut prescription = self
+            .repository
+            .get_prescription_by_id(prescription_id)
+            .await
+            .map_err(|err| CreatePrescriptionError::RepositoryError(err.to_string()))?;
+
+        let new_prescription_fill = prescription
+            .fill(pharmacist_id)
+            .map_err(|err| CreatePrescriptionError::DomainError(err.to_string()))?;
+
+        let prescription_fill = self
+            .repository
+            .fill_prescription(new_prescription_fill)
+            .await
+            .map_err(|err| CreatePrescriptionError::RepositoryError(err.to_string()))?;
+        prescription.fill = Some(prescription_fill);
+
+        Ok(prescription)
     }
 }
 
@@ -195,5 +220,29 @@ mod integration_tests {
             PrescriptionType::ForChronicDiseaseDrugs
         );
         assert_eq!(created_prescription.prescribed_drugs.len(), 2)
+    }
+
+    #[sqlx::test]
+    async fn fills_prescription(pool: sqlx::PgPool) {
+        let (service, seed_ids) = setup_services_and_seed_database(pool).await;
+        let seed_prescription = service
+            .create_prescription(
+                seed_ids.doctor_id,
+                seed_ids.patient_id,
+                None,
+                Some(PrescriptionType::ForChronicDiseaseDrugs),
+                vec![(seed_ids.drug_ids[0], 1), (seed_ids.drug_ids[1], 2)],
+            )
+            .await
+            .unwrap();
+
+        let filled_prescription = service
+            .fill_prescription(seed_prescription.id, seed_ids.pharmacist_id)
+            .await
+            .unwrap();
+        let fill = filled_prescription.fill.unwrap();
+
+        assert!(fill.prescription_id == seed_prescription.id);
+        assert!(fill.pharmacist_id == seed_ids.pharmacist_id);
     }
 }
