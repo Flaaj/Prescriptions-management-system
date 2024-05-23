@@ -545,9 +545,9 @@ mod integration_tests {
 
         assert!(prescription_from_db.fill.is_none());
 
-        let prescription_fill = prescription_from_db.fill(seed_data.pharmacist.id).unwrap();
+        let new_prescription_fill = prescription_from_db.fill(seed_data.pharmacist.id).unwrap();
         repository
-            .fill_prescription(prescription_fill)
+            .fill_prescription(new_prescription_fill.clone())
             .await
             .unwrap();
 
@@ -556,6 +556,6 @@ mod integration_tests {
             .await
             .unwrap();
 
-        assert!(prescription_from_db.fill.is_some());
+        assert_eq!(prescription_from_db.fill.unwrap(), new_prescription_fill);
     }
 }

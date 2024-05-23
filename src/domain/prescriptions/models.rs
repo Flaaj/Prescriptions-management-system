@@ -102,3 +102,17 @@ pub struct PrescriptionFill {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
+
+impl PartialEq<NewPrescriptionFill> for PrescriptionFill {
+    fn eq(&self, other: &NewPrescriptionFill) -> bool {
+        self.id == other.id
+            && self.prescription_id == other.prescription_id
+            && self.pharmacist_id == other.pharmacist_id
+    }
+}
+
+impl PartialEq<PrescriptionFill> for NewPrescriptionFill {
+    fn eq(&self, other: &PrescriptionFill) -> bool {
+        other.eq(self)
+    }
+}
