@@ -126,20 +126,26 @@ mod integration_tests {
             .unwrap();
 
         let patients = repository.get_patients(None, Some(10)).await.unwrap();
-        assert_eq!(patients.len(), 4);
 
+        assert_eq!(patients.len(), 4);
         assert_eq!(patients[0], new_patient_0);
         assert_eq!(patients[1], new_patient_1);
         assert_eq!(patients[2], new_patient_2);
         assert_eq!(patients[3], new_patient_3);
 
         let patients = repository.get_patients(None, Some(2)).await.unwrap();
+
         assert_eq!(patients.len(), 2);
+        assert_eq!(patients[0], new_patient_0);
+        assert_eq!(patients[1], new_patient_1);
 
         let patients = repository.get_patients(Some(1), Some(3)).await.unwrap();
+        
         assert_eq!(patients.len(), 1);
+        assert_eq!(patients[0], new_patient_3);
 
         let patients = repository.get_patients(Some(2), Some(3)).await.unwrap();
+        
         assert_eq!(patients.len(), 0);
     }
 

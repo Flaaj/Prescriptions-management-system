@@ -133,10 +133,13 @@ mod integration_tests {
         let doctors = repository.get_doctors(None, Some(2)).await.unwrap();
 
         assert_eq!(doctors.len(), 2);
+        assert_eq!(doctors[0], new_doctor_0);
+        assert_eq!(doctors[1], new_doctor_1);
 
         let doctors = repository.get_doctors(Some(1), Some(3)).await.unwrap();
 
         assert!(doctors.len() == 1);
+        assert_eq!(doctors[0], new_doctor_3);
 
         let doctors = repository.get_doctors(Some(2), Some(3)).await.unwrap();
 

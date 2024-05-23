@@ -176,10 +176,13 @@ mod integration_tests {
         let drugs = repository.get_drugs(None, Some(2)).await.unwrap();
 
         assert_eq!(drugs.len(), 2);
+        assert_eq!(drugs[0], new_drug_0);
+        assert_eq!(drugs[1], new_drug_1);
 
         let drugs = repository.get_drugs(Some(1), Some(3)).await.unwrap();
 
         assert_eq!(drugs.len(), 1);
+        assert_eq!(drugs[0], new_drug_3);
 
         let drugs = repository.get_drugs(Some(2), Some(3)).await.unwrap();
 
