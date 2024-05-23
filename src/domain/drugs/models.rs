@@ -20,6 +20,7 @@ pub struct NewDrug {
     pub volume_ml: Option<i32>,
 }
 
+#[derive(Debug, PartialEq, Clone)]
 pub struct Drug {
     pub id: Uuid,
     pub name: String,
@@ -30,4 +31,22 @@ pub struct Drug {
     pub volume_ml: Option<i32>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+}
+
+impl PartialEq<NewDrug> for Drug {
+    fn eq(&self, other: &NewDrug) -> bool {
+        self.id == other.id
+            && self.name == other.name
+            && self.content_type == other.content_type
+            && self.pills_count == other.pills_count
+            && self.mg_per_pill == other.mg_per_pill
+            && self.ml_per_pill == other.ml_per_pill
+            && self.volume_ml == other.volume_ml
+    }
+}
+
+impl PartialEq<Drug> for NewDrug {
+    fn eq(&self, other: &Drug) -> bool {
+        other.eq(self)
+    }
 }

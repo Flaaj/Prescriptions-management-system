@@ -63,20 +63,20 @@ impl<'a> DrugsRepositoryTrait for DrugsRepository {
         .fetch_all(&self.pool)
         .await?;
 
-        let drugs = drugs_from_db
-            .into_iter()
-            .map(|record| Drug {
-                id: record.get(0),
-                name: record.get(1),
-                content_type: record.get(2),
-                pills_count: record.get(3),
-                mg_per_pill: record.get(4),
-                ml_per_pill: record.get(5),
-                volume_ml: record.get(6),
-                created_at: record.get(7),
-                updated_at: record.get(8),
+        let mut drugs = vec![];
+        for record in drugs_from_db {
+            drugs.push(Drug {
+                id: record.try_get(0)?,
+                name: record.try_get(1)?,
+                content_type: record.try_get(2)?,
+                pills_count: record.try_get(3)?,
+                mg_per_pill: record.try_get(4)?,
+                ml_per_pill: record.try_get(5)?,
+                volume_ml: record.try_get(6)?,
+                created_at: record.try_get(7)?,
+                updated_at: record.try_get(8)?,
             })
-            .collect();
+        }
 
         Ok(drugs)
     }
@@ -90,15 +90,15 @@ impl<'a> DrugsRepositoryTrait for DrugsRepository {
         .await?;
 
         Ok(Drug {
-            id: drug_from_db.get(0),
-            name: drug_from_db.get(1),
-            content_type: drug_from_db.get(2),
-            pills_count: drug_from_db.get(3),
-            mg_per_pill: drug_from_db.get(4),
-            ml_per_pill: drug_from_db.get(5),
-            volume_ml: drug_from_db.get(6),
-            created_at: drug_from_db.get(7),
-            updated_at: drug_from_db.get(8),
+            id: drug_from_db.try_get(0)?,
+            name: drug_from_db.try_get(1)?,
+            content_type: drug_from_db.try_get(2)?,
+            pills_count: drug_from_db.try_get(3)?,
+            mg_per_pill: drug_from_db.try_get(4)?,
+            ml_per_pill: drug_from_db.try_get(5)?,
+            volume_ml: drug_from_db.try_get(6)?,
+            created_at: drug_from_db.try_get(7)?,
+            updated_at: drug_from_db.try_get(8)?,
         })
     }
 }
@@ -121,98 +121,57 @@ mod integration_tests {
         create_tables(&pool, true).await.unwrap();
         let repository = DrugsRepository::new(pool);
 
-        let result = repository
-            .create_drug(
-                NewDrug::new(
-                    "Gripex".into(),
-                    DrugContentType::SolidPills,
-                    Some(20),
-                    Some(300),
-                    None,
-                    None,
-                )
-                .unwrap(),
-            )
-            .await
-            .unwrap();
+        let new_drug_0 = NewDrug::new(
+            "Gripex".into(),
+            DrugContentType::SolidPills,
+            Some(20),
+            Some(300),
+            None,
+            None,
+        )
+        .unwrap();
+        let created_drug = repository.create_drug(new_drug_0.clone()).await.unwrap();
 
-        assert_eq!(result.name, "Gripex");
-        assert_eq!(result.content_type, DrugContentType::SolidPills);
-        assert_eq!(result.pills_count, Some(20));
-        assert_eq!(result.mg_per_pill, Some(300));
-        assert_eq!(result.ml_per_pill, None);
-        assert_eq!(result.volume_ml, None);
+        assert_eq!(created_drug, new_drug_0);
 
-        repository
-            .create_drug(
-                NewDrug::new(
-                    "Apap".into(),
-                    DrugContentType::SolidPills,
-                    Some(10),
-                    Some(400),
-                    None,
-                    None,
-                )
-                .unwrap(),
-            )
-            .await
-            .unwrap();
-        repository
-            .create_drug(
-                NewDrug::new(
-                    "Aspirin".into(),
-                    DrugContentType::SolidPills,
-                    Some(30),
-                    Some(200),
-                    None,
-                    None,
-                )
-                .unwrap(),
-            )
-            .await
-            .unwrap();
-        repository
-            .create_drug(
-                NewDrug::new(
-                    "Flegamax".into(),
-                    DrugContentType::BottleOfLiquid,
-                    None,
-                    None,
-                    None,
-                    Some(400),
-                )
-                .unwrap(),
-            )
-            .await
-            .unwrap();
+        let new_drug_1 = NewDrug::new(
+            "Apap".into(),
+            DrugContentType::SolidPills,
+            Some(10),
+            Some(400),
+            None,
+            None,
+        )
+        .unwrap();
+        repository.create_drug(new_drug_1.clone()).await.unwrap();
+        let new_drug_2 = NewDrug::new(
+            "Aspirin".into(),
+            DrugContentType::SolidPills,
+            Some(30),
+            Some(200),
+            None,
+            None,
+        )
+        .unwrap();
+        repository.create_drug(new_drug_2.clone()).await.unwrap();
+        let new_drug_3 = NewDrug::new(
+            "Flegamax".into(),
+            DrugContentType::BottleOfLiquid,
+            None,
+            None,
+            None,
+            Some(400),
+        )
+        .unwrap();
+        repository.create_drug(new_drug_3.clone()).await.unwrap();
 
         let drugs = repository.get_drugs(None, Some(10)).await.unwrap();
 
         assert_eq!(drugs.len(), 4);
-        assert_eq!(drugs[0].name, "Gripex");
-        assert_eq!(drugs[0].content_type, DrugContentType::SolidPills);
-        assert_eq!(drugs[0].pills_count, Some(20));
-        assert_eq!(drugs[0].mg_per_pill, Some(300));
-        assert_eq!(drugs[0].ml_per_pill, None);
-        assert_eq!(drugs[0].volume_ml, None);
-        assert_eq!(drugs[1].name, "Apap");
-        assert_eq!(drugs[1].content_type, DrugContentType::SolidPills);
-        assert_eq!(drugs[1].pills_count, Some(10));
-        assert_eq!(drugs[1].mg_per_pill, Some(400));
-        assert_eq!(drugs[1].ml_per_pill, None);
-        assert_eq!(drugs[1].volume_ml, None);
-        assert_eq!(drugs[2].name, "Aspirin");
-        assert_eq!(drugs[2].content_type, DrugContentType::SolidPills);
-        assert_eq!(drugs[2].pills_count, Some(30));
-        assert_eq!(drugs[2].mg_per_pill, Some(200));
-        assert_eq!(drugs[2].ml_per_pill, None);
-        assert_eq!(drugs[2].volume_ml, None);
-        assert_eq!(drugs[3].name, "Flegamax");
-        assert_eq!(drugs[3].content_type, DrugContentType::BottleOfLiquid);
-        assert_eq!(drugs[3].pills_count, None);
-        assert_eq!(drugs[3].mg_per_pill, None);
-        assert_eq!(drugs[3].ml_per_pill, None);
-        assert_eq!(drugs[3].volume_ml, Some(400));
+        assert_eq!(drugs[0], new_drug_0);
+        assert_eq!(drugs[1], new_drug_1);
+        assert_eq!(drugs[2], new_drug_2);
+        assert_eq!(drugs[3], new_drug_3);
 
         let drugs = repository.get_drugs(None, Some(2)).await.unwrap();
 
@@ -244,20 +203,10 @@ mod integration_tests {
 
         let created_drug = repository.create_drug(drug.clone()).await.unwrap();
 
-        assert_eq!(created_drug.name, "Gripex Max");
-        assert_eq!(created_drug.content_type, DrugContentType::SolidPills);
-        assert_eq!(created_drug.pills_count, Some(20));
-        assert_eq!(created_drug.mg_per_pill, Some(300));
-        assert_eq!(created_drug.ml_per_pill, None);
-        assert_eq!(created_drug.volume_ml, None);
+        assert_eq!(drug, created_drug);
 
         let drug_from_repo = repository.get_drug_by_id(drug.id).await.unwrap();
 
-        assert_eq!(drug_from_repo.name, "Gripex Max");
-        assert_eq!(drug_from_repo.content_type, DrugContentType::SolidPills);
-        assert_eq!(drug_from_repo.pills_count, Some(20));
-        assert_eq!(drug_from_repo.mg_per_pill, Some(300));
-        assert_eq!(drug_from_repo.ml_per_pill, None);
-        assert_eq!(drug_from_repo.volume_ml, None);
+        assert_eq!(drug, drug_from_repo);
     }
 }

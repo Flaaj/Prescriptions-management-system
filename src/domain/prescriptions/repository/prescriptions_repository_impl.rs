@@ -40,10 +40,11 @@ impl PrescriptionsRepositoryTrait for PrescriptionsRepository {
         let transaction = self.pool.begin().await?;
 
         sqlx::query!(
-            r#"INSERT INTO prescriptions (id, patient_id, doctor_id, prescription_type, start_date, end_date) VALUES ($1, $2, $3, $4, $5, $6)"#,
+            r#"INSERT INTO prescriptions (id, patient_id, doctor_id, code, prescription_type, start_date, end_date) VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
             prescription.id,
             prescription.patient_id,
             prescription.doctor_id,
+            prescription.code,
             prescription.prescription_type as _,
             prescription.start_date,
             prescription.end_date
@@ -81,6 +82,7 @@ impl PrescriptionsRepositoryTrait for PrescriptionsRepository {
             r#"
         SELECT 
             prescriptions.id, 
+            prescriptions.code,
             prescriptions.prescription_type, 
             prescriptions.start_date, 
             prescriptions.end_date, 
@@ -122,27 +124,28 @@ impl PrescriptionsRepositoryTrait for PrescriptionsRepository {
 
         for row in prescriptions_from_db {
             let prescription_id: Uuid = row.try_get(0)?;
-            let prescription_prescription_type: PrescriptionType = row.try_get(1)?;
-            let prescription_start_date: DateTime<Utc> = row.try_get(2)?;
-            let prescription_end_date: DateTime<Utc> = row.try_get(3)?;
-            let prescription_created_at: DateTime<Utc> = row.try_get(4)?;
-            let prescription_updated_at: DateTime<Utc> = row.try_get(5)?;
-            let doctor_id: Uuid = row.try_get(6)?;
-            let doctor_name: String = row.try_get(7)?;
-            let doctor_pesel_number: String = row.try_get(8)?;
-            let doctor_pwz_number: String = row.try_get(9)?;
-            let patient_id: Uuid = row.try_get(10)?;
-            let patient_name: String = row.try_get(11)?;
-            let patient_pesel_number: String = row.try_get(12)?;
-            let prescribed_drug_id: Uuid = row.try_get(13)?;
-            let prescribed_drug_drug_id: Uuid = row.try_get(14)?;
-            let prescribed_drug_quantity: i32 = row.try_get(15)?;
-            let prescribed_drug_created_at: DateTime<Utc> = row.try_get(16)?;
-            let prescribed_drug_updated_at: DateTime<Utc> = row.try_get(17)?;
-            let prescription_fill_id: Option<Uuid> = row.try_get(18)?;
-            let prescription_fill_pharmacist_id: Option<Uuid> = row.try_get(19)?;
-            let prescription_fill_created_at: Option<DateTime<Utc>> = row.try_get(20)?;
-            let prescription_fill_updated_at: Option<DateTime<Utc>> = row.try_get(21)?;
+            let prescription_code: String = row.try_get(1)?;
+            let prescription_prescription_type: PrescriptionType = row.try_get(2)?;
+            let prescription_start_date: DateTime<Utc> = row.try_get(3)?;
+            let prescription_end_date: DateTime<Utc> = row.try_get(4)?;
+            let prescription_created_at: DateTime<Utc> = row.try_get(5)?;
+            let prescription_updated_at: DateTime<Utc> = row.try_get(6)?;
+            let doctor_id: Uuid = row.try_get(7)?;
+            let doctor_name: String = row.try_get(8)?;
+            let doctor_pesel_number: String = row.try_get(9)?;
+            let doctor_pwz_number: String = row.try_get(10)?;
+            let patient_id: Uuid = row.try_get(11)?;
+            let patient_name: String = row.try_get(12)?;
+            let patient_pesel_number: String = row.try_get(13)?;
+            let prescribed_drug_id: Uuid = row.try_get(14)?;
+            let prescribed_drug_drug_id: Uuid = row.try_get(15)?;
+            let prescribed_drug_quantity: i32 = row.try_get(16)?;
+            let prescribed_drug_created_at: DateTime<Utc> = row.try_get(17)?;
+            let prescribed_drug_updated_at: DateTime<Utc> = row.try_get(18)?;
+            let prescription_fill_id: Option<Uuid> = row.try_get(19)?;
+            let prescription_fill_pharmacist_id: Option<Uuid> = row.try_get(20)?;
+            let prescription_fill_created_at: Option<DateTime<Utc>> = row.try_get(21)?;
+            let prescription_fill_updated_at: Option<DateTime<Utc>> = row.try_get(22)?;
 
             let prescription = prescriptions.iter_mut().find(|p| p.id == prescription_id);
 
@@ -183,6 +186,7 @@ impl PrescriptionsRepositoryTrait for PrescriptionsRepository {
                         pesel_number: doctor_pesel_number,
                         pwz_number: doctor_pwz_number,
                     },
+                    code: prescription_code,
                     prescription_type: prescription_prescription_type,
                     start_date: prescription_start_date,
                     end_date: prescription_end_date,
@@ -202,6 +206,7 @@ impl PrescriptionsRepositoryTrait for PrescriptionsRepository {
             r#"
         SELECT
             prescriptions.id, 
+            prescriptions.code,
             prescriptions.prescription_type, 
             prescriptions.start_date, 
             prescriptions.end_date, 
@@ -241,27 +246,28 @@ impl PrescriptionsRepositoryTrait for PrescriptionsRepository {
 
         for row in prescription_from_db {
             let prescription_id: Uuid = row.try_get(0)?;
-            let prescription_prescription_type: PrescriptionType = row.try_get(1)?;
-            let prescription_start_date: DateTime<Utc> = row.try_get(2)?;
-            let prescription_end_date: DateTime<Utc> = row.try_get(3)?;
-            let prescription_created_at: DateTime<Utc> = row.try_get(4)?;
-            let prescription_updated_at: DateTime<Utc> = row.try_get(5)?;
-            let doctor_id: Uuid = row.try_get(6)?;
-            let doctor_name: String = row.try_get(7)?;
-            let doctor_pesel_number: String = row.try_get(8)?;
-            let doctor_pwz_number: String = row.try_get(9)?;
-            let patient_id: Uuid = row.try_get(10)?;
-            let patient_name: String = row.try_get(11)?;
-            let patient_pesel_number: String = row.try_get(12)?;
-            let prescribed_drug_id: Uuid = row.try_get(13)?;
-            let prescribed_drug_drug_id: Uuid = row.try_get(14)?;
-            let prescribed_drug_quantity: i32 = row.try_get(15)?;
-            let prescribed_drug_created_at: DateTime<Utc> = row.try_get(16)?;
-            let prescribed_drug_updated_at: DateTime<Utc> = row.try_get(17)?;
-            let prescription_fill_id: Option<Uuid> = row.try_get(18)?;
-            let prescription_fill_pharmacist_id: Option<Uuid> = row.try_get(19)?;
-            let prescription_fill_created_at: Option<DateTime<Utc>> = row.try_get(20)?;
-            let prescription_fill_updated_at: Option<DateTime<Utc>> = row.try_get(21)?;
+            let prescription_code: String = row.try_get(1)?;
+            let prescription_prescription_type: PrescriptionType = row.try_get(2)?;
+            let prescription_start_date: DateTime<Utc> = row.try_get(3)?;
+            let prescription_end_date: DateTime<Utc> = row.try_get(4)?;
+            let prescription_created_at: DateTime<Utc> = row.try_get(5)?;
+            let prescription_updated_at: DateTime<Utc> = row.try_get(6)?;
+            let doctor_id: Uuid = row.try_get(7)?;
+            let doctor_name: String = row.try_get(8)?;
+            let doctor_pesel_number: String = row.try_get(9)?;
+            let doctor_pwz_number: String = row.try_get(10)?;
+            let patient_id: Uuid = row.try_get(11)?;
+            let patient_name: String = row.try_get(12)?;
+            let patient_pesel_number: String = row.try_get(13)?;
+            let prescribed_drug_id: Uuid = row.try_get(14)?;
+            let prescribed_drug_drug_id: Uuid = row.try_get(15)?;
+            let prescribed_drug_quantity: i32 = row.try_get(16)?;
+            let prescribed_drug_created_at: DateTime<Utc> = row.try_get(17)?;
+            let prescribed_drug_updated_at: DateTime<Utc> = row.try_get(18)?;
+            let prescription_fill_id: Option<Uuid> = row.try_get(19)?;
+            let prescription_fill_pharmacist_id: Option<Uuid> = row.try_get(20)?;
+            let prescription_fill_created_at: Option<DateTime<Utc>> = row.try_get(21)?;
+            let prescription_fill_updated_at: Option<DateTime<Utc>> = row.try_get(22)?;
 
             let prescription = prescriptions.iter_mut().find(|p| p.id == prescription_id);
 
@@ -302,6 +308,7 @@ impl PrescriptionsRepositoryTrait for PrescriptionsRepository {
                         pesel_number: doctor_pesel_number,
                         pwz_number: doctor_pwz_number,
                     },
+                    code: prescription_code,
                     prescription_type: prescription_prescription_type,
                     start_date: prescription_start_date,
                     end_date: prescription_end_date,
@@ -373,7 +380,7 @@ mod integration_tests {
                 },
             },
             prescriptions::{
-                models::{NewPrescription, PrescriptionType},
+                models::NewPrescription,
                 repository::prescriptions_repository_trait::PrescriptionsRepositoryTrait,
             },
         },
@@ -439,14 +446,14 @@ mod integration_tests {
         let seed_data = seed_database(pool.clone()).await.unwrap();
         let repository = PrescriptionsRepository::new(pool);
 
-        let mut prescription =
+        let mut new_prescription =
             NewPrescription::new(seed_data.doctor.id, seed_data.patient.id, None, None);
         for i in 0..4 {
-            prescription.add_drug(seed_data.drugs[i].id, 1).unwrap();
+            new_prescription.add_drug(seed_data.drugs[i].id, 1).unwrap();
         }
 
         repository
-            .create_prescription(prescription.clone())
+            .create_prescription(new_prescription.clone())
             .await
             .unwrap();
 
@@ -465,24 +472,7 @@ mod integration_tests {
         let prescriptions = repository.get_prescriptions(None, Some(7)).await.unwrap();
 
         assert_eq!(prescriptions.len(), 7);
-
-        let first_prescription = prescriptions.first().unwrap();
-
-        assert_eq!(first_prescription.prescribed_drugs.len(), 4);
-        assert_eq!(
-            first_prescription.prescription_type,
-            PrescriptionType::Regular
-        );
-        assert_eq!(first_prescription.doctor.name, seed_data.doctor.name);
-        assert_eq!(
-            first_prescription.doctor.pwz_number,
-            seed_data.doctor.pwz_number
-        );
-        assert_eq!(first_prescription.patient.name, seed_data.patient.name);
-        assert_eq!(
-            first_prescription.patient.pesel_number,
-            seed_data.patient.pesel_number
-        );
+        assert_eq!(prescriptions[0], new_prescription);
 
         let prescriptions = repository.get_prescriptions(None, Some(20)).await.unwrap();
         assert!(prescriptions.len() == 11);
@@ -500,23 +490,23 @@ mod integration_tests {
         let repository = PrescriptionsRepository::new(pool.clone());
         let seed_data = seed_database(pool).await.unwrap();
 
-        let mut prescription =
+        let mut new_prescription =
             NewPrescription::new(seed_data.doctor.id, seed_data.patient.id, None, None);
         for i in 0..2 {
-            prescription.add_drug(seed_data.drugs[i].id, 1).unwrap();
+            new_prescription.add_drug(seed_data.drugs[i].id, 1).unwrap();
         }
 
         repository
-            .create_prescription(prescription.clone())
+            .create_prescription(new_prescription.clone())
             .await
             .unwrap();
 
         let prescription_from_db = repository
-            .get_prescription_by_id(prescription.id)
+            .get_prescription_by_id(new_prescription.id)
             .await
             .unwrap();
-        assert_eq!(prescription_from_db.id, prescription.id);
-        assert_eq!(prescription_from_db.prescribed_drugs.len(), 2);
+
+        assert_eq!(prescription_from_db, new_prescription);
     }
 
     #[sqlx::test]

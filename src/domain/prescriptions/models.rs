@@ -60,11 +60,31 @@ pub struct Prescription {
     pub patient: PrescriptionPatient,
     pub prescribed_drugs: Vec<PrescribedDrug>,
     pub prescription_type: PrescriptionType,
+    pub code: String,
     pub fill: Option<PrescriptionFill>,
     pub start_date: DateTime<Utc>,
     pub end_date: DateTime<Utc>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+}
+
+impl PartialEq<NewPrescription> for Prescription {
+    fn eq(&self, other: &NewPrescription) -> bool {
+        self.id == other.id
+            && self.doctor.id == other.doctor_id
+            && self.patient.id == other.patient_id
+            && self.prescription_type == other.prescription_type
+            && self.code == other.code
+            && self.start_date == other.start_date
+            && self.end_date == other.end_date
+            && self.prescribed_drugs.len() == other.prescribed_drugs.len()
+    }
+}
+
+impl PartialEq<Prescription> for NewPrescription {
+    fn eq(&self, other: &Prescription) -> bool {
+        other.eq(self)
+    }
 }
 
 #[derive(Debug, PartialEq, Clone)]

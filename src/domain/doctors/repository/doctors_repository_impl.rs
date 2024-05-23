@@ -109,42 +109,26 @@ mod integration_tests {
         create_tables(&pool, true).await.unwrap();
         let repository = DoctorsRepository::new(pool);
 
-        repository
-            .create_doctor(
-                NewDoctor::new("John Doe".into(), "5425740".into(), "96021817257".into()).unwrap(),
-            )
-            .await
-            .unwrap();
-        repository
-            .create_doctor(
-                NewDoctor::new("John Doe".into(), "8463856".into(), "99031301347".into()).unwrap(),
-            )
-            .await
-            .unwrap();
-        repository
-            .create_doctor(
-                NewDoctor::new("John Doe".into(), "3123456".into(), "92022900002".into()).unwrap(),
-            )
-            .await
-            .unwrap();
-        repository
-            .create_doctor(
-                NewDoctor::new("John Doe".into(), "5425751".into(), "96021807250".into()).unwrap(),
-            )
-            .await
-            .unwrap();
+        let new_doctor_0 =
+            NewDoctor::new("John Doe".into(), "5425740".into(), "96021817257".into()).unwrap();
+        repository.create_doctor(new_doctor_0.clone()).await.unwrap();
+        let new_doctor_1 =
+            NewDoctor::new("John Doe".into(), "8463856".into(), "99031301347".into()).unwrap();
+        repository.create_doctor(new_doctor_1.clone()).await.unwrap();
+        let new_doctor_2 =
+            NewDoctor::new("John Doe".into(), "3123456".into(), "92022900002".into()).unwrap();
+        repository.create_doctor(new_doctor_2.clone()).await.unwrap();
+        let new_doctor_3 =
+            NewDoctor::new("John Doe".into(), "5425751".into(), "96021807250".into()).unwrap();
+        repository.create_doctor(new_doctor_3.clone()).await.unwrap();
 
         let doctors = repository.get_doctors(None, Some(10)).await.unwrap();
 
         assert!(doctors.len() == 4);
-        assert_eq!(doctors[0].pwz_number, "5425740");
-        assert_eq!(doctors[0].pesel_number, "96021817257");
-        assert_eq!(doctors[1].pwz_number, "8463856");
-        assert_eq!(doctors[1].pesel_number, "99031301347");
-        assert_eq!(doctors[2].pwz_number, "3123456");
-        assert_eq!(doctors[2].pesel_number, "92022900002");
-        assert_eq!(doctors[3].pwz_number, "5425751");
-        assert_eq!(doctors[3].pesel_number, "96021807250");
+        assert_eq!(doctors[0], new_doctor_0);
+        assert_eq!(doctors[1], new_doctor_1);
+        assert_eq!(doctors[2], new_doctor_2);
+        assert_eq!(doctors[3], new_doctor_3);
 
         let doctors = repository.get_doctors(None, Some(2)).await.unwrap();
 
@@ -164,16 +148,14 @@ mod integration_tests {
         create_tables(&pool, true).await.unwrap();
         let repository = DoctorsRepository::new(pool);
 
-        let doctor =
+        let new_doctor =
             NewDoctor::new("John Does".into(), "5425740".into(), "96021817257".into()).unwrap();
 
-        repository.create_doctor(doctor.clone()).await.unwrap();
+        repository.create_doctor(new_doctor.clone()).await.unwrap();
 
-        let doctor_from_repo = repository.get_doctor_by_id(doctor.id).await.unwrap();
+        let doctor_from_repo = repository.get_doctor_by_id(new_doctor.id).await.unwrap();
 
-        assert_eq!(doctor_from_repo.name, "John Does");
-        assert_eq!(doctor_from_repo.pwz_number, "5425740");
-        assert_eq!(doctor_from_repo.pesel_number, "96021817257");
+        assert_eq!(doctor_from_repo, new_doctor);
     }
 
     #[sqlx::test]

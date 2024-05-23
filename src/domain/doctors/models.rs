@@ -34,3 +34,18 @@ pub struct Doctor {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
+
+impl PartialEq<NewDoctor> for Doctor {
+    fn eq(&self, other: &NewDoctor) -> bool {
+        self.id == other.id
+            && self.name == other.name
+            && self.pesel_number == other.pesel_number
+            && self.pwz_number == other.pwz_number
+    }
+}
+
+impl PartialEq<Doctor> for NewDoctor {
+    fn eq(&self, other: &Doctor) -> bool {
+        other.eq(self)
+    }
+}

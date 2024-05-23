@@ -102,6 +102,7 @@ pub async fn create_tables(pool: &sqlx::PgPool, drop: bool) -> Result<(), sqlx::
             patient_id UUID NOT NULL REFERENCES patients(id),
             doctor_id UUID NOT NULL REFERENCES doctors(id),
             prescription_type prescription_type NOT NULL,
+            code VARCHAR(8) NOT NULL,
             start_date TIMESTAMPTZ NOT NULL,
             end_date TIMESTAMPTZ NOT NULL,
             created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,

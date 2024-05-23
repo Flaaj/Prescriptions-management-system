@@ -61,6 +61,7 @@ mod unit_tests {
                 name: "John Patient".to_string(),
                 pesel_number: "92022900002".to_string(),
             },
+            code: "12345678".to_string(),
             prescription_type,
             start_date,
             end_date,

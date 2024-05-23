@@ -9,11 +9,11 @@ use crate::{
 use super::patients_repository_trait::PatientsRepositoryTrait;
 
 pub struct PatientsRepository {
-    pool:  sqlx::PgPool,
+    pool: sqlx::PgPool,
 }
 
 impl PatientsRepository {
-    pub fn new(pool:  sqlx::PgPool) -> Self {
+    pub fn new(pool: sqlx::PgPool) -> Self {
         Self { pool }
     }
 }
@@ -104,28 +104,37 @@ mod integration_tests {
         create_tables(&pool, true).await.unwrap();
         let repository = PatientsRepository::new(pool);
 
+        let new_patient_0 = NewPatient::new("John Doe".into(), "96021817257".into()).unwrap();
         repository
-            .create_patient(NewPatient::new("John Doe".into(), "96021817257".into()).unwrap())
+            .create_patient(new_patient_0.clone())
             .await
             .unwrap();
+        let new_patient_1 = NewPatient::new("John Doe".into(), "99031301347".into()).unwrap();
         repository
-            .create_patient(NewPatient::new("John Doe".into(), "99031301347".into()).unwrap())
+            .create_patient(new_patient_1.clone())
             .await
             .unwrap();
+        let new_patient_2 = NewPatient::new("John Doe".into(), "92022900002".into()).unwrap();
         repository
-            .create_patient(NewPatient::new("John Doe".into(), "92022900002".into()).unwrap())
+            .create_patient(new_patient_2.clone())
             .await
             .unwrap();
+        let new_patient_3 = NewPatient::new("John Doe".into(), "96021807250".into()).unwrap();
         repository
-            .create_patient(NewPatient::new("John Doe".into(), "96021807250".into()).unwrap())
+            .create_patient(new_patient_3.clone())
             .await
             .unwrap();
-
-        let patients = repository.get_patients(None, Some(2)).await.unwrap();
-        assert_eq!(patients.len(), 2);
 
         let patients = repository.get_patients(None, Some(10)).await.unwrap();
         assert_eq!(patients.len(), 4);
+
+        assert_eq!(patients[0], new_patient_0);
+        assert_eq!(patients[1], new_patient_1);
+        assert_eq!(patients[2], new_patient_2);
+        assert_eq!(patients[3], new_patient_3);
+
+        let patients = repository.get_patients(None, Some(2)).await.unwrap();
+        assert_eq!(patients.len(), 2);
 
         let patients = repository.get_patients(Some(1), Some(3)).await.unwrap();
         assert_eq!(patients.len(), 1);
@@ -139,13 +148,16 @@ mod integration_tests {
         create_tables(&pool, true).await.unwrap();
         let repository = PatientsRepository::new(pool);
 
-        let patient = NewPatient::new("John Doe".into(), "96021817257".into()).unwrap();
+        let new_patient = NewPatient::new("John Doe".into(), "96021817257".into()).unwrap();
 
-        repository.create_patient(patient.clone()).await.unwrap();
+        repository
+            .create_patient(new_patient.clone())
+            .await
+            .unwrap();
 
-        let patient_from_repo = repository.get_patient_by_id(patient.id).await.unwrap();
+        let patient_from_repo = repository.get_patient_by_id(new_patient.id).await.unwrap();
 
-        assert_eq!(patient_from_repo.id, patient.id);
+        assert_eq!(patient_from_repo, new_patient);
     }
 
     #[sqlx::test]
