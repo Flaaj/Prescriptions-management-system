@@ -1,2 +1,0 @@
-pub mod prescriptions_repository_impl;
-pub mod prescriptions_repository_trait;

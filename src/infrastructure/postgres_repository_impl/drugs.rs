@@ -2,25 +2,26 @@ use async_trait::async_trait;
 use sqlx::Row;
 use uuid::Uuid;
 
-use crate::{
-    domain::drugs::models::{Drug, NewDrug},
+use crate::domain::{
+    drugs::{
+        models::{Drug, NewDrug},
+        repository::DrugsRepository,
+    },
     utils::pagination::get_pagination_params,
 };
 
-use super::drugs_repository_trait::DrugsRepositoryTrait;
-
-pub struct DrugsRepository {
+pub struct DrugsPostgresRepository {
     pool: sqlx::PgPool,
 }
 
-impl DrugsRepository {
+impl DrugsPostgresRepository {
     pub fn new(pool: sqlx::PgPool) -> Self {
         Self { pool }
     }
 }
 
 #[async_trait]
-impl<'a> DrugsRepositoryTrait for DrugsRepository {
+impl<'a> DrugsRepository for DrugsPostgresRepository {
     async fn create_drug(&self, drug: NewDrug) -> anyhow::Result<Drug> {
         let result = sqlx::query(
             r#"INSERT INTO drugs (id, name, content_type, pills_count, mg_per_pill, ml_per_pill, volume_ml) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, name, content_type, pills_count, mg_per_pill, ml_per_pill, volume_ml, created_at, updated_at"#,
@@ -105,21 +106,19 @@ impl<'a> DrugsRepositoryTrait for DrugsRepository {
 
 #[cfg(test)]
 mod integration_tests {
+    use super::DrugsPostgresRepository;
     use crate::{
         create_tables::create_tables,
         domain::drugs::{
             models::{DrugContentType, NewDrug},
-            repository::{
-                drugs_repository_impl::DrugsRepository,
-                drugs_repository_trait::DrugsRepositoryTrait,
-            },
+            repository::DrugsRepository,
         },
     };
 
     #[sqlx::test]
     async fn create_and_read_drug_by_id(pool: sqlx::PgPool) {
         create_tables(&pool, true).await.unwrap();
-        let repository = DrugsRepository::new(pool);
+        let repository = DrugsPostgresRepository::new(pool);
 
         let drug = NewDrug::new(
             "Gripex Max".into(),
@@ -143,7 +142,7 @@ mod integration_tests {
     #[sqlx::test]
     async fn create_and_read_drugs_from_database(pool: sqlx::PgPool) {
         create_tables(&pool, true).await.unwrap();
-        let repository = DrugsRepository::new(pool);
+        let repository = DrugsPostgresRepository::new(pool);
 
         let new_drug_0 = NewDrug::new(
             "Gripex".into(),

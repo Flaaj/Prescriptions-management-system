@@ -1,8 +1,11 @@
 use uuid::Uuid;
 
-use crate::{domain::pharmacists::models::NewPharmacist, utils::validators::{
-    validate_name::validate_name, validate_pesel_number::validate_pesel_number,
-}};
+use crate::domain::{
+    pharmacists::models::NewPharmacist,
+    utils::validators::{
+        validate_name::validate_name, validate_pesel_number::validate_pesel_number,
+    },
+};
 
 impl NewPharmacist {
     pub fn new(name: String, pesel_number: String) -> anyhow::Result<Self> {

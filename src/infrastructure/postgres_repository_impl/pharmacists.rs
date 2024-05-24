@@ -1,25 +1,26 @@
 use async_trait::async_trait;
 use uuid::Uuid;
 
-use crate::{
-    domain::pharmacists::models::{NewPharmacist, Pharmacist},
+use crate::domain::{
+    pharmacists::{
+        models::{NewPharmacist, Pharmacist},
+        repository::PharmacistsRepository,
+    },
     utils::pagination::get_pagination_params,
 };
 
-use super::pharmacists_repository_trait::PharmacistsRepositoryTrait;
-
-pub struct PharmacistsRepository {
+pub struct PharmacistsPostgresRepository {
     pool: sqlx::PgPool,
 }
 
-impl PharmacistsRepository {
+impl PharmacistsPostgresRepository {
     pub fn new(pool: sqlx::PgPool) -> Self {
         Self { pool }
     }
 }
 
 #[async_trait]
-impl PharmacistsRepositoryTrait for PharmacistsRepository {
+impl PharmacistsRepository for PharmacistsPostgresRepository {
     async fn create_pharmacist(&self, pharmacist: NewPharmacist) -> anyhow::Result<Pharmacist> {
         let result = sqlx::query!(
             r#"INSERT INTO pharmacists (id, name, pesel_number) VALUES ($1, $2, $3) RETURNING id, name, pesel_number, created_at, updated_at"#,
@@ -88,21 +89,16 @@ impl PharmacistsRepositoryTrait for PharmacistsRepository {
 
 #[cfg(test)]
 mod integration_tests {
+    use super::PharmacistsPostgresRepository;
     use crate::{
         create_tables::create_tables,
-        domain::pharmacists::{
-            models::NewPharmacist,
-            repository::{
-                pharmacists_repository_impl::PharmacistsRepository,
-                pharmacists_repository_trait::PharmacistsRepositoryTrait,
-            },
-        },
+        domain::pharmacists::{models::NewPharmacist, repository::PharmacistsRepository},
     };
 
     #[sqlx::test]
     async fn create_and_read_pharmacists_from_database(pool: sqlx::PgPool) {
         create_tables(&pool, true).await.unwrap();
-        let repository = PharmacistsRepository::new(pool);
+        let repository = PharmacistsPostgresRepository::new(pool);
 
         let new_pharmacist_0 = NewPharmacist::new("John Doe".into(), "96021817257".into()).unwrap();
         let new_pharmacist_1 = NewPharmacist::new("John Doe".into(), "99031301347".into()).unwrap();
@@ -153,7 +149,7 @@ mod integration_tests {
     #[sqlx::test]
     async fn create_and_read_pharmacist_by_id(pool: sqlx::PgPool) {
         create_tables(&pool, true).await.unwrap();
-        let repository = PharmacistsRepository::new(pool);
+        let repository = PharmacistsPostgresRepository::new(pool);
 
         let new_pharmacist = NewPharmacist::new("John Doe".into(), "96021817257".into()).unwrap();
 
@@ -175,7 +171,7 @@ mod integration_tests {
     #[sqlx::test]
     async fn doesnt_create_pharmacist_if_pesel_number_is_duplicated(pool: sqlx::PgPool) {
         create_tables(&pool, true).await.unwrap();
-        let repository = PharmacistsRepository::new(pool);
+        let repository = PharmacistsPostgresRepository::new(pool);
 
         let pharmacist = NewPharmacist::new("John Doe".into(), "96021817257".into()).unwrap();
 

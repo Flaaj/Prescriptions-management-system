@@ -2,10 +2,10 @@ use uuid::Uuid;
 
 use super::{
     models::{Drug, DrugContentType, NewDrug},
-    repository::drugs_repository_trait::DrugsRepositoryTrait,
+    repository::DrugsRepository,
 };
 
-pub struct DrugsService<R: DrugsRepositoryTrait> {
+pub struct DrugsService<R: DrugsRepository> {
     repository: R,
 }
 
@@ -26,7 +26,7 @@ pub enum GetDrugsWithPaginationError {
     DomainError(String),
 }
 
-impl<R: DrugsRepositoryTrait> DrugsService<R> {
+impl<R: DrugsRepository> DrugsService<R> {
     pub fn new(repository: R) -> Self {
         Self { repository }
     }
@@ -90,20 +90,15 @@ mod integration_tests {
 
     use crate::{
         create_tables::create_tables,
-        domain::drugs::{
-            models::DrugContentType,
-            repository::{
-                drugs_repository_impl::DrugsRepository,
-                drugs_repository_trait::DrugsRepositoryTrait,
-            },
-        },
+        domain::drugs::{models::DrugContentType, repository::DrugsRepository},
+        infrastructure::postgres_repository_impl::drugs::DrugsPostgresRepository,
     };
 
     use super::DrugsService;
 
-    async fn setup_service(pool: sqlx::PgPool) -> DrugsService<impl DrugsRepositoryTrait> {
+    async fn setup_service(pool: sqlx::PgPool) -> DrugsService<impl DrugsRepository> {
         create_tables(&pool, true).await.unwrap();
-        DrugsService::new(DrugsRepository::new(pool))
+        DrugsService::new(DrugsPostgresRepository::new(pool))
     }
 
     #[sqlx::test]

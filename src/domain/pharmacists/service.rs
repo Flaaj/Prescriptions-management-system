@@ -1,6 +1,6 @@
 use crate::domain::pharmacists::{
     models::{NewPharmacist, Pharmacist},
-    repository::pharmacists_repository_trait::PharmacistsRepositoryTrait,
+    repository::PharmacistsRepository,
 };
 use uuid::Uuid;
 
@@ -22,11 +22,11 @@ pub enum GetPharmacistWithPaginationError {
 }
 
 #[derive(Clone)]
-pub struct PharmacistsService<R: PharmacistsRepositoryTrait> {
+pub struct PharmacistsService<R: PharmacistsRepository> {
     repository: R,
 }
 
-impl<R: PharmacistsRepositoryTrait> PharmacistsService<R> {
+impl<R: PharmacistsRepository> PharmacistsService<R> {
     pub fn new(repository: R) -> Self {
         Self { repository }
     }
@@ -80,19 +80,14 @@ impl<R: PharmacistsRepositoryTrait> PharmacistsService<R> {
 mod integration_tests {
     use super::PharmacistsService;
     use crate::{
-        create_tables::create_tables,
-        domain::pharmacists::repository::{
-            pharmacists_repository_impl::PharmacistsRepository,
-            pharmacists_repository_trait::PharmacistsRepositoryTrait,
-        },
+        create_tables::create_tables, domain::pharmacists::repository::PharmacistsRepository,
+        infrastructure::postgres_repository_impl::pharmacists::PharmacistsPostgresRepository,
     };
     use uuid::Uuid;
 
-    async fn setup_service(
-        pool: sqlx::PgPool,
-    ) -> PharmacistsService<impl PharmacistsRepositoryTrait> {
+    async fn setup_service(pool: sqlx::PgPool) -> PharmacistsService<impl PharmacistsRepository> {
         create_tables(&pool, true).await.unwrap();
-        PharmacistsService::new(PharmacistsRepository::new(pool))
+        PharmacistsService::new(PharmacistsPostgresRepository::new(pool))
     }
 
     #[sqlx::test]

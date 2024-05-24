@@ -1,6 +1,5 @@
 pub mod doctors;
-pub mod patients;
-pub mod prescriptions;
-pub mod pharmacists;
 pub mod drugs;
-pub mod utils;
+pub mod patients;
+pub mod pharmacists;
+pub mod prescriptions;

@@ -6,7 +6,7 @@ use crate::domain::prescriptions::models::{
 };
 
 #[async_trait]
-pub trait PrescriptionsRepositoryTrait {
+pub trait PrescriptionsRepository {
     async fn create_prescription(
         &self,
         prescription: NewPrescription,

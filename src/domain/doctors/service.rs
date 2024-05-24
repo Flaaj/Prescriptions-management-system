@@ -1,6 +1,6 @@
 use crate::domain::doctors::{
     models::{Doctor, NewDoctor},
-    repository::doctors_repository_trait::DoctorsRepositoryTrait,
+    repository::DoctorsRepository,
 };
 use uuid::Uuid;
 
@@ -22,11 +22,11 @@ pub enum GetDoctorWithPaginationError {
 }
 
 #[derive(Clone)]
-pub struct DoctorsService<R: DoctorsRepositoryTrait> {
+pub struct DoctorsService<R: DoctorsRepository> {
     repository: R,
 }
 
-impl<R: DoctorsRepositoryTrait> DoctorsService<R> {
+impl<R: DoctorsRepository> DoctorsService<R> {
     pub fn new(repository: R) -> Self {
         Self { repository }
     }
@@ -77,18 +77,12 @@ impl<R: DoctorsRepositoryTrait> DoctorsService<R> {
 #[cfg(test)]
 mod integration_tests {
     use super::DoctorsService;
-    use crate::{
-        create_tables::create_tables,
-        domain::doctors::repository::{
-            doctors_repository_impl::DoctorsRepository,
-            doctors_repository_trait::DoctorsRepositoryTrait,
-        },
-    };
+    use crate::{create_tables::create_tables, domain::doctors::repository::DoctorsRepository, infrastructure::postgres_repository_impl::doctors::DoctorsPostgresRepository};
     use uuid::Uuid;
 
-    async fn setup_service(pool: sqlx::PgPool) -> DoctorsService<impl DoctorsRepositoryTrait> {
+    async fn setup_service(pool: sqlx::PgPool) -> DoctorsService<impl DoctorsRepository> {
         create_tables(&pool, true).await.unwrap();
-        DoctorsService::new(DoctorsRepository::new(pool))
+        DoctorsService::new(DoctorsPostgresRepository::new(pool))
     }
 
     #[sqlx::test]

@@ -4,7 +4,7 @@ use uuid::Uuid;
 use crate::domain::doctors::models::{Doctor, NewDoctor};
 
 #[async_trait]
-pub trait DoctorsRepositoryTrait {
+pub trait DoctorsRepository {
     async fn create_doctor(&self, doctor: NewDoctor) -> anyhow::Result<Doctor>;
     async fn get_doctors(
         &self,

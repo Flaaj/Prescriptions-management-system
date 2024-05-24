@@ -3,11 +3,11 @@ use uuid::Uuid;
 
 use super::{
     models::{NewPrescription, Prescription, PrescriptionType},
-    repository::prescriptions_repository_trait::PrescriptionsRepositoryTrait,
+    repository::PrescriptionsRepository,
 };
 
 #[derive(Clone)]
-pub struct PrescriptionsService<R: PrescriptionsRepositoryTrait> {
+pub struct PrescriptionsService<R: PrescriptionsRepository> {
     repository: R,
 }
 
@@ -17,7 +17,7 @@ pub enum CreatePrescriptionError {
     DomainError(String),
 }
 
-impl<R: PrescriptionsRepositoryTrait> PrescriptionsService<R> {
+impl<R: PrescriptionsRepository> PrescriptionsService<R> {
     pub fn new(repository: R) -> Self {
         Self { repository }
     }
@@ -80,27 +80,16 @@ mod integration_tests {
     use crate::{
         create_tables::create_tables,
         domain::{
-            doctors::{
-                repository::doctors_repository_impl::DoctorsRepository, service::DoctorsService,
-            },
-            drugs::{
-                models::DrugContentType, repository::drugs_repository_impl::DrugsRepository,
-                service::DrugsService,
-            },
-            patients::{
-                repository::patients_repository_impl::PatientsRepository, service::PatientsService,
-            },
-            pharmacists::{
-                repository::pharmacists_repository_impl::PharmacistsRepository,
-                service::PharmacistsService,
-            },
-            prescriptions::{
-                models::PrescriptionType,
-                repository::{
-                    prescriptions_repository_impl::PrescriptionsRepository,
-                    prescriptions_repository_trait::PrescriptionsRepositoryTrait,
-                },
-            },
+            doctors::service::DoctorsService,
+            drugs::{models::DrugContentType, service::DrugsService},
+            patients::service::PatientsService,
+            pharmacists::service::PharmacistsService,
+            prescriptions::{models::PrescriptionType, repository::PrescriptionsRepository},
+        },
+        infrastructure::postgres_repository_impl::{
+            doctors::DoctorsPostgresRepository, drugs::DrugsPostgresRepository,
+            patients::PatientsPostgresRepository, pharmacists::PharmacistsPostgresRepository,
+            prescriptions::PrescriptionsPostgresRepository,
         },
     };
     use sqlx::PgPool;
@@ -117,16 +106,18 @@ mod integration_tests {
     async fn setup_services_and_seed_database(
         pool: PgPool,
     ) -> (
-        PrescriptionsService<impl PrescriptionsRepositoryTrait>,
+        PrescriptionsService<impl PrescriptionsRepository>,
         DatabaseSeedRecordIds,
     ) {
         create_tables(&pool, true).await.unwrap();
 
-        let doctors_service = DoctorsService::new(DoctorsRepository::new(pool.clone()));
-        let pharmacist_service = PharmacistsService::new(PharmacistsRepository::new(pool.clone()));
-        let patients_service = PatientsService::new(PatientsRepository::new(pool.clone()));
-        let drugs_service = DrugsService::new(DrugsRepository::new(pool.clone()));
-        let prescriptions_service = PrescriptionsService::new(PrescriptionsRepository::new(pool));
+        let doctors_service = DoctorsService::new(DoctorsPostgresRepository::new(pool.clone()));
+        let pharmacist_service =
+            PharmacistsService::new(PharmacistsPostgresRepository::new(pool.clone()));
+        let patients_service = PatientsService::new(PatientsPostgresRepository::new(pool.clone()));
+        let drugs_service = DrugsService::new(DrugsPostgresRepository::new(pool.clone()));
+        let prescriptions_service =
+            PrescriptionsService::new(PrescriptionsPostgresRepository::new(pool));
 
         (
             prescriptions_service,

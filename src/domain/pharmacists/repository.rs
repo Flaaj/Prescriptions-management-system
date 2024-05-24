@@ -4,7 +4,7 @@ use uuid::Uuid;
 use crate::domain::pharmacists::models::{NewPharmacist, Pharmacist};
 
 #[async_trait]
-pub trait PharmacistsRepositoryTrait {
+pub trait PharmacistsRepository {
     async fn create_pharmacist(&self, pharmacist: NewPharmacist) -> anyhow::Result<Pharmacist>;
     async fn get_pharmacists(
         &self,

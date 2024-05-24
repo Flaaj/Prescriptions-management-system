@@ -1,26 +1,27 @@
 use async_trait::async_trait;
 use uuid::Uuid;
 
-use crate::{
-    domain::doctors::models::{Doctor, NewDoctor},
+use crate::domain::{
+    doctors::{
+        models::{Doctor, NewDoctor},
+        repository::DoctorsRepository,
+    },
     utils::pagination::get_pagination_params,
 };
 
-use super::doctors_repository_trait::DoctorsRepositoryTrait;
-
 #[derive(Clone)]
-pub struct DoctorsRepository {
+pub struct DoctorsPostgresRepository {
     pool: sqlx::PgPool,
 }
 
-impl DoctorsRepository {
+impl DoctorsPostgresRepository {
     pub fn new(pool: sqlx::PgPool) -> Self {
         Self { pool }
     }
 }
 
 #[async_trait]
-impl<'a> DoctorsRepositoryTrait for DoctorsRepository {
+impl<'a> DoctorsRepository for DoctorsPostgresRepository {
     async fn create_doctor(&self, doctor: NewDoctor) -> anyhow::Result<Doctor> {
         let result = sqlx::query!(
             r#"INSERT INTO doctors (id, name, pwz_number, pesel_number) VALUES ($1, $2, $3, $4) RETURNING id, name, pwz_number, pesel_number, created_at, updated_at"#,
@@ -93,21 +94,16 @@ impl<'a> DoctorsRepositoryTrait for DoctorsRepository {
 
 #[cfg(test)]
 mod integration_tests {
+    use super::DoctorsPostgresRepository;
     use crate::{
         create_tables::create_tables,
-        domain::doctors::{
-            models::NewDoctor,
-            repository::{
-                doctors_repository_impl::DoctorsRepository,
-                doctors_repository_trait::DoctorsRepositoryTrait,
-            },
-        },
+        domain::doctors::{models::NewDoctor, repository::DoctorsRepository},
     };
 
     #[sqlx::test]
     async fn create_and_read_doctor_by_id(pool: sqlx::PgPool) {
         create_tables(&pool, true).await.unwrap();
-        let repository = DoctorsRepository::new(pool);
+        let repository = DoctorsPostgresRepository::new(pool);
 
         let new_doctor =
             NewDoctor::new("John Does".into(), "5425740".into(), "96021817257".into()).unwrap();
@@ -122,7 +118,7 @@ mod integration_tests {
     #[sqlx::test]
     async fn create_and_read_doctors_from_database(pool: sqlx::PgPool) {
         create_tables(&pool, true).await.unwrap();
-        let repository = DoctorsRepository::new(pool);
+        let repository = DoctorsPostgresRepository::new(pool);
 
         let new_doctor_0 =
             NewDoctor::new("John First".into(), "5425740".into(), "96021817257".into()).unwrap();
@@ -177,7 +173,7 @@ mod integration_tests {
     #[sqlx::test]
     async fn doesnt_create_doctor_if_pwz_or_pesel_numbers_are_duplicated(pool: sqlx::PgPool) {
         create_tables(&pool, true).await.unwrap();
-        let repository = DoctorsRepository::new(pool);
+        let repository = DoctorsPostgresRepository::new(pool);
 
         let doctor =
             NewDoctor::new("John Doe".into(), "5425740".into(), "96021817257".into()).unwrap();

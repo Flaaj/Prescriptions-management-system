@@ -1,7 +1,7 @@
 use uuid::Uuid;
 
-use crate::{
-    domain::patients::models::NewPatient,
+use crate::domain::{
+    patients::models::NewPatient,
     utils::validators::{
         validate_name::validate_name, validate_pesel_number::validate_pesel_number,
     },
