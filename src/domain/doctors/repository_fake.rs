@@ -85,8 +85,8 @@ impl DoctorsRepository for FakeDoctorsRepository {
 }
 
 #[cfg(test)]
-// the same tests as in postgres_repository_impl/doctors.rs to make sure mocks work the same way
-mod mock_tests {
+// the same tests as in postgres_repository_impl/doctors.rs to make sure fake repo works the same way
+mod fake_repo_tests {
     use uuid::Uuid;
 
     use super::FakeDoctorsRepository;
