@@ -85,7 +85,7 @@ impl<R: DrugsRepository> DrugsService<R> {
 }
 
 #[cfg(test)]
-mod integration_tests {
+mod tests {
     use uuid::Uuid;
 
     use crate::{

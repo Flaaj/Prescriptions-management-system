@@ -21,7 +21,7 @@ impl NewPharmacist {
 }
 
 #[cfg(test)]
-mod unit_tests {
+mod tests {
     use super::NewPharmacist;
 
     #[test]

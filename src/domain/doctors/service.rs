@@ -75,7 +75,7 @@ impl<R: DoctorsRepository> DoctorsService<R> {
 }
 
 #[cfg(test)]
-mod unit_tests {
+mod tests {
     use super::DoctorsService;
     use crate::{
         create_tables::create_tables,

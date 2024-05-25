@@ -351,7 +351,7 @@ impl PrescriptionsRepository for PrescriptionsPostgresRepository {
 }
 
 #[cfg(test)]
-mod integration_tests {
+mod tests {
     use uuid::Uuid;
 
     use super::{GetPrescriptionError, PrescriptionsPostgresRepository};

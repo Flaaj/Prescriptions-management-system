@@ -77,7 +77,7 @@ impl<R: PharmacistsRepository> PharmacistsService<R> {
 }
 
 #[cfg(test)]
-mod integration_tests {
+mod tests {
     use super::PharmacistsService;
     use crate::{
         create_tables::create_tables, domain::pharmacists::repository::PharmacistsRepository,

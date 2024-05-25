@@ -80,7 +80,7 @@ impl NewDrug {
 }
 
 #[cfg(test)]
-mod unit_tests {
+mod tests {
     use uuid::Uuid;
 
     use crate::domain::drugs::models::{DrugContentType, NewDrug};

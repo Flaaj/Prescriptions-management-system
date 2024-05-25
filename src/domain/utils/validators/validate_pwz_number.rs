@@ -32,7 +32,7 @@ pub fn validate_pwz_number(pwz_number: &str) -> anyhow::Result<()> {
 }
 
 #[cfg(test)]
-mod unit_tests {
+mod tests {
     use super::validate_pwz_number;
     use rstest::rstest;
 

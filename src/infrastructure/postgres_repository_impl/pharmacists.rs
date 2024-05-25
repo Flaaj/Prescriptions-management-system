@@ -88,7 +88,7 @@ impl PharmacistsRepository for PharmacistsPostgresRepository {
 }
 
 #[cfg(test)]
-mod integration_tests {
+mod tests {
     use super::PharmacistsPostgresRepository;
     use crate::{
         create_tables::create_tables,

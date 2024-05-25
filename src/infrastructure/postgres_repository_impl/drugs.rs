@@ -105,7 +105,7 @@ impl<'a> DrugsRepository for DrugsPostgresRepository {
 }
 
 #[cfg(test)]
-mod integration_tests {
+mod tests {
     use super::DrugsPostgresRepository;
     use crate::{
         create_tables::create_tables,

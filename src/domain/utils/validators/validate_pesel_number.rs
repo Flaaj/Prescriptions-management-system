@@ -40,7 +40,7 @@ pub fn validate_pesel_number(pesel_number: &str) -> anyhow::Result<()> {
 }
 
 #[cfg(test)]
-mod unit_tests {
+mod tests {
     use super::validate_pesel_number;
     use rstest::rstest;
 

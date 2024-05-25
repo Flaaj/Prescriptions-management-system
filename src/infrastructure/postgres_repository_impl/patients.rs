@@ -88,7 +88,7 @@ impl PatientsRepository for PatientsPostgresRepository {
 }
 
 #[cfg(test)]
-mod integration_tests {
+mod tests {
     use super::PatientsPostgresRepository;
     use crate::{
         create_tables::create_tables,

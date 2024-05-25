@@ -86,15 +86,19 @@ impl DoctorsRepository for FakeDoctorsRepository {
 
 #[cfg(test)]
 // the same tests as in postgres_repository_impl/doctors.rs to make sure fake repo works the same way
-mod fake_repo_tests {
+mod tests {
     use uuid::Uuid;
 
     use super::FakeDoctorsRepository;
     use crate::domain::doctors::{models::NewDoctor, repository::DoctorsRepository};
 
+    async fn setup_repository() -> FakeDoctorsRepository {
+        FakeDoctorsRepository::new()
+    }
+
     #[tokio::test]
     async fn create_and_read_doctor_by_id() {
-        let repository = FakeDoctorsRepository::new();
+        let repository = setup_repository().await;
 
         let new_doctor =
             NewDoctor::new("John Does".into(), "5425740".into(), "96021817257".into()).unwrap();
@@ -108,7 +112,7 @@ mod fake_repo_tests {
 
     #[tokio::test]
     async fn returns_error_if_doctor_with_given_id_doesnt_exist() {
-        let repository = FakeDoctorsRepository::new();
+        let repository = setup_repository().await;
 
         let doctor_from_repo = repository.get_doctor_by_id(Uuid::new_v4()).await;
 
@@ -117,7 +121,7 @@ mod fake_repo_tests {
 
     #[tokio::test]
     async fn create_and_read_doctors_from_database() {
-        let repository = FakeDoctorsRepository::new();
+        let repository = setup_repository().await;
 
         let new_doctor_0 =
             NewDoctor::new("John First".into(), "5425740".into(), "96021817257".into()).unwrap();
@@ -171,7 +175,7 @@ mod fake_repo_tests {
 
     #[tokio::test]
     async fn doesnt_create_doctor_if_pwz_or_pesel_numbers_are_duplicated() {
-        let repository = FakeDoctorsRepository::new();
+        let repository = setup_repository().await;
 
         let doctor =
             NewDoctor::new("John Doe".into(), "5425740".into(), "96021817257".into()).unwrap();

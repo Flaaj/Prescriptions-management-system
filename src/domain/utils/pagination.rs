@@ -19,7 +19,7 @@ pub fn get_pagination_params(
 }
 
 #[cfg(test)]
-mod unit_tests {
+mod tests {
     use super::*;
 
     #[test]

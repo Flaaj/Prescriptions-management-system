@@ -21,7 +21,7 @@ impl NewPatient {
 }
 
 #[cfg(test)]
-mod unit_tests {
+mod tests {
     use crate::domain::patients::models::NewPatient;
 
     #[test]

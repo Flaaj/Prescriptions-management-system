@@ -212,7 +212,7 @@ pub fn get_routes() -> Vec<Route> {
 }
 
 #[cfg(test)]
-mod integration_tests {
+mod tests {
     use crate::{create_tables::create_tables, domain::doctors::models::Doctor, setup_context};
     use rocket::{
         http::{ContentType, Status},

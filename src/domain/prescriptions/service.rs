@@ -75,7 +75,7 @@ impl<R: PrescriptionsRepository> PrescriptionsService<R> {
 }
 
 #[cfg(test)]
-mod integration_tests {
+mod tests {
     use super::PrescriptionsService;
     use crate::{
         create_tables::create_tables,

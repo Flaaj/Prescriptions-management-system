@@ -94,7 +94,7 @@ impl DoctorsRepository for DoctorsPostgresRepository {
 }
 
 #[cfg(test)]
-mod integration_tests {
+mod tests {
     use uuid::Uuid;
 
     use super::DoctorsPostgresRepository;
@@ -103,10 +103,14 @@ mod integration_tests {
         domain::doctors::{models::NewDoctor, repository::DoctorsRepository},
     };
 
+    async fn setup_repository(pool: sqlx::PgPool) -> DoctorsPostgresRepository {
+        create_tables(&pool, true).await.unwrap();
+        DoctorsPostgresRepository::new(pool)
+    }
+
     #[sqlx::test]
     async fn create_and_read_doctor_by_id(pool: sqlx::PgPool) {
-        create_tables(&pool, true).await.unwrap();
-        let repository = DoctorsPostgresRepository::new(pool);
+        let repository = setup_repository(pool).await;
 
         let new_doctor =
             NewDoctor::new("John Does".into(), "5425740".into(), "96021817257".into()).unwrap();
@@ -120,8 +124,7 @@ mod integration_tests {
 
     #[sqlx::test]
     async fn returns_error_if_doctor_with_given_id_doesnt_exist(pool: sqlx::PgPool) {
-        create_tables(&pool, true).await.unwrap();
-        let repository = DoctorsPostgresRepository::new(pool);
+        let repository = setup_repository(pool).await;
 
         let doctor_from_repo = repository.get_doctor_by_id(Uuid::new_v4()).await;
 
@@ -130,8 +133,7 @@ mod integration_tests {
 
     #[sqlx::test]
     async fn create_and_read_doctors_from_database(pool: sqlx::PgPool) {
-        create_tables(&pool, true).await.unwrap();
-        let repository = DoctorsPostgresRepository::new(pool);
+        let repository = setup_repository(pool).await;
 
         let new_doctor_0 =
             NewDoctor::new("John First".into(), "5425740".into(), "96021817257".into()).unwrap();
@@ -185,8 +187,7 @@ mod integration_tests {
 
     #[sqlx::test]
     async fn doesnt_create_doctor_if_pwz_or_pesel_numbers_are_duplicated(pool: sqlx::PgPool) {
-        create_tables(&pool, true).await.unwrap();
-        let repository = DoctorsPostgresRepository::new(pool);
+        let repository = setup_repository(pool).await;
 
         let doctor =
             NewDoctor::new("John Doe".into(), "5425740".into(), "96021817257".into()).unwrap();
