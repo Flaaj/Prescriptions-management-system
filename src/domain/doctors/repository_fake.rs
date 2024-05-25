@@ -1,46 +1,53 @@
+use std::sync::RwLock;
+
 use async_trait::async_trait;
+use chrono::Utc;
 use uuid::Uuid;
 
 use crate::domain::{
-    doctors::{
-        models::{Doctor, NewDoctor},
-        repository::DoctorsRepository,
-    },
+    doctors::models::{Doctor, NewDoctor},
     utils::pagination::get_pagination_params,
 };
 
-#[derive(Clone)]
-pub struct DoctorsPostgresRepository {
-    pool: sqlx::PgPool,
+use super::repository::DoctorsRepository;
+
+pub struct FakeDoctorsRepository {
+    doctors: RwLock<Vec<Doctor>>,
 }
 
-impl DoctorsPostgresRepository {
-    pub fn new(pool: sqlx::PgPool) -> Self {
-        Self { pool }
+impl FakeDoctorsRepository {
+    #[allow(dead_code)]
+    pub fn new() -> Self {
+        Self {
+            doctors: RwLock::new(vec![]),
+        }
     }
 }
 
 #[async_trait]
-impl DoctorsRepository for DoctorsPostgresRepository {
-    async fn create_doctor(&self, doctor: NewDoctor) -> anyhow::Result<Doctor> {
-        let result = sqlx::query!(
-            r#"INSERT INTO doctors (id, name, pwz_number, pesel_number) VALUES ($1, $2, $3, $4) RETURNING id, name, pwz_number, pesel_number, created_at, updated_at"#,
-            doctor.id,
-            doctor.name,
-            doctor.pwz_number,
-            doctor.pesel_number,
-        )
-        .fetch_one(&self.pool)
-        .await?;
+impl DoctorsRepository for FakeDoctorsRepository {
+    async fn create_doctor(&self, new_doctor: NewDoctor) -> anyhow::Result<Doctor> {
+        let does_pwz_or_pesel_number_exist = self.doctors.read().unwrap().iter().any(|doctor| {
+            doctor.pwz_number == new_doctor.pwz_number
+                || doctor.pesel_number == new_doctor.pesel_number
+        });
 
-        Ok(Doctor {
-            id: result.id,
-            name: result.name,
-            pwz_number: result.pwz_number,
-            pesel_number: result.pesel_number,
-            created_at: result.created_at,
-            updated_at: result.updated_at,
-        })
+        if does_pwz_or_pesel_number_exist {
+            return Err(anyhow::anyhow!("PWZ or PESEL number already exists"));
+        }
+
+        let doctor = Doctor {
+            id: new_doctor.id,
+            name: new_doctor.name,
+            pwz_number: new_doctor.pwz_number,
+            pesel_number: new_doctor.pesel_number,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        };
+
+        self.doctors.write().unwrap().push(doctor.clone());
+
+        Ok(doctor)
     }
 
     async fn get_doctors(
@@ -49,64 +56,45 @@ impl DoctorsRepository for DoctorsPostgresRepository {
         page_size: Option<i64>,
     ) -> anyhow::Result<Vec<Doctor>> {
         let (page_size, offset) = get_pagination_params(page, page_size)?;
+        let a = offset;
+        let b = offset + page_size;
 
-        let doctors_from_db = sqlx::query!(
-            r#"SELECT id, name, pwz_number, pesel_number, created_at, updated_at FROM doctors LIMIT $1 OFFSET $2"#,
-            page_size,
-            offset
-        )
-        .fetch_all(&self.pool)
-        .await;
-
-        let doctors = doctors_from_db
-            .unwrap()
-            .into_iter()
-            .map(|record| Doctor {
-                id: record.id,
-                name: record.name,
-                pwz_number: record.pwz_number,
-                pesel_number: record.pesel_number,
-                created_at: record.created_at,
-                updated_at: record.updated_at,
-            })
-            .collect();
+        let mut doctors: Vec<Doctor> = vec![];
+        for i in a..b {
+            match self.doctors.read().unwrap().get(i as usize) {
+                Some(doctor) => doctors.push(doctor.clone()),
+                None => {}
+            }
+        }
 
         Ok(doctors)
     }
 
     async fn get_doctor_by_id(&self, doctor_id: Uuid) -> anyhow::Result<Doctor> {
-        let doctor_from_db = sqlx::query!(
-            r#"SELECT id, name, pwz_number, pesel_number, created_at, updated_at FROM doctors WHERE id = $1"#,
-            doctor_id
-        )
-        .fetch_one(&self.pool)
-        .await?;
-
-        Ok(Doctor {
-            id: doctor_from_db.id,
-            name: doctor_from_db.name,
-            pwz_number: doctor_from_db.pwz_number,
-            pesel_number: doctor_from_db.pesel_number,
-            created_at: doctor_from_db.created_at,
-            updated_at: doctor_from_db.updated_at,
-        })
+        match self
+            .doctors
+            .read()
+            .unwrap()
+            .iter()
+            .find(|doctor| doctor.id == doctor_id)
+        {
+            Some(doctor) => Ok(doctor.clone()),
+            None => Err(anyhow::anyhow!("Doctor not found")),
+        }
     }
 }
 
 #[cfg(test)]
-mod integration_tests {
+// the same tests as in postgres_repository_impl/doctors.rs to make sure mocks work the same way
+mod mock_tests {
     use uuid::Uuid;
 
-    use super::DoctorsPostgresRepository;
-    use crate::{
-        create_tables::create_tables,
-        domain::doctors::{models::NewDoctor, repository::DoctorsRepository},
-    };
+    use super::FakeDoctorsRepository;
+    use crate::domain::doctors::{models::NewDoctor, repository::DoctorsRepository};
 
-    #[sqlx::test]
-    async fn create_and_read_doctor_by_id(pool: sqlx::PgPool) {
-        create_tables(&pool, true).await.unwrap();
-        let repository = DoctorsPostgresRepository::new(pool);
+    #[tokio::test]
+    async fn create_and_read_doctor_by_id() {
+        let repository = FakeDoctorsRepository::new();
 
         let new_doctor =
             NewDoctor::new("John Does".into(), "5425740".into(), "96021817257".into()).unwrap();
@@ -118,20 +106,18 @@ mod integration_tests {
         assert_eq!(doctor_from_repo, new_doctor);
     }
 
-    #[sqlx::test]
-    async fn returns_error_if_doctor_with_given_id_doesnt_exist(pool: sqlx::PgPool) {
-        create_tables(&pool, true).await.unwrap();
-        let repository = DoctorsPostgresRepository::new(pool);
+    #[tokio::test]
+    async fn returns_error_if_doctor_with_given_id_doesnt_exist() {
+        let repository = FakeDoctorsRepository::new();
 
         let doctor_from_repo = repository.get_doctor_by_id(Uuid::new_v4()).await;
 
         assert!(doctor_from_repo.is_err());
     }
 
-    #[sqlx::test]
-    async fn create_and_read_doctors_from_database(pool: sqlx::PgPool) {
-        create_tables(&pool, true).await.unwrap();
-        let repository = DoctorsPostgresRepository::new(pool);
+    #[tokio::test]
+    async fn create_and_read_doctors_from_database() {
+        let repository = FakeDoctorsRepository::new();
 
         let new_doctor_0 =
             NewDoctor::new("John First".into(), "5425740".into(), "96021817257".into()).unwrap();
@@ -183,10 +169,9 @@ mod integration_tests {
         assert!(doctors.len() == 0);
     }
 
-    #[sqlx::test]
-    async fn doesnt_create_doctor_if_pwz_or_pesel_numbers_are_duplicated(pool: sqlx::PgPool) {
-        create_tables(&pool, true).await.unwrap();
-        let repository = DoctorsPostgresRepository::new(pool);
+    #[tokio::test]
+    async fn doesnt_create_doctor_if_pwz_or_pesel_numbers_are_duplicated() {
+        let repository = FakeDoctorsRepository::new();
 
         let doctor =
             NewDoctor::new("John Doe".into(), "5425740".into(), "96021817257".into()).unwrap();

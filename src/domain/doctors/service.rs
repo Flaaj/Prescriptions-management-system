@@ -1,4 +1,4 @@
-use crate::domain::doctors::{
+use super::{
     models::{Doctor, NewDoctor},
     repository::DoctorsRepository,
 };
@@ -13,7 +13,7 @@ pub enum CreateDoctorError {
 #[derive(Debug)]
 pub enum GetDoctorByIdError {
     DomainError,
-    RepositoryError(String),
+    NotFoundError,
 }
 
 #[derive(Debug)]
@@ -54,7 +54,7 @@ impl<R: DoctorsRepository> DoctorsService<R> {
             .repository
             .get_doctor_by_id(doctor_id)
             .await
-            .map_err(|err| GetDoctorByIdError::RepositoryError(err.to_string()))?;
+            .map_err(|_| GetDoctorByIdError::NotFoundError)?;
 
         Ok(doctor)
     }
@@ -75,14 +75,18 @@ impl<R: DoctorsRepository> DoctorsService<R> {
 }
 
 #[cfg(test)]
-mod integration_tests {
+mod unit_tests {
     use super::DoctorsService;
-    use crate::{create_tables::create_tables, domain::doctors::repository::DoctorsRepository, infrastructure::postgres_repository_impl::doctors::DoctorsPostgresRepository};
+    use crate::{
+        create_tables::create_tables,
+        domain::doctors::{repository_fake::FakeDoctorsRepository, repository::DoctorsRepository},
+    };
     use uuid::Uuid;
 
     async fn setup_service(pool: sqlx::PgPool) -> DoctorsService<impl DoctorsRepository> {
         create_tables(&pool, true).await.unwrap();
-        DoctorsService::new(DoctorsPostgresRepository::new(pool))
+        let fake_repo = FakeDoctorsRepository::new();
+        DoctorsService::new(fake_repo)
     }
 
     #[sqlx::test]

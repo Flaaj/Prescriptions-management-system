@@ -112,11 +112,14 @@ impl<'r> Responder<'r, 'static> for GetDoctorByIdError {
                     .status(Status::UnprocessableEntity)
                     .ok()
             }
-            GetDoctorByIdError::RepositoryError(message) => Response::build()
-                .sized_body(message.len(), std::io::Cursor::new(message))
-                .header(ContentType::JSON)
-                .status(Status::NotFound)
-                .ok(),
+            GetDoctorByIdError::NotFoundError => {
+                let message = "Doctor with given id doesn't exist";
+                Response::build()
+                    .sized_body(message.len(), std::io::Cursor::new(message))
+                    .header(ContentType::JSON)
+                    .status(Status::NotFound)
+                    .ok()
+            }
         }
     }
 }
@@ -127,18 +130,16 @@ impl OpenApiResponderInner for GetDoctorByIdError {
 
         let mut responses = Map::new();
         responses.insert(
-            "400".to_string(),
+            "404".to_string(),
             RefOr::Object(OpenApiReponse {
-                description:
-                    "Returned when the the doctor with given id doesn't exist in the database"
-                        .to_string(),
+                description: "Returned when the the doctor with given id doesn't exist".to_string(),
                 ..Default::default()
             }),
         );
         responses.insert(
-            "422".to_string(),
+            "421".to_string(),
             RefOr::Object(OpenApiReponse {
-                description: "Returned when the the id is invalid".to_string(),
+                description: "Returned when the the id is not UUID".to_string(),
                 ..Default::default()
             }),
         );

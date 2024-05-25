@@ -24,27 +24,25 @@ extern crate dotenv_codegen;
 #[derive(Clone)]
 pub struct Context {
     pub doctors_service: Arc<DoctorsService<DoctorsPostgresRepository>>,
-    pub pharmacist_service: Arc<PharmacistsService<PharmacistsPostgresRepository>>,
+    pub pharmacists_service: Arc<PharmacistsService<PharmacistsPostgresRepository>>,
     pub patients_service: Arc<PatientsService<PatientsPostgresRepository>>,
     pub drugs_service: Arc<DrugsService<DrugsPostgresRepository>>,
 }
 pub type Ctx = rocket::State<Context>;
 
 pub fn setup_context(pool: PgPool) -> Context {
-    let doctors_service = Arc::new(DoctorsService::new(DoctorsPostgresRepository::new(
-        pool.clone(),
-    )));
-    let pharmacist_service = Arc::new(PharmacistsService::new(PharmacistsPostgresRepository::new(
-        pool.clone(),
-    )));
-    let patients_service = Arc::new(PatientsService::new(PatientsPostgresRepository::new(
-        pool.clone(),
-    )));
-    let drugs_service = Arc::new(DrugsService::new(DrugsPostgresRepository::new(pool)));
+    let doctors_repository = DoctorsPostgresRepository::new(pool.clone());
+    let doctors_service = Arc::new(DoctorsService::new(doctors_repository));
+    let pharmacists_rerpository = PharmacistsPostgresRepository::new(pool.clone());
+    let pharmacists_service = Arc::new(PharmacistsService::new(pharmacists_rerpository));
+    let patients_repository = PatientsPostgresRepository::new(pool.clone());
+    let patients_service = Arc::new(PatientsService::new(patients_repository));
+    let drugs_repository = DrugsPostgresRepository::new(pool.clone());
+    let drugs_service = Arc::new(DrugsService::new(drugs_repository));
 
     Context {
         doctors_service,
-        pharmacist_service,
+        pharmacists_service,
         patients_service,
         drugs_service,
     }
