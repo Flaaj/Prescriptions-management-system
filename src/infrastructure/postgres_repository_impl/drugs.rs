@@ -1,7 +1,3 @@
-use async_trait::async_trait;
-use sqlx::Row;
-use uuid::Uuid;
-
 use crate::domain::{
     drugs::{
         models::{Drug, NewDrug},
@@ -9,6 +5,9 @@ use crate::domain::{
     },
     utils::pagination::get_pagination_params,
 };
+use async_trait::async_trait;
+use sqlx::Row;
+use uuid::Uuid;
 
 pub struct PostgresDrugsRepository {
     pool: sqlx::PgPool,
@@ -106,19 +105,20 @@ impl<'a> DrugsRepository for PostgresDrugsRepository {
 
 #[cfg(test)]
 mod tests {
-    use super::PostgresDrugsRepository;
+    use super::{DrugsRepository, PostgresDrugsRepository};
     use crate::{
         create_tables::create_tables,
-        domain::drugs::{
-            models::{DrugContentType, NewDrug},
-            repository::DrugsRepository,
-        },
+        domain::drugs::models::{DrugContentType, NewDrug},
     };
+
+    async fn setup_repository(pool: sqlx::PgPool) -> PostgresDrugsRepository {
+        create_tables(&pool, true).await.unwrap();
+        PostgresDrugsRepository::new(pool)
+    }
 
     #[sqlx::test]
     async fn create_and_read_drug_by_id(pool: sqlx::PgPool) {
-        create_tables(&pool, true).await.unwrap();
-        let repository = PostgresDrugsRepository::new(pool);
+        let repository = setup_repository(pool).await;
 
         let drug = NewDrug::new(
             "Gripex Max".into(),
@@ -141,8 +141,7 @@ mod tests {
 
     #[sqlx::test]
     async fn create_and_read_drugs_from_database(pool: sqlx::PgPool) {
-        create_tables(&pool, true).await.unwrap();
-        let repository = PostgresDrugsRepository::new(pool);
+        let repository = setup_repository(pool).await;
 
         let new_drug_0 = NewDrug::new(
             "Gripex".into(),

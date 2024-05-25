@@ -118,7 +118,7 @@ mod tests {
     }
 
     #[sqlx::test]
-    async fn returns_error_if_patienbts_with_given_id_doesnt_exist(pool: sqlx::PgPool) {
+    async fn returns_error_if_patients_with_given_id_doesnt_exist(pool: sqlx::PgPool) {
         let repository = setup_repository(pool).await;
 
         let patient_from_repo = repository.get_patient_by_id(Uuid::new_v4()).await;

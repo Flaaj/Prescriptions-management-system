@@ -77,20 +77,18 @@ impl<R: DoctorsRepository> DoctorsService<R> {
 #[cfg(test)]
 mod tests {
     use super::DoctorsService;
-    use crate::{
-        create_tables::create_tables,
-        domain::doctors::{repository::DoctorsRepository, repository::InMemoryDoctorsRepository},
+    use crate::domain::doctors::{
+        repository::DoctorsRepository, repository::InMemoryDoctorsRepository,
     };
     use uuid::Uuid;
 
-    async fn setup_service(pool: sqlx::PgPool) -> DoctorsService<impl DoctorsRepository> {
-        create_tables(&pool, true).await.unwrap();
+    async fn setup_service() -> DoctorsService<impl DoctorsRepository> {
         DoctorsService::new(InMemoryDoctorsRepository::new())
     }
 
-    #[sqlx::test]
-    async fn creates_doctor_and_reads_by_id(pool: sqlx::PgPool) {
-        let service = setup_service(pool).await;
+    #[tokio::test]
+    async fn creates_doctor_and_reads_by_id() {
+        let service = setup_service().await;
 
         let created_doctor = service
             .create_doctor("John Doex".into(), "96021807250".into(), "5425740".into())
@@ -108,9 +106,9 @@ mod tests {
         assert_eq!(doctor_from_repository.pwz_number, "5425740");
     }
 
-    #[sqlx::test]
-    async fn create_doctor_returns_error_if_body_is_incorrect(pool: sqlx::PgPool) {
-        let service = setup_service(pool).await;
+    #[tokio::test]
+    async fn create_doctor_returns_error_if_body_is_incorrect() {
+        let service = setup_service().await;
 
         let result = service
             .create_doctor("John Doex".into(), "96021807251".into(), "5425740".into()) // invalid pesel
@@ -119,11 +117,9 @@ mod tests {
         assert!(result.is_err());
     }
 
-    #[sqlx::test]
-    async fn create_doctor_returns_error_if_pwz_or_pesel_numbers_are_duplicated(
-        pool: sqlx::PgPool,
-    ) {
-        let service = setup_service(pool).await;
+    #[tokio::test]
+    async fn create_doctor_returns_error_if_pwz_or_pesel_numbers_are_duplicated() {
+        let service = setup_service().await;
 
         service
             .create_doctor("John Doex".into(), "96021807250".into(), "5425740".into())
@@ -143,18 +139,18 @@ mod tests {
         assert!(duplicated_pwz_number_result.is_err());
     }
 
-    #[sqlx::test]
-    async fn get_doctor_by_id_returns_error_if_such_doctor_does_not_exist(pool: sqlx::PgPool) {
-        let service = setup_service(pool).await;
+    #[tokio::test]
+    async fn get_doctor_by_id_returns_error_if_such_doctor_does_not_exist() {
+        let service = setup_service().await;
 
         let result = service.get_doctor_by_id(Uuid::new_v4()).await;
 
         assert!(result.is_err());
     }
 
-    #[sqlx::test]
-    async fn gets_doctors_with_pagination(pool: sqlx::PgPool) {
-        let service = setup_service(pool).await;
+    #[tokio::test]
+    async fn gets_doctors_with_pagination() {
+        let service = setup_service().await;
 
         service
             .create_doctor("John Doex".into(), "96021817257".into(), "5425740".into())
@@ -216,9 +212,9 @@ mod tests {
         assert_eq!(doctors.len(), 0);
     }
 
-    #[sqlx::test]
-    async fn get_doctors_with_pagination_returns_error_if_params_are_invalid(pool: sqlx::PgPool) {
-        let service = setup_service(pool).await;
+    #[tokio::test]
+    async fn get_doctors_with_pagination_returns_error_if_params_are_invalid() {
+        let service = setup_service().await;
 
         assert!(service
             .get_doctors_with_pagination(Some(-1), None)

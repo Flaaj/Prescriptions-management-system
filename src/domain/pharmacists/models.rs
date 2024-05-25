@@ -8,7 +8,7 @@ pub struct NewPharmacist {
     pub pesel_number: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Pharmacist {
     pub id: Uuid,
     pub name: String,

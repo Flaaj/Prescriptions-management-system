@@ -89,16 +89,52 @@ impl PharmacistsRepository for PostgresPharmacistsRepository {
 
 #[cfg(test)]
 mod tests {
+    use uuid::Uuid;
+
     use super::PostgresPharmacistsRepository;
     use crate::{
         create_tables::create_tables,
         domain::pharmacists::{models::NewPharmacist, repository::PharmacistsRepository},
     };
 
+    async fn setup_repository(pool: sqlx::PgPool) -> PostgresPharmacistsRepository {
+        create_tables(&pool, true).await.unwrap();
+        PostgresPharmacistsRepository::new(pool)
+    }
+
+    #[sqlx::test]
+    async fn create_and_read_pharmacist_by_id(pool: sqlx::PgPool) {
+        let repository = setup_repository(pool).await;
+
+        let new_pharmacist = NewPharmacist::new("John Doe".into(), "96021817257".into()).unwrap();
+
+        let created_pharmacist = repository
+            .create_pharmacist(new_pharmacist.clone())
+            .await
+            .unwrap();
+
+        assert_eq!(created_pharmacist, new_pharmacist);
+
+        let pharmacist_from_repo = repository
+            .get_pharmacist_by_id(new_pharmacist.id)
+            .await
+            .unwrap();
+
+        assert_eq!(pharmacist_from_repo, new_pharmacist);
+    }
+
+    #[sqlx::test]
+    async fn returns_error_if_pharmacists_with_given_id_doesnt_exist(pool: sqlx::PgPool) {
+        let repository = setup_repository(pool).await;
+
+        let pharmacist_from_repo = repository.get_pharmacist_by_id(Uuid::new_v4()).await;
+
+        assert!(pharmacist_from_repo.is_err());
+    }
+
     #[sqlx::test]
     async fn create_and_read_pharmacists_from_database(pool: sqlx::PgPool) {
-        create_tables(&pool, true).await.unwrap();
-        let repository = PostgresPharmacistsRepository::new(pool);
+        let repository = setup_repository(pool).await;
 
         let new_pharmacist_0 = NewPharmacist::new("John Doe".into(), "96021817257".into()).unwrap();
         let new_pharmacist_1 = NewPharmacist::new("John Doe".into(), "99031301347".into()).unwrap();
@@ -147,31 +183,8 @@ mod tests {
     }
 
     #[sqlx::test]
-    async fn create_and_read_pharmacist_by_id(pool: sqlx::PgPool) {
-        create_tables(&pool, true).await.unwrap();
-        let repository = PostgresPharmacistsRepository::new(pool);
-
-        let new_pharmacist = NewPharmacist::new("John Doe".into(), "96021817257".into()).unwrap();
-
-        let created_pharmacist = repository
-            .create_pharmacist(new_pharmacist.clone())
-            .await
-            .unwrap();
-
-        assert_eq!(created_pharmacist, new_pharmacist);
-
-        let pharmacist_from_repo = repository
-            .get_pharmacist_by_id(new_pharmacist.id)
-            .await
-            .unwrap();
-
-        assert_eq!(pharmacist_from_repo, new_pharmacist);
-    }
-
-    #[sqlx::test]
     async fn doesnt_create_pharmacist_if_pesel_number_is_duplicated(pool: sqlx::PgPool) {
-        create_tables(&pool, true).await.unwrap();
-        let repository = PostgresPharmacistsRepository::new(pool);
+        let repository = setup_repository(pool).await;
 
         let pharmacist = NewPharmacist::new("John Doe".into(), "96021817257".into()).unwrap();
 

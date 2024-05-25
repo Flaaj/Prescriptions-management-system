@@ -79,20 +79,16 @@ impl<R: PatientsRepository> PatientsService<R> {
 #[cfg(test)]
 mod tests {
     use super::PatientsService;
-    use crate::{
-        create_tables::create_tables, domain::patients::repository::PatientsRepository,
-        infrastructure::postgres_repository_impl::patients::PostgresPatientsRepository,
-    };
+    use crate::domain::patients::repository::{InMemoryPatientsRepository, PatientsRepository};
     use uuid::Uuid;
 
-    async fn setup_service(pool: sqlx::PgPool) -> PatientsService<impl PatientsRepository> {
-        create_tables(&pool, true).await.unwrap();
-        PatientsService::new(PostgresPatientsRepository::new(pool))
+    async fn setup_service() -> PatientsService<impl PatientsRepository> {
+        PatientsService::new(InMemoryPatientsRepository::new())
     }
 
-    #[sqlx::test]
-    async fn creates_patient_and_reads_by_id(pool: sqlx::PgPool) {
-        let service = setup_service(pool).await;
+    #[tokio::test]
+    async fn creates_patient_and_reads_by_id() {
+        let service = setup_service().await;
 
         let created_patient = service
             .create_patient("John Doex".into(), "96021807250".into())
@@ -108,9 +104,9 @@ mod tests {
         assert_eq!(patient_from_repository.pesel_number, "96021807250");
     }
 
-    #[sqlx::test]
-    async fn create_patient_returns_error_if_body_is_incorrect(pool: sqlx::PgPool) {
-        let service = setup_service(pool).await;
+    #[tokio::test]
+    async fn create_patient_returns_error_if_body_is_incorrect() {
+        let service = setup_service().await;
 
         let result = service
             .create_patient("John Doex".into(), "96021807251".into()) // invalid pesel
@@ -119,9 +115,9 @@ mod tests {
         assert!(result.is_err());
     }
 
-    #[sqlx::test]
-    async fn create_patient_returns_error_if_pesel_number_is_duplicated(pool: sqlx::PgPool) {
-        let service = setup_service(pool).await;
+    #[tokio::test]
+    async fn create_patient_returns_error_if_pesel_number_is_duplicated() {
+        let service = setup_service().await;
 
         service
             .create_patient("John Doex".into(), "96021807250".into())
@@ -135,18 +131,18 @@ mod tests {
         assert!(duplicated_pesel_number_result.is_err());
     }
 
-    #[sqlx::test]
-    async fn get_patient_by_id_returns_error_if_such_patient_does_not_exist(pool: sqlx::PgPool) {
-        let service = setup_service(pool).await;
+    #[tokio::test]
+    async fn get_patient_by_id_returns_error_if_such_patient_does_not_exist() {
+        let service = setup_service().await;
 
         let result = service.get_patient_by_id(Uuid::new_v4()).await;
 
         assert!(result.is_err());
     }
 
-    #[sqlx::test]
-    async fn gets_patients_with_pagination(pool: sqlx::PgPool) {
-        let service = setup_service(pool).await;
+    #[tokio::test]
+    async fn gets_patients_with_pagination() {
+        let service = setup_service().await;
 
         service
             .create_patient("John Doex".into(), "96021817257".into())
@@ -208,9 +204,9 @@ mod tests {
         assert_eq!(patients.len(), 0);
     }
 
-    #[sqlx::test]
-    async fn get_patients_with_pagination_returns_error_if_params_are_invalid(pool: sqlx::PgPool) {
-        let service = setup_service(pool).await;
+    #[tokio::test]
+    async fn get_patients_with_pagination_returns_error_if_params_are_invalid() {
+        let service = setup_service().await;
 
         assert!(service
             .get_patients_with_pagination(Some(-1), None)
