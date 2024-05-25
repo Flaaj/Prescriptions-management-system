@@ -10,18 +10,18 @@ use crate::domain::{
 };
 
 #[derive(Clone)]
-pub struct DoctorsPostgresRepository {
+pub struct PostgresDoctorsRepository {
     pool: sqlx::PgPool,
 }
 
-impl DoctorsPostgresRepository {
+impl PostgresDoctorsRepository {
     pub fn new(pool: sqlx::PgPool) -> Self {
         Self { pool }
     }
 }
 
 #[async_trait]
-impl DoctorsRepository for DoctorsPostgresRepository {
+impl DoctorsRepository for PostgresDoctorsRepository {
     async fn create_doctor(&self, doctor: NewDoctor) -> anyhow::Result<Doctor> {
         let result = sqlx::query!(
             r#"INSERT INTO doctors (id, name, pwz_number, pesel_number) VALUES ($1, $2, $3, $4) RETURNING id, name, pwz_number, pesel_number, created_at, updated_at"#,
@@ -97,15 +97,15 @@ impl DoctorsRepository for DoctorsPostgresRepository {
 mod tests {
     use uuid::Uuid;
 
-    use super::DoctorsPostgresRepository;
+    use super::PostgresDoctorsRepository;
     use crate::{
         create_tables::create_tables,
         domain::doctors::{models::NewDoctor, repository::DoctorsRepository},
     };
 
-    async fn setup_repository(pool: sqlx::PgPool) -> DoctorsPostgresRepository {
+    async fn setup_repository(pool: sqlx::PgPool) -> PostgresDoctorsRepository {
         create_tables(&pool, true).await.unwrap();
-        DoctorsPostgresRepository::new(pool)
+        PostgresDoctorsRepository::new(pool)
     }
 
     #[sqlx::test]

@@ -9,18 +9,18 @@ use crate::domain::{
     utils::pagination::get_pagination_params,
 };
 
-pub struct PatientsPostgresRepository {
+pub struct PostgresPatientsRepository {
     pool: sqlx::PgPool,
 }
 
-impl PatientsPostgresRepository {
+impl PostgresPatientsRepository {
     pub fn new(pool: sqlx::PgPool) -> Self {
         Self { pool }
     }
 }
 
 #[async_trait]
-impl PatientsRepository for PatientsPostgresRepository {
+impl PatientsRepository for PostgresPatientsRepository {
     async fn create_patient(&self, patient: NewPatient) -> anyhow::Result<Patient> {
         let result = sqlx::query!(
             r#"INSERT INTO patients (id, name, pesel_number) VALUES ($1, $2, $3) RETURNING id, name, pesel_number, created_at, updated_at"#,
@@ -89,16 +89,21 @@ impl PatientsRepository for PatientsPostgresRepository {
 
 #[cfg(test)]
 mod tests {
-    use super::PatientsPostgresRepository;
+    use super::PostgresPatientsRepository;
     use crate::{
         create_tables::create_tables,
         domain::patients::{models::NewPatient, repository::PatientsRepository},
     };
+    use uuid::Uuid;
+
+    async fn setup_repository(pool: sqlx::PgPool) -> PostgresPatientsRepository {
+        create_tables(&pool, true).await.unwrap();
+        PostgresPatientsRepository::new(pool)
+    }
 
     #[sqlx::test]
     async fn create_and_read_patient_by_id(pool: sqlx::PgPool) {
-        create_tables(&pool, true).await.unwrap();
-        let repository = PatientsPostgresRepository::new(pool);
+        let repository = setup_repository(pool).await;
 
         let new_patient = NewPatient::new("John Doe".into(), "96021817257".into()).unwrap();
 
@@ -113,9 +118,17 @@ mod tests {
     }
 
     #[sqlx::test]
+    async fn returns_error_if_patienbts_with_given_id_doesnt_exist(pool: sqlx::PgPool) {
+        let repository = setup_repository(pool).await;
+
+        let patient_from_repo = repository.get_patient_by_id(Uuid::new_v4()).await;
+
+        assert!(patient_from_repo.is_err());
+    }
+
+    #[sqlx::test]
     async fn create_and_read_patients_from_database(pool: sqlx::PgPool) {
-        create_tables(&pool, true).await.unwrap();
-        let repository = PatientsPostgresRepository::new(pool);
+        let repository = setup_repository(pool).await;
 
         let new_patient_0 = NewPatient::new("John Doe".into(), "96021817257".into()).unwrap();
         let new_patient_1 = NewPatient::new("John Doe".into(), "99031301347".into()).unwrap();
@@ -165,8 +178,7 @@ mod tests {
 
     #[sqlx::test]
     async fn doesnt_create_patient_if_pesel_number_is_duplicated(pool: sqlx::PgPool) {
-        create_tables(&pool, true).await.unwrap();
-        let repository = PatientsPostgresRepository::new(pool);
+        let repository = setup_repository(pool).await;
 
         let patient = NewPatient::new("John Doe".into(), "96021817257".into()).unwrap();
         assert!(repository.create_patient(patient).await.is_ok());

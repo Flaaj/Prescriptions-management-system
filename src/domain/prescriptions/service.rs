@@ -1,10 +1,9 @@
-use chrono::{DateTime, Utc};
-use uuid::Uuid;
-
 use super::{
     models::{NewPrescription, Prescription, PrescriptionType},
     repository::PrescriptionsRepository,
 };
+use chrono::{DateTime, Utc};
+use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct PrescriptionsService<R: PrescriptionsRepository> {
@@ -87,9 +86,9 @@ mod tests {
             prescriptions::{models::PrescriptionType, repository::PrescriptionsRepository},
         },
         infrastructure::postgres_repository_impl::{
-            doctors::DoctorsPostgresRepository, drugs::DrugsPostgresRepository,
-            patients::PatientsPostgresRepository, pharmacists::PharmacistsPostgresRepository,
-            prescriptions::PrescriptionsPostgresRepository,
+            doctors::PostgresDoctorsRepository, drugs::PostgresDrugsRepository,
+            patients::PostgresPatientsRepository, pharmacists::PostgresPharmacistsRepository,
+            prescriptions::PostgresPrescriptionsRepository,
         },
     };
     use sqlx::PgPool;
@@ -111,13 +110,13 @@ mod tests {
     ) {
         create_tables(&pool, true).await.unwrap();
 
-        let doctors_service = DoctorsService::new(DoctorsPostgresRepository::new(pool.clone()));
+        let doctors_service = DoctorsService::new(PostgresDoctorsRepository::new(pool.clone()));
         let pharmacist_service =
-            PharmacistsService::new(PharmacistsPostgresRepository::new(pool.clone()));
-        let patients_service = PatientsService::new(PatientsPostgresRepository::new(pool.clone()));
-        let drugs_service = DrugsService::new(DrugsPostgresRepository::new(pool.clone()));
+            PharmacistsService::new(PostgresPharmacistsRepository::new(pool.clone()));
+        let patients_service = PatientsService::new(PostgresPatientsRepository::new(pool.clone()));
+        let drugs_service = DrugsService::new(PostgresDrugsRepository::new(pool.clone()));
         let prescriptions_service =
-            PrescriptionsService::new(PrescriptionsPostgresRepository::new(pool));
+            PrescriptionsService::new(PostgresPrescriptionsRepository::new(pool));
 
         (
             prescriptions_service,

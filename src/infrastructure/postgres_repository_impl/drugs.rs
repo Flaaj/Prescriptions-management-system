@@ -10,18 +10,18 @@ use crate::domain::{
     utils::pagination::get_pagination_params,
 };
 
-pub struct DrugsPostgresRepository {
+pub struct PostgresDrugsRepository {
     pool: sqlx::PgPool,
 }
 
-impl DrugsPostgresRepository {
+impl PostgresDrugsRepository {
     pub fn new(pool: sqlx::PgPool) -> Self {
         Self { pool }
     }
 }
 
 #[async_trait]
-impl<'a> DrugsRepository for DrugsPostgresRepository {
+impl<'a> DrugsRepository for PostgresDrugsRepository {
     async fn create_drug(&self, drug: NewDrug) -> anyhow::Result<Drug> {
         let result = sqlx::query(
             r#"INSERT INTO drugs (id, name, content_type, pills_count, mg_per_pill, ml_per_pill, volume_ml) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, name, content_type, pills_count, mg_per_pill, ml_per_pill, volume_ml, created_at, updated_at"#,
@@ -106,7 +106,7 @@ impl<'a> DrugsRepository for DrugsPostgresRepository {
 
 #[cfg(test)]
 mod tests {
-    use super::DrugsPostgresRepository;
+    use super::PostgresDrugsRepository;
     use crate::{
         create_tables::create_tables,
         domain::drugs::{
@@ -118,7 +118,7 @@ mod tests {
     #[sqlx::test]
     async fn create_and_read_drug_by_id(pool: sqlx::PgPool) {
         create_tables(&pool, true).await.unwrap();
-        let repository = DrugsPostgresRepository::new(pool);
+        let repository = PostgresDrugsRepository::new(pool);
 
         let drug = NewDrug::new(
             "Gripex Max".into(),
@@ -142,7 +142,7 @@ mod tests {
     #[sqlx::test]
     async fn create_and_read_drugs_from_database(pool: sqlx::PgPool) {
         create_tables(&pool, true).await.unwrap();
-        let repository = DrugsPostgresRepository::new(pool);
+        let repository = PostgresDrugsRepository::new(pool);
 
         let new_drug_0 = NewDrug::new(
             "Gripex".into(),

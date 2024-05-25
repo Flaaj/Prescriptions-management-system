@@ -9,12 +9,9 @@
 //  - has end date, which marks date after which it can't be used anymore
 //  - each prescription can be used only once
 
+use crate::domain::prescriptions::models::{NewPrescribedDrug, NewPrescription, PrescriptionType};
 use chrono::{DateTime, Duration, Utc};
 use uuid::Uuid;
-
-use crate::domain::prescriptions::models::{
-    NewPrescribedDrug, NewPrescription, PrescriptionType,
-};
 
 #[derive(thiserror::Error, Debug, PartialEq)]
 pub enum NewPrescriptionValidationError {

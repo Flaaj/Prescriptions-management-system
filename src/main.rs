@@ -11,8 +11,8 @@ use domain::{
     patients::service::PatientsService, pharmacists::service::PharmacistsService,
 };
 use infrastructure::postgres_repository_impl::{
-    doctors::DoctorsPostgresRepository, drugs::DrugsPostgresRepository,
-    patients::PatientsPostgresRepository, pharmacists::PharmacistsPostgresRepository,
+    doctors::PostgresDoctorsRepository, drugs::PostgresDrugsRepository,
+    patients::PostgresPatientsRepository, pharmacists::PostgresPharmacistsRepository,
 };
 use rocket::{launch, Build, Rocket};
 use rocket_okapi::swagger_ui::{make_swagger_ui, SwaggerUIConfig};
@@ -23,21 +23,21 @@ extern crate dotenv_codegen;
 
 #[derive(Clone)]
 pub struct Context {
-    pub doctors_service: Arc<DoctorsService<DoctorsPostgresRepository>>,
-    pub pharmacists_service: Arc<PharmacistsService<PharmacistsPostgresRepository>>,
-    pub patients_service: Arc<PatientsService<PatientsPostgresRepository>>,
-    pub drugs_service: Arc<DrugsService<DrugsPostgresRepository>>,
+    pub doctors_service: Arc<DoctorsService<PostgresDoctorsRepository>>,
+    pub pharmacists_service: Arc<PharmacistsService<PostgresPharmacistsRepository>>,
+    pub patients_service: Arc<PatientsService<PostgresPatientsRepository>>,
+    pub drugs_service: Arc<DrugsService<PostgresDrugsRepository>>,
 }
 pub type Ctx = rocket::State<Context>;
 
 pub fn setup_context(pool: PgPool) -> Context {
-    let doctors_repository = DoctorsPostgresRepository::new(pool.clone());
+    let doctors_repository = PostgresDoctorsRepository::new(pool.clone());
     let doctors_service = Arc::new(DoctorsService::new(doctors_repository));
-    let pharmacists_rerpository = PharmacistsPostgresRepository::new(pool.clone());
+    let pharmacists_rerpository = PostgresPharmacistsRepository::new(pool.clone());
     let pharmacists_service = Arc::new(PharmacistsService::new(pharmacists_rerpository));
-    let patients_repository = PatientsPostgresRepository::new(pool.clone());
+    let patients_repository = PostgresPatientsRepository::new(pool.clone());
     let patients_service = Arc::new(PatientsService::new(patients_repository));
-    let drugs_repository = DrugsPostgresRepository::new(pool.clone());
+    let drugs_repository = PostgresDrugsRepository::new(pool.clone());
     let drugs_service = Arc::new(DrugsService::new(drugs_repository));
 
     Context {

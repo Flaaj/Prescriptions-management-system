@@ -79,14 +79,13 @@ mod tests {
     use super::DoctorsService;
     use crate::{
         create_tables::create_tables,
-        domain::doctors::{repository_fake::FakeDoctorsRepository, repository::DoctorsRepository},
+        domain::doctors::{repository::DoctorsRepository, repository::InMemoryDoctorsRepository},
     };
     use uuid::Uuid;
 
     async fn setup_service(pool: sqlx::PgPool) -> DoctorsService<impl DoctorsRepository> {
         create_tables(&pool, true).await.unwrap();
-        let fake_repo = FakeDoctorsRepository::new();
-        DoctorsService::new(fake_repo)
+        DoctorsService::new(InMemoryDoctorsRepository::new())
     }
 
     #[sqlx::test]

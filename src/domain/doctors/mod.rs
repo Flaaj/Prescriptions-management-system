@@ -1,5 +1,4 @@
-pub mod repository;
-pub mod use_cases;
 pub mod models;
+pub mod repository;
 pub mod service;
-mod repository_fake;
+pub mod use_cases;

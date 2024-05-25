@@ -91,14 +91,14 @@ mod tests {
     use crate::{
         create_tables::create_tables,
         domain::drugs::{models::DrugContentType, repository::DrugsRepository},
-        infrastructure::postgres_repository_impl::drugs::DrugsPostgresRepository,
+        infrastructure::postgres_repository_impl::drugs::PostgresDrugsRepository,
     };
 
     use super::DrugsService;
 
     async fn setup_service(pool: sqlx::PgPool) -> DrugsService<impl DrugsRepository> {
         create_tables(&pool, true).await.unwrap();
-        DrugsService::new(DrugsPostgresRepository::new(pool))
+        DrugsService::new(PostgresDrugsRepository::new(pool))
     }
 
     #[sqlx::test]

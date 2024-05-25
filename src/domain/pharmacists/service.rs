@@ -81,13 +81,13 @@ mod tests {
     use super::PharmacistsService;
     use crate::{
         create_tables::create_tables, domain::pharmacists::repository::PharmacistsRepository,
-        infrastructure::postgres_repository_impl::pharmacists::PharmacistsPostgresRepository,
+        infrastructure::postgres_repository_impl::pharmacists::PostgresPharmacistsRepository,
     };
     use uuid::Uuid;
 
     async fn setup_service(pool: sqlx::PgPool) -> PharmacistsService<impl PharmacistsRepository> {
         create_tables(&pool, true).await.unwrap();
-        PharmacistsService::new(PharmacistsPostgresRepository::new(pool))
+        PharmacistsService::new(PostgresPharmacistsRepository::new(pool))
     }
 
     #[sqlx::test]
