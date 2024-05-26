@@ -1,10 +1,6 @@
 use std::sync::RwLock;
 
 use crate::domain::{
-    doctors::models::Doctor,
-    drugs::models::Drug,
-    patients::models::Patient,
-    pharmacists::models::Pharmacist,
     prescriptions::models::{NewPrescription, NewPrescriptionFill, Prescription, PrescriptionFill},
     utils::pagination::get_pagination_params,
 };
