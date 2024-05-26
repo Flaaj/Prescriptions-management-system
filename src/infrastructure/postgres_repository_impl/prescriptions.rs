@@ -431,19 +431,19 @@ mod tests {
         pool: sqlx::PgPool,
     ) -> (PostgresPrescriptionsRepository, DatabaseSeedData) {
         create_tables(&pool, true).await.unwrap();
-        let seed_data = seed_database(pool.clone()).await.unwrap();
+        let seeds = seed_database(pool.clone()).await.unwrap();
         let repository = PostgresPrescriptionsRepository::new(pool);
-        (repository, seed_data)
+        (repository, seeds)
     }
 
     #[sqlx::test]
     async fn creates_and_reads_prescriptions_from_database(pool: sqlx::PgPool) {
-        let (repository, seed_data) = setup_repository(pool).await;
+        let (repository, seeds) = setup_repository(pool).await;
 
         let mut new_prescription =
-            NewPrescription::new(seed_data.doctor.id, seed_data.patient.id, None, None);
+            NewPrescription::new(seeds.doctor.id, seeds.patient.id, None, None);
         for i in 0..4 {
-            new_prescription.add_drug(seed_data.drugs[i].id, 1).unwrap();
+            new_prescription.add_drug(seeds.drugs[i].id, 1).unwrap();
         }
 
         repository
@@ -453,9 +453,9 @@ mod tests {
 
         for _ in 0..10 {
             let mut another_prescription =
-                NewPrescription::new(seed_data.doctor.id, seed_data.patient.id, None, None);
+                NewPrescription::new(seeds.doctor.id, seeds.patient.id, None, None);
             another_prescription
-                .add_drug(seed_data.drugs[0].id, 1)
+                .add_drug(seeds.drugs[0].id, 1)
                 .unwrap();
             repository
                 .create_prescription(another_prescription)
@@ -480,12 +480,12 @@ mod tests {
 
     #[sqlx::test]
     async fn creates_and_reads_prescription_by_id(pool: sqlx::PgPool) {
-        let (repository, seed_data) = setup_repository(pool).await;
+        let (repository, seeds) = setup_repository(pool).await;
 
         let mut new_prescription =
-            NewPrescription::new(seed_data.doctor.id, seed_data.patient.id, None, None);
+            NewPrescription::new(seeds.doctor.id, seeds.patient.id, None, None);
         for i in 0..2 {
-            new_prescription.add_drug(seed_data.drugs[i].id, 1).unwrap();
+            new_prescription.add_drug(seeds.drugs[i].id, 1).unwrap();
         }
 
         repository
@@ -502,6 +502,44 @@ mod tests {
     }
 
     #[sqlx::test]
+    async fn doesnt_create_prescription_if_relations_dont_exist(pool: sqlx::PgPool) {
+        let (repository, seeds) = setup_repository(pool).await;
+
+        let mut new_prescription_with_nonexisting_doctor_id =
+            NewPrescription::new(Uuid::new_v4(), seeds.doctor.id, None, None);
+        new_prescription_with_nonexisting_doctor_id
+            .add_drug(seeds.drugs[0].id, 1)
+            .unwrap();
+
+        assert!(repository
+            .create_prescription(new_prescription_with_nonexisting_doctor_id)
+            .await
+            .is_err());
+
+        let mut new_prescription_with_nonexisting_patient_id =
+            NewPrescription::new(seeds.patient.id, Uuid::new_v4(), None, None);
+        new_prescription_with_nonexisting_patient_id
+            .add_drug(seeds.drugs[0].id, 1)
+            .unwrap();
+
+        assert!(repository
+            .create_prescription(new_prescription_with_nonexisting_patient_id)
+            .await
+            .is_err());
+
+        let mut new_prescription_with_nonexisting_drug_id =
+            NewPrescription::new(seeds.doctor.id, seeds.patient.id, None, None);
+        new_prescription_with_nonexisting_drug_id
+            .add_drug(Uuid::new_v4(), 1)
+            .unwrap();
+
+        assert!(repository
+            .create_prescription(new_prescription_with_nonexisting_drug_id)
+            .await
+            .is_err());
+    }
+
+    #[sqlx::test]
     async fn returns_error_if_prescription_doesnt_exist(pool: sqlx::PgPool) {
         let (repository, _) = setup_repository(pool).await;
         let prescription_id = Uuid::new_v4();
@@ -513,11 +551,11 @@ mod tests {
 
     #[sqlx::test]
     async fn fills_prescription_and_saves_to_database(pool: sqlx::PgPool) {
-        let (repository, seed_data) = setup_repository(pool).await;
+        let (repository, seeds) = setup_repository(pool).await;
 
         let mut prescription =
-            NewPrescription::new(seed_data.doctor.id, seed_data.patient.id, None, None);
-        prescription.add_drug(seed_data.drugs[0].id, 1).unwrap();
+            NewPrescription::new(seeds.doctor.id, seeds.patient.id, None, None);
+        prescription.add_drug(seeds.drugs[0].id, 1).unwrap();
 
         repository
             .create_prescription(prescription.clone())
@@ -531,7 +569,7 @@ mod tests {
 
         assert!(prescription_from_db.fill.is_none());
 
-        let new_prescription_fill = prescription_from_db.fill(seed_data.pharmacist.id).unwrap();
+        let new_prescription_fill = prescription_from_db.fill(seeds.pharmacist.id).unwrap();
         let created_prescription_fill = repository
             .fill_prescription(new_prescription_fill.clone())
             .await
@@ -545,5 +583,29 @@ mod tests {
             .unwrap();
 
         assert_eq!(prescription_from_db.fill.unwrap(), new_prescription_fill);
+    }
+
+
+    #[sqlx::test]
+    async fn doesnt_fill_if_pharmacist_relation_doesnt_exist(pool: sqlx::PgPool) {
+        let (repository, seeds) = setup_repository(pool).await;
+
+        let mut new_prescription =
+            NewPrescription::new(seeds.doctor.id, seeds.patient.id, None, None);
+        for i in 0..2 {
+            new_prescription.add_drug(seeds.drugs[i].id, 1).unwrap();
+        }
+        let prescription_from_db = repository
+            .create_prescription(new_prescription.clone())
+            .await
+            .unwrap();
+
+        let new_prescription_fill_with_nonexistent_pharmacist_id =
+            prescription_from_db.fill(Uuid::new_v4()).unwrap();
+
+        assert!(repository
+            .fill_prescription(new_prescription_fill_with_nonexistent_pharmacist_id)
+            .await
+            .is_err());
     }
 }
