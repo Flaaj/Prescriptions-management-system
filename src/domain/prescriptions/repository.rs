@@ -1,4 +1,4 @@
-use std::{borrow::BorrowMut, sync::RwLock};
+use std::sync::RwLock;
 
 use crate::domain::{
     doctors::models::Doctor,
@@ -10,7 +10,6 @@ use crate::domain::{
 };
 use async_trait::async_trait;
 use chrono::Utc;
-use rocket::futures::SinkExt;
 use uuid::Uuid;
 
 use super::models::{PrescribedDrug, PrescriptionDoctor, PrescriptionPatient};
@@ -40,10 +39,6 @@ pub trait PrescriptionsRepository {
 /// Used to test the service layer in isolation
 pub struct InMemoryPrescriptionsRepository {
     prescriptions: RwLock<Vec<Prescription>>,
-    doctors: RwLock<Vec<Doctor>>,
-    patients: RwLock<Vec<Patient>>,
-    pharmacists: RwLock<Vec<Pharmacist>>,
-    drugs: RwLock<Vec<Drug>>,
 }
 
 impl InMemoryPrescriptionsRepository {
@@ -51,40 +46,7 @@ impl InMemoryPrescriptionsRepository {
     pub fn new() -> Self {
         Self {
             prescriptions: RwLock::new(Vec::new()),
-            doctors: RwLock::new(Vec::new()),
-            drugs: RwLock::new(Vec::new()),
-            patients: RwLock::new(Vec::new()),
-            pharmacists: RwLock::new(Vec::new()),
         }
-    }
-
-    fn add_doctor(&self, doctor: Doctor) {
-        self.doctors.write().unwrap().push(doctor);
-    }
-
-    fn add_drugs(&self, drug: Drug) {
-        self.drugs.write().unwrap().push(drug);
-    }
-
-    async fn get_drug_by_prescribed_drug_id(&self, drug_id: Uuid) -> anyhow::Result<Drug> {
-        match self
-            .drugs
-            .read()
-            .unwrap()
-            .iter()
-            .find(|drug| drug.id == drug_id)
-        {
-            Some(drug) => Ok(drug.clone()),
-            None => Err(anyhow::anyhow!("Drug not found")),
-        }
-    }
-
-    fn add_patient(&self, patient: Patient) {
-        self.patients.write().unwrap().push(patient);
-    }
-
-    fn add_pharmacist(&self, pharmacist: Pharmacist) {
-        self.pharmacists.write().unwrap().push(pharmacist);
     }
 }
 
