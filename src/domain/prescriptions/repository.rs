@@ -1,14 +1,19 @@
-use std::sync::RwLock;
+use std::{borrow::BorrowMut, sync::RwLock};
 
 use crate::domain::{
+    doctors::models::Doctor,
+    drugs::models::Drug,
+    patients::models::Patient,
+    pharmacists::models::Pharmacist,
     prescriptions::models::{NewPrescription, NewPrescriptionFill, Prescription, PrescriptionFill},
     utils::pagination::get_pagination_params,
 };
 use async_trait::async_trait;
 use chrono::Utc;
+use rocket::futures::SinkExt;
 use uuid::Uuid;
 
-use super::models::{PrescriptionDoctor, PrescriptionPatient};
+use super::models::{PrescribedDrug, PrescriptionDoctor, PrescriptionPatient};
 
 #[async_trait]
 pub trait PrescriptionsRepository {
@@ -35,6 +40,10 @@ pub trait PrescriptionsRepository {
 /// Used to test the service layer in isolation
 pub struct InMemoryPrescriptionsRepository {
     prescriptions: RwLock<Vec<Prescription>>,
+    doctors: RwLock<Vec<Doctor>>,
+    patients: RwLock<Vec<Patient>>,
+    pharmacists: RwLock<Vec<Pharmacist>>,
+    drugs: RwLock<Vec<Drug>>,
 }
 
 impl InMemoryPrescriptionsRepository {
@@ -42,7 +51,40 @@ impl InMemoryPrescriptionsRepository {
     pub fn new() -> Self {
         Self {
             prescriptions: RwLock::new(Vec::new()),
+            doctors: RwLock::new(Vec::new()),
+            drugs: RwLock::new(Vec::new()),
+            patients: RwLock::new(Vec::new()),
+            pharmacists: RwLock::new(Vec::new()),
         }
+    }
+
+    fn add_doctor(&self, doctor: Doctor) {
+        self.doctors.write().unwrap().push(doctor);
+    }
+
+    fn add_drugs(&self, drug: Drug) {
+        self.drugs.write().unwrap().push(drug);
+    }
+
+    async fn get_drug_by_prescribed_drug_id(&self, drug_id: Uuid) -> anyhow::Result<Drug> {
+        match self
+            .drugs
+            .read()
+            .unwrap()
+            .iter()
+            .find(|drug| drug.id == drug_id)
+        {
+            Some(drug) => Ok(drug.clone()),
+            None => Err(anyhow::anyhow!("Drug not found")),
+        }
+    }
+
+    fn add_patient(&self, patient: Patient) {
+        self.patients.write().unwrap().push(patient);
+    }
+
+    fn add_pharmacist(&self, pharmacist: Pharmacist) {
+        self.pharmacists.write().unwrap().push(pharmacist);
     }
 }
 
@@ -52,7 +94,7 @@ impl PrescriptionsRepository for InMemoryPrescriptionsRepository {
         &self,
         new_prescription: NewPrescription,
     ) -> anyhow::Result<Prescription> {
-        Ok(Prescription {
+        let prescription = Prescription {
             id: new_prescription.id,
             doctor: PrescriptionDoctor {
                 id: new_prescription.doctor_id,
@@ -65,7 +107,18 @@ impl PrescriptionsRepository for InMemoryPrescriptionsRepository {
                 name: "John Doe".into(),
                 pesel_number: "12345678900".into(),
             },
-            prescribed_drugs: vec![],
+            prescribed_drugs: new_prescription
+                .prescribed_drugs
+                .iter()
+                .map(|new_prescibed_drug| PrescribedDrug {
+                    id: Uuid::new_v4(),
+                    drug_id: new_prescibed_drug.drug_id,
+                    prescription_id: new_prescription.id,
+                    quantity: new_prescibed_drug.quantity as i32,
+                    created_at: Utc::now(),
+                    updated_at: Utc::now(),
+                })
+                .collect(),
             prescription_type: new_prescription.prescription_type,
             code: new_prescription.code,
             fill: None,
@@ -73,7 +126,14 @@ impl PrescriptionsRepository for InMemoryPrescriptionsRepository {
             end_date: new_prescription.end_date,
             created_at: Utc::now(),
             updated_at: Utc::now(),
-        })
+        };
+
+        self.prescriptions
+            .write()
+            .unwrap()
+            .push(prescription.clone());
+
+        Ok(prescription)
     }
 
     async fn get_prescriptions(
@@ -105,7 +165,7 @@ impl PrescriptionsRepository for InMemoryPrescriptionsRepository {
             .find(|prescription| prescription.id == prescription_id)
         {
             Some(prescription) => Ok(prescription.clone()),
-            None => Err(anyhow::anyhow!("Pharmacist not found")),
+            None => Err(anyhow::anyhow!("Prescription not found")),
         }
     }
 
@@ -113,13 +173,34 @@ impl PrescriptionsRepository for InMemoryPrescriptionsRepository {
         &self,
         new_prescription_fill: NewPrescriptionFill,
     ) -> anyhow::Result<PrescriptionFill> {
-        Ok(PrescriptionFill {
+        let prescription_fill = PrescriptionFill {
             id: new_prescription_fill.id,
             prescription_id: new_prescription_fill.prescription_id,
             pharmacist_id: new_prescription_fill.pharmacist_id,
             created_at: Utc::now(),
             updated_at: Utc::now(),
-        })
+        };
+
+        let prescriptions = self.prescriptions.read().unwrap().to_owned();
+        let (index, prescription) = prescriptions
+            .iter()
+            .enumerate()
+            .map(|(index, prescription)| {
+                (index, {
+                    let mut prescription = prescription.clone();
+                    prescription.fill = Some(prescription_fill.clone());
+                    prescription
+                })
+            })
+            .find(|(_, prescription)| prescription.id == new_prescription_fill.prescription_id)
+            .unwrap();
+
+        self.prescriptions
+            .write()
+            .unwrap()
+            .insert(index, prescription);
+
+        Ok(prescription_fill)
     }
 }
 

@@ -94,7 +94,7 @@ pub struct NewPrescriptionFill {
     pub pharmacist_id: Uuid,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub struct PrescriptionFill {
     pub id: Uuid,
     pub prescription_id: Uuid,
