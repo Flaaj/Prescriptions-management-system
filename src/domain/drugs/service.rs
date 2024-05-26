@@ -95,13 +95,13 @@ mod tests {
 
     use super::DrugsService;
 
-    async fn setup_service() -> DrugsService<impl DrugsRepository> {
+    fn setup_service() -> DrugsService<impl DrugsRepository> {
         DrugsService::new(InMemoryDrugsRepository::new())
     }
 
     #[tokio::test]
     async fn creates_drug_and_reads_by_id() {
-        let service = setup_service().await;
+        let service = setup_service();
 
         let created_drug = service
             .create_drug(
@@ -137,7 +137,7 @@ mod tests {
 
     #[tokio::test]
     async fn get_drug_by_id_returns_error_if_drug_doesnt_exist() {
-        let service = setup_service().await;
+        let service = setup_service();
 
         let result = service.get_drug_by_id(Uuid::new_v4()).await;
 
@@ -146,7 +146,7 @@ mod tests {
 
     #[tokio::test]
     async fn gets_drugs_with_pagination() {
-        let service = setup_service().await;
+        let service = setup_service();
 
         let result = service
             .create_drug(
@@ -243,7 +243,7 @@ mod tests {
 
     #[tokio::test]
     async fn get_drugs_with_pagination_returns_error_if_params_are_invalid() {
-        let service = setup_service().await;
+        let service = setup_service();
 
         assert!(service
             .get_drugs_with_pagination(Some(-1), None)

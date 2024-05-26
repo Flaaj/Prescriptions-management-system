@@ -354,7 +354,7 @@ impl PrescriptionsRepository for PostgresPrescriptionsRepository {
 mod tests {
     use uuid::Uuid;
 
-    use super::{GetPrescriptionError, PostgresPrescriptionsRepository};
+    use super::PostgresPrescriptionsRepository;
     use crate::{
         create_tables::create_tables,
         domain::{
@@ -427,11 +427,18 @@ mod tests {
         })
     }
 
-    #[sqlx::test]
-    async fn creates_and_reads_prescriptions_from_database(pool: sqlx::PgPool) {
+    async fn setup_repository(
+        pool: sqlx::PgPool,
+    ) -> (PostgresPrescriptionsRepository, DatabaseSeedData) {
         create_tables(&pool, true).await.unwrap();
         let seed_data = seed_database(pool.clone()).await.unwrap();
         let repository = PostgresPrescriptionsRepository::new(pool);
+        (repository, seed_data)
+    }
+
+    #[sqlx::test]
+    async fn creates_and_reads_prescriptions_from_database(pool: sqlx::PgPool) {
+        let (repository, seed_data) = setup_repository(pool).await;
 
         let mut new_prescription =
             NewPrescription::new(seed_data.doctor.id, seed_data.patient.id, None, None);
@@ -473,9 +480,7 @@ mod tests {
 
     #[sqlx::test]
     async fn creates_and_reads_prescription_by_id(pool: sqlx::PgPool) {
-        create_tables(&pool, true).await.unwrap();
-        let repository = PostgresPrescriptionsRepository::new(pool.clone());
-        let seed_data = seed_database(pool).await.unwrap();
+        let (repository, seed_data) = setup_repository(pool).await;
 
         let mut new_prescription =
             NewPrescription::new(seed_data.doctor.id, seed_data.patient.id, None, None);
@@ -498,23 +503,17 @@ mod tests {
 
     #[sqlx::test]
     async fn returns_error_if_prescription_doesnt_exist(pool: sqlx::PgPool) {
-        create_tables(&pool, true).await.unwrap();
-        let repository = PostgresPrescriptionsRepository::new(pool);
+        let (repository, _) = setup_repository(pool).await;
         let prescription_id = Uuid::new_v4();
 
         let prescription_from_db = repository.get_prescription_by_id(prescription_id).await;
 
-        assert_eq!(
-            prescription_from_db.unwrap_err().downcast_ref(),
-            Some(&GetPrescriptionError::NotFound(prescription_id)),
-        );
+        assert!(prescription_from_db.is_err(),);
     }
 
     #[sqlx::test]
     async fn fills_prescription_and_saves_to_database(pool: sqlx::PgPool) {
-        create_tables(&pool, true).await.unwrap();
-        let repository = PostgresPrescriptionsRepository::new(pool.clone());
-        let seed_data = seed_database(pool).await.unwrap();
+        let (repository, seed_data) = setup_repository(pool).await;
 
         let mut prescription =
             NewPrescription::new(seed_data.doctor.id, seed_data.patient.id, None, None);

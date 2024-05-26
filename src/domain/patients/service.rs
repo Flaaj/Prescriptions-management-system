@@ -82,13 +82,13 @@ mod tests {
     use crate::domain::patients::repository::{InMemoryPatientsRepository, PatientsRepository};
     use uuid::Uuid;
 
-    async fn setup_service() -> PatientsService<impl PatientsRepository> {
+    fn setup_service() -> PatientsService<impl PatientsRepository> {
         PatientsService::new(InMemoryPatientsRepository::new())
     }
 
     #[tokio::test]
     async fn creates_patient_and_reads_by_id() {
-        let service = setup_service().await;
+        let service = setup_service();
 
         let created_patient = service
             .create_patient("John Doex".into(), "96021807250".into())
@@ -106,7 +106,7 @@ mod tests {
 
     #[tokio::test]
     async fn create_patient_returns_error_if_body_is_incorrect() {
-        let service = setup_service().await;
+        let service = setup_service();
 
         let result = service
             .create_patient("John Doex".into(), "96021807251".into()) // invalid pesel
@@ -117,7 +117,7 @@ mod tests {
 
     #[tokio::test]
     async fn create_patient_returns_error_if_pesel_number_is_duplicated() {
-        let service = setup_service().await;
+        let service = setup_service();
 
         service
             .create_patient("John Doex".into(), "96021807250".into())
@@ -133,7 +133,7 @@ mod tests {
 
     #[tokio::test]
     async fn get_patient_by_id_returns_error_if_such_patient_does_not_exist() {
-        let service = setup_service().await;
+        let service = setup_service();
 
         let result = service.get_patient_by_id(Uuid::new_v4()).await;
 
@@ -142,7 +142,7 @@ mod tests {
 
     #[tokio::test]
     async fn gets_patients_with_pagination() {
-        let service = setup_service().await;
+        let service = setup_service();
 
         service
             .create_patient("John Doex".into(), "96021817257".into())
@@ -206,7 +206,7 @@ mod tests {
 
     #[tokio::test]
     async fn get_patients_with_pagination_returns_error_if_params_are_invalid() {
-        let service = setup_service().await;
+        let service = setup_service();
 
         assert!(service
             .get_patients_with_pagination(Some(-1), None)

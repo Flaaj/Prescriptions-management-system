@@ -82,13 +82,13 @@ mod tests {
     };
     use uuid::Uuid;
 
-    async fn setup_service() -> DoctorsService<impl DoctorsRepository> {
+    fn setup_service() -> DoctorsService<impl DoctorsRepository> {
         DoctorsService::new(InMemoryDoctorsRepository::new())
     }
 
     #[tokio::test]
     async fn creates_doctor_and_reads_by_id() {
-        let service = setup_service().await;
+        let service = setup_service();
 
         let created_doctor = service
             .create_doctor("John Doex".into(), "96021807250".into(), "5425740".into())
@@ -108,7 +108,7 @@ mod tests {
 
     #[tokio::test]
     async fn create_doctor_returns_error_if_body_is_incorrect() {
-        let service = setup_service().await;
+        let service = setup_service();
 
         let result = service
             .create_doctor("John Doex".into(), "96021807251".into(), "5425740".into()) // invalid pesel
@@ -119,7 +119,7 @@ mod tests {
 
     #[tokio::test]
     async fn create_doctor_returns_error_if_pwz_or_pesel_numbers_are_duplicated() {
-        let service = setup_service().await;
+        let service = setup_service();
 
         service
             .create_doctor("John Doex".into(), "96021807250".into(), "5425740".into())
@@ -141,7 +141,7 @@ mod tests {
 
     #[tokio::test]
     async fn get_doctor_by_id_returns_error_if_such_doctor_does_not_exist() {
-        let service = setup_service().await;
+        let service = setup_service();
 
         let result = service.get_doctor_by_id(Uuid::new_v4()).await;
 
@@ -150,7 +150,7 @@ mod tests {
 
     #[tokio::test]
     async fn gets_doctors_with_pagination() {
-        let service = setup_service().await;
+        let service = setup_service();
 
         service
             .create_doctor("John Doex".into(), "96021817257".into(), "5425740".into())
@@ -214,7 +214,7 @@ mod tests {
 
     #[tokio::test]
     async fn get_doctors_with_pagination_returns_error_if_params_are_invalid() {
-        let service = setup_service().await;
+        let service = setup_service();
 
         assert!(service
             .get_doctors_with_pagination(Some(-1), None)
