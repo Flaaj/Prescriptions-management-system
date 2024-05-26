@@ -24,8 +24,6 @@ A system for managing prescriptions.
 - [ ] drugs controller
 - [ ] patients controller
 - [ ] prescriptions controller
-- [ ] prescriptions in-memory repository implementation and removing postgres implementation from PrescriptionsRepository tests
-- [ ] explicit tests for non-existing relations when creating prescription (for instance if trying to create prescription using doctor_id that doesn't exist)
 - [ ] authorization
 - [ ] images service for storing drug images
 
