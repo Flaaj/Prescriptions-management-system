@@ -15,7 +15,6 @@ pub enum CreateDoctorError {
 
 #[derive(Debug)]
 pub enum GetDoctorByIdError {
-    DomainError,
     RepositoryError(GetDoctorByIdRepositoryError),
 }
 

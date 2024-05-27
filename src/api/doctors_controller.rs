@@ -126,14 +126,6 @@ pub async fn create_doctor(
 impl<'r> Responder<'r, 'static> for GetDoctorByIdError {
     fn respond_to(self, _: &'r Request<'_>) -> rocket::response::Result<'static> {
         match self {
-            GetDoctorByIdError::DomainError => {
-                let message = "Doctor id is incorrect - it must be provided in UUID format";
-                Response::build()
-                    .sized_body(message.len(), std::io::Cursor::new(message))
-                    .header(ContentType::JSON)
-                    .status(Status::UnprocessableEntity)
-                    .ok()
-            }
             GetDoctorByIdError::RepositoryError(repository_err) => {
                 let message = repository_err.to_string();
                 Response::build()
