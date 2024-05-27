@@ -1,5 +1,5 @@
 use super::{
-    models::{NewPrescription, Prescription, PrescriptionType},
+    models::{NewPrescribedDrug, NewPrescription, Prescription, PrescriptionType},
     repository::PrescriptionsRepository,
 };
 use chrono::{DateTime, Utc};
@@ -27,16 +27,19 @@ impl<R: PrescriptionsRepository> PrescriptionsService<R> {
         patient_id: Uuid,
         start_date: Option<DateTime<Utc>>,
         prescription_type: Option<PrescriptionType>,
-        prescribed_drug_ids: Vec<(Uuid, u32)>,
+        prescribed_drugs: Vec<(Uuid, u32)>,
     ) -> Result<Prescription, CreatePrescriptionError> {
-        let mut new_prescription =
-            NewPrescription::new(doctor_id, patient_id, start_date, prescription_type);
-
-        for (drug_id, quantity) in prescribed_drug_ids {
-            new_prescription
-                .add_drug(drug_id, quantity)
-                .map_err(|err| CreatePrescriptionError::DomainError(err.to_string()))?;
-        }
+        let new_prescription = NewPrescription::new(
+            doctor_id,
+            patient_id,
+            start_date,
+            prescription_type,
+            prescribed_drugs
+                .iter()
+                .map(|&(drug_id, quantity)| NewPrescribedDrug { drug_id, quantity })
+                .collect(),
+        )
+        .map_err(|err| CreatePrescriptionError::DomainError(err.to_string()))?;
 
         let created_prescription = self
             .repository
@@ -73,158 +76,174 @@ impl<R: PrescriptionsRepository> PrescriptionsService<R> {
     }
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::PrescriptionsService;
-//     use crate::domain::{
-//         doctors::service::DoctorsService,
-//         drugs::{models::DrugContentType, service::DrugsService},
-//         patients::service::PatientsService,
-//         pharmacists::service::PharmacistsService,
-//         prescriptions::{models::PrescriptionType, repository::PrescriptionsRepository},
-//     };
-//     use sqlx::PgPool;
-//     use uuid::Uuid;
+#[cfg(test)]
+mod tests {
+    use super::PrescriptionsService;
+    use crate::domain::{
+        doctors::{models::Doctor, repository::InMemoryDoctorsRepository, service::DoctorsService},
+        drugs::{
+            models::{Drug, DrugContentType},
+            repository::InMemoryDrugsRepository,
+            service::DrugsService,
+        },
+        patients::{
+            models::Patient, repository::InMemoryPatientsRepository, service::PatientsService,
+        },
+        pharmacists::{
+            models::Pharmacist, repository::InMemoryPharmacistsRepository,
+            service::PharmacistsService,
+        },
+        prescriptions::{
+            models::PrescriptionType,
+            repository::{InMemoryPrescriptionsRepository, PrescriptionsRepository},
+        },
+    };
 
-//     struct DatabaseSeedRecordIds {
-//         doctor_id: Uuid,
-//         patient_id: Uuid,
-//         #[allow(dead_code)]
-//         pharmacist_id: Uuid,
-//         drug_ids: Vec<Uuid>,
-//     }
+    struct DatabaseSeeds {
+        doctor: Doctor,
+        pharmacist: Pharmacist,
+        patient: Patient,
+        drugs: Vec<Drug>,
+    }
 
-//     async fn setup_services_and_seed_database(
-//         pool: PgPool,
-//     ) -> (
-//         PrescriptionsService<impl PrescriptionsRepository>,
-//         DatabaseSeedRecordIds,
-//     ) {
-//         create_tables(&pool, true).await.unwrap();
+    async fn setup_services_and_seed_database() -> (
+        PrescriptionsService<impl PrescriptionsRepository>,
+        DatabaseSeeds,
+    ) {
+        let doctors_service = DoctorsService::new(InMemoryDoctorsRepository::new());
+        let created_doctor = doctors_service
+            .create_doctor("John Doctor".into(), "92022900002".into(), "3123456".into())
+            .await
+            .unwrap();
 
-//         let doctors_service = DoctorsService::new(PostgresDoctorsRepository::new(pool.clone()));
-//         let pharmacist_service =
-//             PharmacistsService::new(PostgresPharmacistsRepository::new(pool.clone()));
-//         let patients_service = PatientsService::new(PostgresPatientsRepository::new(pool.clone()));
-//         let drugs_service = DrugsService::new(PostgresDrugsRepository::new(pool.clone()));
-//         let prescriptions_service =
-//             PrescriptionsService::new(PostgresPrescriptionsRepository::new(pool));
+        let pharmacist_service = PharmacistsService::new(InMemoryPharmacistsRepository::new());
+        let created_pharmacist = pharmacist_service
+            .create_pharmacist("John Pharmacist".into(), "92022900002".into())
+            .await
+            .unwrap();
 
-//         (
-//             prescriptions_service,
-//             DatabaseSeedRecordIds {
-//                 doctor_id: doctors_service
-//                     .create_doctor("John Doctor".into(), "92022900002".into(), "3123456".into())
-//                     .await
-//                     .unwrap()
-//                     .id,
-//                 patient_id: patients_service
-//                     .create_patient("John Patient".into(), "92022900002".into())
-//                     .await
-//                     .unwrap()
-//                     .id,
-//                 pharmacist_id: pharmacist_service
-//                     .create_pharmacist("John Pharmacist".into(), "92022900002".into())
-//                     .await
-//                     .unwrap()
-//                     .id,
-//                 drug_ids: vec![
-//                     drugs_service
-//                         .create_drug(
-//                             "Gripex".into(),
-//                             DrugContentType::SolidPills,
-//                             Some(20),
-//                             Some(300),
-//                             None,
-//                             None,
-//                         )
-//                         .await
-//                         .unwrap()
-//                         .id,
-//                     drugs_service
-//                         .create_drug(
-//                             "Gripex".into(),
-//                             DrugContentType::SolidPills,
-//                             Some(20),
-//                             Some(300),
-//                             None,
-//                             None,
-//                         )
-//                         .await
-//                         .unwrap()
-//                         .id,
-//                     drugs_service
-//                         .create_drug(
-//                             "Gripex".into(),
-//                             DrugContentType::SolidPills,
-//                             Some(20),
-//                             Some(300),
-//                             None,
-//                             None,
-//                         )
-//                         .await
-//                         .unwrap()
-//                         .id,
-//                     drugs_service
-//                         .create_drug(
-//                             "Gripex".into(),
-//                             DrugContentType::SolidPills,
-//                             Some(20),
-//                             Some(300),
-//                             None,
-//                             None,
-//                         )
-//                         .await
-//                         .unwrap()
-//                         .id,
-//                 ],
-//             },
-//         )
-//     }
+        let patients_service = PatientsService::new(InMemoryPatientsRepository::new());
+        let created_patient = patients_service
+            .create_patient("John Patient".into(), "92022900002".into())
+            .await
+            .unwrap();
 
-//     #[sqlx::test]
-//     async fn creates_prescription(pool: sqlx::PgPool) {
-//         let (service, seed_ids) = setup_services_and_seed_database(pool).await;
+        let drugs_service = DrugsService::new(InMemoryDrugsRepository::new());
+        let created_drug_0 = drugs_service
+            .create_drug(
+                "Gripex".into(),
+                DrugContentType::SolidPills,
+                Some(20),
+                Some(300),
+                None,
+                None,
+            )
+            .await
+            .unwrap();
+        let created_drug_1 = drugs_service
+            .create_drug(
+                "Gripex".into(),
+                DrugContentType::SolidPills,
+                Some(20),
+                Some(300),
+                None,
+                None,
+            )
+            .await
+            .unwrap();
+        let created_drug_2 = drugs_service
+            .create_drug(
+                "Gripex".into(),
+                DrugContentType::SolidPills,
+                Some(20),
+                Some(300),
+                None,
+                None,
+            )
+            .await
+            .unwrap();
+        let created_drug_3 = drugs_service
+            .create_drug(
+                "Gripex".into(),
+                DrugContentType::SolidPills,
+                Some(20),
+                Some(300),
+                None,
+                None,
+            )
+            .await
+            .unwrap();
 
-//         let created_prescription = service
-//             .create_prescription(
-//                 seed_ids.doctor_id,
-//                 seed_ids.patient_id,
-//                 None,
-//                 Some(PrescriptionType::ForChronicDiseaseDrugs),
-//                 vec![(seed_ids.drug_ids[0], 1), (seed_ids.drug_ids[1], 2)],
-//             )
-//             .await
-//             .unwrap();
+        (
+            PrescriptionsService::new(InMemoryPrescriptionsRepository::new(
+                None,
+                Some(vec![created_doctor.clone()]),
+                Some(vec![created_patient.clone()]),
+                Some(vec![created_pharmacist.clone()]),
+                Some(vec![
+                    created_drug_0.clone(),
+                    created_drug_1.clone(),
+                    created_drug_2.clone(),
+                    created_drug_3.clone(),
+                ]),
+            )),
+            DatabaseSeeds {
+                doctor: created_doctor,
+                pharmacist: created_pharmacist,
+                patient: created_patient,
+                drugs: vec![
+                    created_drug_0,
+                    created_drug_1,
+                    created_drug_2,
+                    created_drug_3,
+                ],
+            },
+        )
+    }
 
-//         assert_eq!(
-//             created_prescription.prescription_type,
-//             PrescriptionType::ForChronicDiseaseDrugs
-//         );
-//         assert_eq!(created_prescription.prescribed_drugs.len(), 2)
-//     }
+    #[tokio::test]
+    async fn creates_prescription() {
+        let (service, seeds) = setup_services_and_seed_database().await;
 
-//     #[sqlx::test]
-//     async fn fills_prescription(pool: sqlx::PgPool) {
-//         let (service, seed_ids) = setup_services_and_seed_database(pool).await;
-//         let seed_prescription = service
-//             .create_prescription(
-//                 seed_ids.doctor_id,
-//                 seed_ids.patient_id,
-//                 None,
-//                 Some(PrescriptionType::ForChronicDiseaseDrugs),
-//                 vec![(seed_ids.drug_ids[0], 1), (seed_ids.drug_ids[1], 2)],
-//             )
-//             .await
-//             .unwrap();
+        let created_prescription = service
+            .create_prescription(
+                seeds.doctor.id,
+                seeds.patient.id,
+                None,
+                Some(PrescriptionType::ForChronicDiseaseDrugs),
+                vec![(seeds.drugs[0].id, 1), (seeds.drugs[1].id, 2)],
+            )
+            .await
+            .unwrap();
 
-//         let filled_prescription = service
-//             .fill_prescription(seed_prescription.id, seed_ids.pharmacist_id)
-//             .await
-//             .unwrap();
-//         let fill = filled_prescription.fill.unwrap();
+        assert_eq!(
+            created_prescription.prescription_type,
+            PrescriptionType::ForChronicDiseaseDrugs
+        );
+        assert_eq!(created_prescription.prescribed_drugs.len(), 2)
+    }
 
-//         assert!(fill.prescription_id == seed_prescription.id);
-//         assert!(fill.pharmacist_id == seed_ids.pharmacist_id);
-//     }
-// }
+    #[tokio::test]
+    async fn fills_prescription() {
+        let (service, seeds) = setup_services_and_seed_database().await;
+        let seed_prescription = service
+            .create_prescription(
+                seeds.doctor.id,
+                seeds.patient.id,
+                None,
+                Some(PrescriptionType::ForChronicDiseaseDrugs),
+                vec![(seeds.drugs[0].id, 1), (seeds.drugs[1].id, 2)],
+            )
+            .await
+            .unwrap();
+
+        let filled_prescription = service
+            .fill_prescription(seed_prescription.id, seeds.pharmacist.id)
+            .await
+            .unwrap();
+        let fill = filled_prescription.fill.unwrap();
+
+        assert!(fill.prescription_id == seed_prescription.id);
+        assert!(fill.pharmacist_id == seeds.pharmacist.id);
+    }
+}

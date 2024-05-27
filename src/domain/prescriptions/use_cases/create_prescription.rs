@@ -9,6 +9,8 @@
 //  - has end date, which marks date after which it can't be used anymore
 //  - each prescription can be used only once
 
+use std::collections::HashSet;
+
 use crate::domain::prescriptions::models::{NewPrescribedDrug, NewPrescription, PrescriptionType};
 use chrono::{DateTime, Duration, Utc};
 use uuid::Uuid;
@@ -40,54 +42,45 @@ impl NewPrescription {
         patient_id: Uuid,
         start_date: Option<DateTime<Utc>>,
         prescription_type: Option<PrescriptionType>,
-    ) -> Self {
-        // defaults:
+        prescribed_drugs: Vec<NewPrescribedDrug>,
+    ) -> anyhow::Result<Self> {
+        if prescribed_drugs.is_empty() {
+            Err(NewPrescriptionValidationError::NoPrescribedDrugs)?;
+        }
+
+        let mut ids_hashset: HashSet<Uuid> = HashSet::new();
+        for prescribed_drug in &prescribed_drugs {
+            if prescribed_drug.quantity == 0 {
+                Err(NewPrescriptionValidationError::InvalidDrugQuantity(
+                    prescribed_drug.drug_id,
+                ))?;
+            }
+            if ids_hashset.contains(&prescribed_drug.drug_id) {
+                Err(NewPrescriptionValidationError::DuplicateDrugId(
+                    prescribed_drug.drug_id,
+                ))?;
+            }
+
+            ids_hashset.insert(prescribed_drug.drug_id);
+        }
+
         let start_date = start_date.unwrap_or(Utc::now());
         let prescription_type = prescription_type.unwrap_or(PrescriptionType::Regular);
-
         let duration = prescription_type.get_duration();
         let end_date = start_date + duration;
 
         let code = rand::random::<u64>().to_string().chars().take(8).collect();
 
-        Self {
+        Ok(Self {
             id: Uuid::new_v4(),
             doctor_id,
             patient_id,
-            prescribed_drugs: vec![],
+            prescribed_drugs,
             prescription_type,
             code,
             start_date,
             end_date,
-        }
-    }
-
-    fn has_drug_with_id(&self, drug_id: Uuid) -> bool {
-        self.prescribed_drugs
-            .iter()
-            .any(|drug| drug.drug_id == drug_id)
-    }
-
-    pub fn add_drug(&mut self, drug_id: Uuid, quantity: u32) -> anyhow::Result<()> {
-        if quantity == 0 {
-            Err(NewPrescriptionValidationError::InvalidDrugQuantity(drug_id))?;
-        }
-        if self.has_drug_with_id(drug_id) {
-            Err(NewPrescriptionValidationError::DuplicateDrugId(drug_id))?;
-        }
-
-        let prescribed_drug = NewPrescribedDrug { drug_id, quantity };
-        self.prescribed_drugs.push(prescribed_drug);
-
-        Ok(())
-    }
-
-    pub fn validate(&self) -> anyhow::Result<()> {
-        if self.prescribed_drugs.is_empty() {
-            Err(NewPrescriptionValidationError::NoPrescribedDrugs)?;
-        }
-
-        Ok(())
+        })
     }
 }
 
@@ -96,24 +89,47 @@ mod tests {
     use chrono::{Duration, Utc};
     use uuid::Uuid;
 
+    use crate::domain::prescriptions::models::NewPrescribedDrug;
+
     use super::{NewPrescription, NewPrescriptionValidationError, PrescriptionType};
 
     #[test]
     fn creates_prescription() {
         let doctor_id = Uuid::new_v4();
         let patient_id = Uuid::new_v4();
+        let new_prescribed_drug = NewPrescribedDrug {
+            drug_id: Uuid::new_v4(),
+            quantity: 1,
+        };
 
-        let sut = NewPrescription::new(doctor_id, patient_id, None, None);
+        let sut = NewPrescription::new(
+            doctor_id,
+            patient_id,
+            None,
+            None,
+            vec![new_prescribed_drug.clone()],
+        )
+        .unwrap();
 
         assert_eq!(sut.doctor_id, doctor_id);
         assert_eq!(sut.patient_id, patient_id);
-        assert_eq!(sut.prescribed_drugs, vec![]);
+        assert_eq!(sut.prescribed_drugs, vec![new_prescribed_drug]);
         assert_eq!(sut.prescription_type, PrescriptionType::Regular);
     }
 
     #[test]
     fn generates_random_8_digit_code_on_creation() {
-        let sut = NewPrescription::new(Uuid::new_v4(), Uuid::new_v4(), None, None);
+        let sut = NewPrescription::new(
+            Uuid::new_v4(),
+            Uuid::new_v4(),
+            None,
+            None,
+            vec![NewPrescribedDrug {
+                drug_id: Uuid::new_v4(),
+                quantity: 1,
+            }],
+        )
+        .unwrap();
 
         assert_eq!(sut.code.len(), 8);
         assert!(sut.code.chars().all(char::is_numeric));
@@ -128,7 +144,12 @@ mod tests {
             Uuid::new_v4(),
             Some(now),
             Some(PrescriptionType::Regular),
-        );
+            vec![NewPrescribedDrug {
+                drug_id: Uuid::new_v4(),
+                quantity: 1,
+            }],
+        )
+        .unwrap();
 
         assert_eq!(sut.prescription_type, PrescriptionType::Regular);
         assert_eq!(sut.start_date, now);
@@ -144,7 +165,12 @@ mod tests {
             Uuid::new_v4(),
             Some(now),
             Some(PrescriptionType::ForAntibiotics),
-        );
+            vec![NewPrescribedDrug {
+                drug_id: Uuid::new_v4(),
+                quantity: 1,
+            }],
+        )
+        .unwrap();
 
         assert_eq!(sut.prescription_type, PrescriptionType::ForAntibiotics);
         assert_eq!(sut.start_date, now);
@@ -160,7 +186,12 @@ mod tests {
             Uuid::new_v4(),
             Some(now),
             Some(PrescriptionType::ForImmunologicalDrugs),
-        );
+            vec![NewPrescribedDrug {
+                drug_id: Uuid::new_v4(),
+                quantity: 1,
+            }],
+        )
+        .unwrap();
 
         assert_eq!(
             sut.prescription_type,
@@ -180,7 +211,12 @@ mod tests {
             Uuid::new_v4(),
             Some(now),
             Some(PrescriptionType::ForChronicDiseaseDrugs),
-        );
+            vec![NewPrescribedDrug {
+                drug_id: Uuid::new_v4(),
+                quantity: 1,
+            }],
+        )
+        .unwrap();
 
         assert_eq!(
             sut.prescription_type,
@@ -193,23 +229,47 @@ mod tests {
     #[test]
     fn adds_prescribed_drug_to_prescription() {
         let drug_id = Uuid::new_v4();
-        let mut prescription = NewPrescription::new(Uuid::new_v4(), Uuid::new_v4(), None, None);
+        let prescription = NewPrescription::new(
+            Uuid::new_v4(),
+            Uuid::new_v4(),
+            None,
+            None,
+            vec![NewPrescribedDrug {
+                drug_id,
+                quantity: 2,
+            }],
+        )
+        .unwrap();
 
-        prescription.add_drug(drug_id, 2).unwrap();
-        let sut = prescription.prescribed_drugs;
-
-        let prescribed_drug = sut.get(0).unwrap();
-        assert_eq!(prescribed_drug.drug_id, drug_id);
-        assert_eq!(prescribed_drug.quantity, 2);
+        let sut = prescription.prescribed_drugs.get(0).unwrap();
+        assert_eq!(sut.drug_id, drug_id);
+        assert_eq!(sut.quantity, 2);
     }
 
     #[test]
     fn adds_multiple_drugs_to_prescription() {
-        let mut prescription = NewPrescription::new(Uuid::new_v4(), Uuid::new_v4(), None, None);
+        let prescription = NewPrescription::new(
+            Uuid::new_v4(),
+            Uuid::new_v4(),
+            None,
+            None,
+            vec![
+                NewPrescribedDrug {
+                    drug_id: Uuid::new_v4(),
+                    quantity: 1,
+                },
+                NewPrescribedDrug {
+                    drug_id: Uuid::new_v4(),
+                    quantity: 2,
+                },
+                NewPrescribedDrug {
+                    drug_id: Uuid::new_v4(),
+                    quantity: 3,
+                },
+            ],
+        )
+        .unwrap();
 
-        prescription.add_drug(Uuid::new_v4(), 1).unwrap();
-        prescription.add_drug(Uuid::new_v4(), 2).unwrap();
-        prescription.add_drug(Uuid::new_v4(), 3).unwrap();
         let sut = prescription.prescribed_drugs;
 
         assert_eq!(sut.len(), 3);
@@ -218,9 +278,17 @@ mod tests {
     #[test]
     fn cant_add_drug_with_zero_quantity() {
         let drug_id = Uuid::new_v4();
-        let mut prescription = NewPrescription::new(Uuid::new_v4(), Uuid::new_v4(), None, None);
 
-        let sut = prescription.add_drug(drug_id, 0);
+        let sut = NewPrescription::new(
+            Uuid::new_v4(),
+            Uuid::new_v4(),
+            None,
+            None,
+            vec![NewPrescribedDrug {
+                drug_id,
+                quantity: 0,
+            }],
+        );
 
         let expected_err = NewPrescriptionValidationError::InvalidDrugQuantity(drug_id);
         assert_eq!(sut.unwrap_err().downcast_ref(), Some(&expected_err));
@@ -229,30 +297,31 @@ mod tests {
     #[test]
     fn cant_add_two_drugs_with_the_same_id() {
         let drug_id = Uuid::new_v4();
-        let mut prescription = NewPrescription::new(Uuid::new_v4(), Uuid::new_v4(), None, None);
 
-        prescription.add_drug(drug_id, 1).unwrap();
-        let sut = prescription.add_drug(drug_id, 2);
+        let sut = NewPrescription::new(
+            Uuid::new_v4(),
+            Uuid::new_v4(),
+            None,
+            None,
+            vec![
+                NewPrescribedDrug {
+                    drug_id,
+                    quantity: 1,
+                },
+                NewPrescribedDrug {
+                    drug_id,
+                    quantity: 2,
+                },
+            ],
+        );
 
         let expected_err = NewPrescriptionValidationError::DuplicateDrugId(drug_id);
         assert_eq!(sut.unwrap_err().downcast_ref(), Some(&expected_err));
     }
 
     #[test]
-    fn passes_validation_when_more_than_one_drug_is_prescribed() {
-        let mut prescription = NewPrescription::new(Uuid::new_v4(), Uuid::new_v4(), None, None);
-        prescription.add_drug(Uuid::new_v4(), 1).unwrap();
-
-        let sut = prescription.validate();
-
-        assert!(sut.is_ok());
-    }
-
-    #[test]
-    fn doesnt_pass_validation_when_no_drugs_are_added_to_prescription() {
-        let prescription = NewPrescription::new(Uuid::new_v4(), Uuid::new_v4(), None, None);
-
-        let sut = prescription.validate();
+    fn doesnt_create_prescription_when_no_drugs_are_added_to_prescription() {
+        let sut = NewPrescription::new(Uuid::new_v4(), Uuid::new_v4(), None, None, vec![]);
 
         let expected_err = NewPrescriptionValidationError::NoPrescribedDrugs;
         assert_eq!(sut.unwrap_err().downcast_ref(), Some(&expected_err));

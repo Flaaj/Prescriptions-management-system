@@ -47,13 +47,19 @@ pub struct InMemoryPrescriptionsRepository {
 
 impl InMemoryPrescriptionsRepository {
     #[allow(dead_code)]
-    pub fn new() -> Self {
+    pub fn new(
+        initial_prescriptions: Option<Vec<Prescription>>,
+        initial_doctors: Option<Vec<Doctor>>,
+        initial_patients: Option<Vec<Patient>>,
+        initial_pharmacists: Option<Vec<Pharmacist>>,
+        initial_drugs: Option<Vec<Drug>>,
+    ) -> Self {
         Self {
-            prescriptions: RwLock::new(Vec::new()),
-            doctors: RwLock::new(Vec::new()),
-            drugs: RwLock::new(Vec::new()),
-            patients: RwLock::new(Vec::new()),
-            pharmacists: RwLock::new(Vec::new()),
+            prescriptions: RwLock::new(initial_prescriptions.unwrap_or(Vec::new())),
+            doctors: RwLock::new(initial_doctors.unwrap_or(Vec::new())),
+            drugs: RwLock::new(initial_drugs.unwrap_or(Vec::new())),
+            patients: RwLock::new(initial_patients.unwrap_or(Vec::new())),
+            pharmacists: RwLock::new(initial_pharmacists.unwrap_or(Vec::new())),
         }
     }
 }
@@ -222,7 +228,7 @@ mod tests {
             repository::{InMemoryPharmacistsRepository, PharmacistsRepository},
         },
         prescriptions::{
-            models::NewPrescription,
+            models::{NewPrescribedDrug, NewPrescription},
             repository::{InMemoryPrescriptionsRepository, PrescriptionsRepository},
         },
     };
@@ -301,7 +307,7 @@ mod tests {
     }
 
     async fn setup_repository() -> (InMemoryPrescriptionsRepository, DatabaseSeeds) {
-        let repository = InMemoryPrescriptionsRepository::new();
+        let repository = InMemoryPrescriptionsRepository::new(None, None, None, None, None);
         let seeds = seed_in_memory_database(&repository).await.unwrap();
         (repository, seeds)
     }
@@ -310,11 +316,31 @@ mod tests {
     async fn creates_and_reads_prescriptions_from_database() {
         let (repository, seeds) = setup_repository().await;
 
-        let mut new_prescription =
-            NewPrescription::new(seeds.doctor.id, seeds.patient.id, None, None);
-        for i in 0..4 {
-            new_prescription.add_drug(seeds.drugs[i].id, 1).unwrap();
-        }
+        let new_prescription = NewPrescription::new(
+            seeds.doctor.id,
+            seeds.patient.id,
+            None,
+            None,
+            vec![
+                NewPrescribedDrug {
+                    drug_id: seeds.drugs[0].id,
+                    quantity: 1,
+                },
+                NewPrescribedDrug {
+                    drug_id: seeds.drugs[1].id,
+                    quantity: 1,
+                },
+                NewPrescribedDrug {
+                    drug_id: seeds.drugs[2].id,
+                    quantity: 1,
+                },
+                NewPrescribedDrug {
+                    drug_id: seeds.drugs[3].id,
+                    quantity: 1,
+                },
+            ],
+        )
+        .unwrap();
 
         repository
             .create_prescription(new_prescription.clone())
@@ -322,9 +348,17 @@ mod tests {
             .unwrap();
 
         for _ in 0..10 {
-            let mut another_prescription =
-                NewPrescription::new(seeds.doctor.id, seeds.patient.id, None, None);
-            another_prescription.add_drug(seeds.drugs[0].id, 1).unwrap();
+            let another_prescription = NewPrescription::new(
+                seeds.doctor.id,
+                seeds.patient.id,
+                None,
+                None,
+                vec![NewPrescribedDrug {
+                    drug_id: seeds.drugs[0].id,
+                    quantity: 1,
+                }],
+            )
+            .unwrap();
             repository
                 .create_prescription(another_prescription)
                 .await
@@ -350,11 +384,23 @@ mod tests {
     async fn creates_and_reads_prescription_by_id() {
         let (repository, seeds) = setup_repository().await;
 
-        let mut new_prescription =
-            NewPrescription::new(seeds.doctor.id, seeds.patient.id, None, None);
-        for i in 0..2 {
-            new_prescription.add_drug(seeds.drugs[i].id, 1).unwrap();
-        }
+        let new_prescription = NewPrescription::new(
+            seeds.doctor.id,
+            seeds.patient.id,
+            None,
+            None,
+            vec![
+                NewPrescribedDrug {
+                    drug_id: seeds.drugs[0].id,
+                    quantity: 1,
+                },
+                NewPrescribedDrug {
+                    drug_id: seeds.drugs[1].id,
+                    quantity: 1,
+                },
+            ],
+        )
+        .unwrap();
 
         repository
             .create_prescription(new_prescription.clone())
@@ -373,33 +419,51 @@ mod tests {
     async fn doesnt_create_prescription_if_relations_dont_exist() {
         let (repository, seeds) = setup_repository().await;
 
-        let mut new_prescription_with_nonexisting_doctor_id =
-            NewPrescription::new(Uuid::new_v4(), seeds.doctor.id, None, None);
-        new_prescription_with_nonexisting_doctor_id
-            .add_drug(seeds.drugs[0].id, 1)
-            .unwrap();
+        let new_prescription_with_nonexisting_doctor_id = NewPrescription::new(
+            Uuid::new_v4(),
+            seeds.doctor.id,
+            None,
+            None,
+            vec![NewPrescribedDrug {
+                drug_id: seeds.drugs[0].id,
+                quantity: 1,
+            }],
+        )
+        .unwrap();
 
         assert!(repository
             .create_prescription(new_prescription_with_nonexisting_doctor_id)
             .await
             .is_err());
 
-        let mut new_prescription_with_nonexisting_patient_id =
-            NewPrescription::new(seeds.patient.id, Uuid::new_v4(), None, None);
-        new_prescription_with_nonexisting_patient_id
-            .add_drug(seeds.drugs[0].id, 1)
-            .unwrap();
+        let new_prescription_with_nonexisting_patient_id = NewPrescription::new(
+            seeds.patient.id,
+            Uuid::new_v4(),
+            None,
+            None,
+            vec![NewPrescribedDrug {
+                drug_id: seeds.drugs[0].id,
+                quantity: 1,
+            }],
+        )
+        .unwrap();
 
         assert!(repository
             .create_prescription(new_prescription_with_nonexisting_patient_id)
             .await
             .is_err());
 
-        let mut new_prescription_with_nonexisting_drug_id =
-            NewPrescription::new(seeds.doctor.id, seeds.patient.id, None, None);
-        new_prescription_with_nonexisting_drug_id
-            .add_drug(Uuid::new_v4(), 1)
-            .unwrap();
+        let new_prescription_with_nonexisting_drug_id = NewPrescription::new(
+            seeds.doctor.id,
+            seeds.patient.id,
+            None,
+            None,
+            vec![NewPrescribedDrug {
+                drug_id: Uuid::new_v4(),
+                quantity: 1,
+            }],
+        )
+        .unwrap();
 
         assert!(repository
             .create_prescription(new_prescription_with_nonexisting_drug_id)
@@ -421,8 +485,17 @@ mod tests {
     async fn fills_prescription_and_saves_to_database() {
         let (repository, seeds) = setup_repository().await;
 
-        let mut prescription = NewPrescription::new(seeds.doctor.id, seeds.patient.id, None, None);
-        prescription.add_drug(seeds.drugs[0].id, 1).unwrap();
+        let prescription = NewPrescription::new(
+            seeds.doctor.id,
+            seeds.patient.id,
+            None,
+            None,
+            vec![NewPrescribedDrug {
+                drug_id: seeds.drugs[0].id,
+                quantity: 1,
+            }],
+        )
+        .unwrap();
 
         repository
             .create_prescription(prescription.clone())
@@ -456,11 +529,24 @@ mod tests {
     async fn doesnt_fill_if_pharmacist_relation_doesnt_exist() {
         let (repository, seeds) = setup_repository().await;
 
-        let mut new_prescription =
-            NewPrescription::new(seeds.doctor.id, seeds.patient.id, None, None);
-        for i in 0..2 {
-            new_prescription.add_drug(seeds.drugs[i].id, 1).unwrap();
-        }
+        let new_prescription = NewPrescription::new(
+            seeds.doctor.id,
+            seeds.patient.id,
+            None,
+            None,
+            vec![
+                NewPrescribedDrug {
+                    drug_id: seeds.drugs[0].id,
+                    quantity: 1,
+                },
+                NewPrescribedDrug {
+                    drug_id: seeds.drugs[1].id,
+                    quantity: 1,
+                },
+            ],
+        )
+        .unwrap();
+
         let prescription_from_db = repository
             .create_prescription(new_prescription.clone())
             .await
