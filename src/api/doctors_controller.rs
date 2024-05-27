@@ -1,6 +1,9 @@
 use crate::{
     domain::doctors::{
         models::Doctor,
+        repository::{
+            CreateDoctorRepositoryError, GetDoctorByIdRepositoryError, GetDoctorsRepositoryError,
+        },
         service::{CreateDoctorError, GetDoctorByIdError, GetDoctorWithPaginationError},
     },
     Ctx,
@@ -48,13 +51,22 @@ impl<'r> Responder<'r, 'static> for CreateDoctorError {
             CreateDoctorError::DomainError(message) => Response::build()
                 .sized_body(message.len(), std::io::Cursor::new(message))
                 .header(ContentType::JSON)
-                .status(Status::BadRequest)
+                .status(Status::UnprocessableEntity)
                 .ok(),
-            CreateDoctorError::RepositoryError(message) => Response::build()
-                .sized_body(message.len(), std::io::Cursor::new(message))
-                .header(ContentType::JSON)
-                .status(Status::BadRequest)
-                .ok(),
+            CreateDoctorError::RepositoryError(repository_err) => {
+                let message = repository_err.to_string();
+                Response::build()
+                    .sized_body(message.len(), std::io::Cursor::new(message))
+                    .header(ContentType::JSON)
+                    .status(match repository_err {
+                        CreateDoctorRepositoryError::DuplicatedPeselNumber => Status::Conflict,
+                        CreateDoctorRepositoryError::DuplicatedPwzNumber => Status::Conflict,
+                        CreateDoctorRepositoryError::DatabaseError(_) => {
+                            Status::InternalServerError
+                        }
+                    })
+                    .ok()
+            }
         }
     }
 }
@@ -65,17 +77,27 @@ impl OpenApiResponderInner for CreateDoctorError {
 
         let mut responses = Map::new();
         responses.insert(
-            "400".to_string(),
+            "421".to_string(),
             RefOr::Object(OpenApiReponse {
-                description: "Returned when the pwz_number or the pesel_number are either incorrect or already exist in the database, or the name has incorrect format"
-                    .to_string(),
+                description:
+                    "Returned when the name, the pesel_number or the pwz_number are incorrect"
+                        .to_string(),
                 ..Default::default()
             }),
         );
         responses.insert(
-            "422".to_string(),
+            "409".to_string(),
             RefOr::Object(OpenApiReponse {
-                description: "Returned when the request body is incorrect".to_string(),
+                description:
+                    "Returned when the pwz_number or the pesel_number exist in the database"
+                        .to_string(),
+                ..Default::default()
+            }),
+        );
+        responses.insert(
+            "500".to_string(),
+            RefOr::Object(OpenApiReponse {
+                description: "Unexpected server error - please contact developer".to_string(),
                 ..Default::default()
             }),
         );
@@ -112,12 +134,17 @@ impl<'r> Responder<'r, 'static> for GetDoctorByIdError {
                     .status(Status::UnprocessableEntity)
                     .ok()
             }
-            GetDoctorByIdError::NotFoundError => {
-                let message = "Doctor with given id doesn't exist";
+            GetDoctorByIdError::RepositoryError(repository_err) => {
+                let message = repository_err.to_string();
                 Response::build()
                     .sized_body(message.len(), std::io::Cursor::new(message))
                     .header(ContentType::JSON)
-                    .status(Status::NotFound)
+                    .status(match repository_err {
+                        GetDoctorByIdRepositoryError::NotFound(_) => Status::NotFound,
+                        GetDoctorByIdRepositoryError::DatabaseError(_) => {
+                            Status::InternalServerError
+                        }
+                    })
                     .ok()
             }
         }
@@ -143,6 +170,13 @@ impl OpenApiResponderInner for GetDoctorByIdError {
                 ..Default::default()
             }),
         );
+        responses.insert(
+            "500".to_string(),
+            RefOr::Object(OpenApiReponse {
+                description: "Unexpected server error - please contact developer".to_string(),
+                ..Default::default()
+            }),
+        );
         Ok(Responses {
             responses,
             ..Default::default()
@@ -164,11 +198,17 @@ pub async fn get_doctor_by_id(
 impl<'r> Responder<'r, 'static> for GetDoctorWithPaginationError {
     fn respond_to(self, _: &'r Request<'_>) -> rocket::response::Result<'static> {
         match self {
-            GetDoctorWithPaginationError::DomainError(message) => Response::build()
-                .sized_body(message.len(), std::io::Cursor::new(message))
-                .header(ContentType::JSON)
-                .status(Status::BadRequest)
-                .ok(),
+            Self::RepositoryError(repository_err) => {
+                let message = repository_err.to_string();
+                Response::build()
+                    .sized_body(message.len(), std::io::Cursor::new(message))
+                    .header(ContentType::JSON)
+                    .status(match repository_err {
+                        GetDoctorsRepositoryError::InvalidPaginationParams(_) => Status::BadRequest,
+                        GetDoctorsRepositoryError::DatabaseError(_) => Status::InternalServerError,
+                    })
+                    .ok()
+            }
         }
     }
 }
@@ -182,6 +222,13 @@ impl OpenApiResponderInner for GetDoctorWithPaginationError {
             "400".to_string(),
             RefOr::Object(OpenApiReponse {
                 description: "Returned when the the page < 0 or page_size < 1".to_string(),
+                ..Default::default()
+            }),
+        );
+        responses.insert(
+            "500".to_string(),
+            RefOr::Object(OpenApiReponse {
+                description: "Unexpected server error - please contact developer".to_string(),
                 ..Default::default()
             }),
         );
@@ -283,7 +330,7 @@ mod tests {
     }
 
     #[sqlx::test]
-    async fn create_doctor_returns_bad_request_if_body_has_incorrect_value_incorrect(
+    async fn create_doctor_returns_unprocessable_entity_if_body_has_incorrect_value_incorrect(
         pool: sqlx::PgPool,
     ) {
         let client = create_api_client(pool).await;
@@ -294,11 +341,11 @@ mod tests {
         request_with_incorrect_value.add_header(ContentType::JSON);
         let response = request_with_incorrect_value.dispatch().await;
 
-        assert_eq!(response.status(), Status::BadRequest);
+        assert_eq!(response.status(), Status::UnprocessableEntity);
     }
 
     #[sqlx::test]
-    async fn create_doctor_returns_bad_request_if_pwz_or_pesel_numbers_are_duplicated(
+    async fn create_doctor_returns_conflict_if_pwz_or_pesel_numbers_are_duplicated(
         pool: sqlx::PgPool,
     ) {
         let client = create_api_client(pool).await;
@@ -315,7 +362,7 @@ mod tests {
             .header(ContentType::JSON);
         let response = request_with_duplicated_pesel.dispatch().await;
 
-        assert_eq!(response.status(), Status::BadRequest);
+        assert_eq!(response.status(), Status::Conflict);
 
         let request_with_duplicated_pwz = client
             .post("/doctors")
@@ -323,7 +370,7 @@ mod tests {
             .header(ContentType::JSON);
         let response = request_with_duplicated_pwz.dispatch().await;
 
-        assert_eq!(response.status(), Status::BadRequest);
+        assert_eq!(response.status(), Status::Conflict);
     }
 
     #[sqlx::test]

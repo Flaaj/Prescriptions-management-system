@@ -1,24 +1,27 @@
 use super::{
     models::{Doctor, NewDoctor},
-    repository::DoctorsRepository,
+    repository::{
+        CreateDoctorRepositoryError, DoctorsRepository, GetDoctorByIdRepositoryError,
+        GetDoctorsRepositoryError,
+    },
 };
 use uuid::Uuid;
 
 #[derive(Debug)]
 pub enum CreateDoctorError {
     DomainError(String),
-    RepositoryError(String),
+    RepositoryError(CreateDoctorRepositoryError),
 }
 
 #[derive(Debug)]
 pub enum GetDoctorByIdError {
     DomainError,
-    NotFoundError,
+    RepositoryError(GetDoctorByIdRepositoryError),
 }
 
 #[derive(Debug)]
 pub enum GetDoctorWithPaginationError {
-    DomainError(String),
+    RepositoryError(GetDoctorsRepositoryError),
 }
 
 #[derive(Clone)]
@@ -44,7 +47,7 @@ impl<R: DoctorsRepository> DoctorsService<R> {
             .repository
             .create_doctor(new_doctor)
             .await
-            .map_err(|err| CreateDoctorError::RepositoryError(err.to_string()))?;
+            .map_err(|err| CreateDoctorError::RepositoryError(err))?;
 
         Ok(created_doctor)
     }
@@ -54,7 +57,7 @@ impl<R: DoctorsRepository> DoctorsService<R> {
             .repository
             .get_doctor_by_id(doctor_id)
             .await
-            .map_err(|_| GetDoctorByIdError::NotFoundError)?;
+            .map_err(|err| GetDoctorByIdError::RepositoryError(err))?;
 
         Ok(doctor)
     }
@@ -68,7 +71,7 @@ impl<R: DoctorsRepository> DoctorsService<R> {
             .repository
             .get_doctors(page, page_size)
             .await
-            .map_err(|err| GetDoctorWithPaginationError::DomainError(err.to_string()))?;
+            .map_err(|err| GetDoctorWithPaginationError::RepositoryError(err))?;
 
         Ok(doctors)
     }

@@ -7,15 +7,45 @@ use chrono::Utc;
 use std::sync::RwLock;
 use uuid::Uuid;
 
+#[derive(thiserror::Error, Debug, PartialEq)]
+pub enum CreateDoctorRepositoryError {
+    #[error("PWZ number already exists")]
+    DuplicatedPwzNumber,
+    #[error("PESEL number already exists")]
+    DuplicatedPeselNumber,
+    #[error("Database error: {0}")]
+    DatabaseError(String),
+}
+
+#[derive(thiserror::Error, Debug, PartialEq)]
+pub enum GetDoctorsRepositoryError {
+    #[error("Invalid pagination parameters: {0}")]
+    InvalidPaginationParams(String),
+    #[error("Database error: {0}")]
+    DatabaseError(String),
+}
+
+#[derive(thiserror::Error, Debug, PartialEq)]
+pub enum GetDoctorByIdRepositoryError {
+    #[error("Doctor with this id not found ({0})")]
+    NotFound(Uuid),
+    #[error("Database error: {0}")]
+    DatabaseError(String),
+}
+
 #[async_trait]
 pub trait DoctorsRepository {
-    async fn create_doctor(&self, doctor: NewDoctor) -> anyhow::Result<Doctor>;
+    async fn create_doctor(&self, doctor: NewDoctor)
+        -> Result<Doctor, CreateDoctorRepositoryError>;
     async fn get_doctors(
         &self,
         page: Option<i64>,
         page_size: Option<i64>,
-    ) -> anyhow::Result<Vec<Doctor>>;
-    async fn get_doctor_by_id(&self, doctor_id: Uuid) -> anyhow::Result<Doctor>;
+    ) -> Result<Vec<Doctor>, GetDoctorsRepositoryError>;
+    async fn get_doctor_by_id(
+        &self,
+        doctor_id: Uuid,
+    ) -> Result<Doctor, GetDoctorByIdRepositoryError>;
 }
 
 /// Used to test the service layer in isolation
@@ -34,14 +64,17 @@ impl InMemoryDoctorsRepository {
 
 #[async_trait]
 impl DoctorsRepository for InMemoryDoctorsRepository {
-    async fn create_doctor(&self, new_doctor: NewDoctor) -> anyhow::Result<Doctor> {
-        let does_pwz_or_pesel_number_exist = self.doctors.read().unwrap().iter().any(|doctor| {
-            doctor.pwz_number == new_doctor.pwz_number
-                || doctor.pesel_number == new_doctor.pesel_number
-        });
-
-        if does_pwz_or_pesel_number_exist {
-            return Err(anyhow::anyhow!("PWZ or PESEL number already exists"));
+    async fn create_doctor(
+        &self,
+        new_doctor: NewDoctor,
+    ) -> Result<Doctor, CreateDoctorRepositoryError> {
+        for doctor in self.doctors.read().unwrap().iter() {
+            if doctor.pwz_number == new_doctor.pwz_number {
+                return Err(CreateDoctorRepositoryError::DuplicatedPwzNumber);
+            }
+            if doctor.pesel_number == new_doctor.pesel_number {
+                return Err(CreateDoctorRepositoryError::DuplicatedPeselNumber);
+            }
         }
 
         let doctor = Doctor {
@@ -62,8 +95,9 @@ impl DoctorsRepository for InMemoryDoctorsRepository {
         &self,
         page: Option<i64>,
         page_size: Option<i64>,
-    ) -> anyhow::Result<Vec<Doctor>> {
-        let (page_size, offset) = get_pagination_params(page, page_size)?;
+    ) -> Result<Vec<Doctor>, GetDoctorsRepositoryError> {
+        let (page_size, offset) = get_pagination_params(page, page_size)
+            .map_err(|err| GetDoctorsRepositoryError::InvalidPaginationParams(err.to_string()))?;
         let a = offset;
         let b = offset + page_size;
 
@@ -78,7 +112,10 @@ impl DoctorsRepository for InMemoryDoctorsRepository {
         Ok(doctors)
     }
 
-    async fn get_doctor_by_id(&self, doctor_id: Uuid) -> anyhow::Result<Doctor> {
+    async fn get_doctor_by_id(
+        &self,
+        doctor_id: Uuid,
+    ) -> Result<Doctor, GetDoctorByIdRepositoryError> {
         match self
             .doctors
             .read()
@@ -87,7 +124,7 @@ impl DoctorsRepository for InMemoryDoctorsRepository {
             .find(|doctor| doctor.id == doctor_id)
         {
             Some(doctor) => Ok(doctor.clone()),
-            None => Err(anyhow::anyhow!("Doctor not found")),
+            None => Err(GetDoctorByIdRepositoryError::NotFound(doctor_id)),
         }
     }
 }
@@ -98,7 +135,16 @@ mod tests {
     use uuid::Uuid;
 
     use super::InMemoryDoctorsRepository;
-    use crate::domain::doctors::{models::NewDoctor, repository::DoctorsRepository};
+    use crate::domain::{
+        doctors::{
+            models::NewDoctor,
+            repository::{
+                CreateDoctorRepositoryError, DoctorsRepository, GetDoctorByIdRepositoryError,
+                GetDoctorsRepositoryError,
+            },
+        },
+        utils::pagination::PaginationError,
+    };
 
     async fn setup_repository() -> InMemoryDoctorsRepository {
         InMemoryDoctorsRepository::new()
@@ -121,10 +167,14 @@ mod tests {
     #[tokio::test]
     async fn returns_error_if_doctor_with_given_id_doesnt_exist() {
         let repository = setup_repository().await;
+        let doctor_id = Uuid::new_v4();
 
-        let doctor_from_repo = repository.get_doctor_by_id(Uuid::new_v4()).await;
+        let doctor_from_repo = repository.get_doctor_by_id(doctor_id).await;
 
-        assert!(doctor_from_repo.is_err());
+        assert_eq!(
+            doctor_from_repo,
+            Err(GetDoctorByIdRepositoryError::NotFound(doctor_id))
+        );
     }
 
     #[tokio::test]
@@ -182,6 +232,25 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn get_doctors_returns_error_if_pagination_params_are_incorrect() {
+        let repository = setup_repository().await;
+
+        assert_eq!(
+            repository.get_doctors(Some(-1), Some(10)).await,
+            Err(GetDoctorsRepositoryError::InvalidPaginationParams(
+                PaginationError::InvalidPageOrPageSize.to_string()
+            ))
+        );
+
+        assert_eq!(
+            repository.get_doctors(Some(0), Some(0)).await,
+            Err(GetDoctorsRepositoryError::InvalidPaginationParams(
+                PaginationError::InvalidPageOrPageSize.to_string()
+            ))
+        );
+    }
+
+    #[tokio::test]
     async fn doesnt_create_doctor_if_pwz_or_pesel_numbers_are_duplicated() {
         let repository = setup_repository().await;
 
@@ -193,17 +262,21 @@ mod tests {
         let doctor_with_duplicated_pwz_number =
             NewDoctor::new("John Doe".into(), "5425740".into(), "99031301347".into()).unwrap();
 
-        assert!(repository
-            .create_doctor(doctor_with_duplicated_pwz_number)
-            .await
-            .is_err());
+        assert_eq!(
+            repository
+                .create_doctor(doctor_with_duplicated_pwz_number)
+                .await,
+            Err(CreateDoctorRepositoryError::DuplicatedPwzNumber)
+        );
 
         let doctor_with_duplicated_pesel_number =
             NewDoctor::new("John Doe".into(), "3123456".into(), "96021817257".into()).unwrap();
 
-        assert!(repository
-            .create_doctor(doctor_with_duplicated_pesel_number)
-            .await
-            .is_err());
+        assert_eq!(
+            repository
+                .create_doctor(doctor_with_duplicated_pesel_number)
+                .await,
+            Err(CreateDoctorRepositoryError::DuplicatedPeselNumber)
+        );
     }
 }
