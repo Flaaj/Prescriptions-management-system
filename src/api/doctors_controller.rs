@@ -47,27 +47,24 @@ pub struct CreateDoctorDto {
 
 impl<'r> Responder<'r, 'static> for CreateDoctorError {
     fn respond_to(self, _: &'r Request<'_>) -> rocket::response::Result<'static> {
-        match self {
-            CreateDoctorError::DomainError(message) => Response::build()
-                .sized_body(message.len(), std::io::Cursor::new(message))
-                .header(ContentType::JSON)
-                .status(Status::UnprocessableEntity)
-                .ok(),
-            CreateDoctorError::RepositoryError(repository_err) => {
+        let (message, status) = match self {
+            Self::DomainError(message) => (message, Status::UnprocessableEntity),
+            Self::RepositoryError(repository_err) => {
                 let message = repository_err.to_string();
-                Response::build()
-                    .sized_body(message.len(), std::io::Cursor::new(message))
-                    .header(ContentType::JSON)
-                    .status(match repository_err {
-                        CreateDoctorRepositoryError::DuplicatedPeselNumber => Status::Conflict,
-                        CreateDoctorRepositoryError::DuplicatedPwzNumber => Status::Conflict,
-                        CreateDoctorRepositoryError::DatabaseError(_) => {
-                            Status::InternalServerError
-                        }
-                    })
-                    .ok()
+                let status = match repository_err {
+                    CreateDoctorRepositoryError::DuplicatedPeselNumber => Status::Conflict,
+                    CreateDoctorRepositoryError::DuplicatedPwzNumber => Status::Conflict,
+                    CreateDoctorRepositoryError::DatabaseError(_) => Status::InternalServerError,
+                };
+                (message, status)
             }
-        }
+        };
+
+        Response::build()
+            .sized_body(message.len(), std::io::Cursor::new(message))
+            .header(ContentType::JSON)
+            .status(status)
+            .ok()
     }
 }
 
@@ -125,21 +122,22 @@ pub async fn create_doctor(
 
 impl<'r> Responder<'r, 'static> for GetDoctorByIdError {
     fn respond_to(self, _: &'r Request<'_>) -> rocket::response::Result<'static> {
-        match self {
-            GetDoctorByIdError::RepositoryError(repository_err) => {
+        let (message, status) = match self {
+            Self::RepositoryError(repository_err) => {
                 let message = repository_err.to_string();
-                Response::build()
-                    .sized_body(message.len(), std::io::Cursor::new(message))
-                    .header(ContentType::JSON)
-                    .status(match repository_err {
-                        GetDoctorByIdRepositoryError::NotFound(_) => Status::NotFound,
-                        GetDoctorByIdRepositoryError::DatabaseError(_) => {
-                            Status::InternalServerError
-                        }
-                    })
-                    .ok()
+                let status = match repository_err {
+                    GetDoctorByIdRepositoryError::NotFound(_) => Status::NotFound,
+                    GetDoctorByIdRepositoryError::DatabaseError(_) => Status::InternalServerError,
+                };
+                (message, status)
             }
-        }
+        };
+
+        Response::build()
+            .sized_body(message.len(), std::io::Cursor::new(message))
+            .header(ContentType::JSON)
+            .status(status)
+            .ok()
     }
 }
 
@@ -189,19 +187,24 @@ pub async fn get_doctor_by_id(
 
 impl<'r> Responder<'r, 'static> for GetDoctorWithPaginationError {
     fn respond_to(self, _: &'r Request<'_>) -> rocket::response::Result<'static> {
-        match self {
+        let (message, status) = match self {
             Self::RepositoryError(repository_err) => {
                 let message = repository_err.to_string();
-                Response::build()
-                    .sized_body(message.len(), std::io::Cursor::new(message))
-                    .header(ContentType::JSON)
-                    .status(match repository_err {
-                        GetDoctorsRepositoryError::InvalidPaginationParams(_) => Status::BadRequest,
-                        GetDoctorsRepositoryError::DatabaseError(_) => Status::InternalServerError,
-                    })
-                    .ok()
+                let status = match repository_err {
+                    GetDoctorsRepositoryError::InvalidPaginationParams(_) => {
+                        Status::UnprocessableEntity
+                    }
+                    GetDoctorsRepositoryError::DatabaseError(_) => Status::InternalServerError,
+                };
+                (message, status)
             }
-        }
+        };
+
+        Response::build()
+            .sized_body(message.len(), std::io::Cursor::new(message))
+            .header(ContentType::JSON)
+            .status(status)
+            .ok()
     }
 }
 
@@ -428,5 +431,32 @@ mod tests {
         let doctors: Vec<Doctor> = json::from_str(&response.into_string().await.unwrap()).unwrap();
 
         assert_eq!(doctors.len(), 2);
+    }
+
+    #[sqlx::test]
+    fn get_doctors_with_pagination_returns_unprocessable_entity_if_page_or_page_size_is_invalid(
+        pool: sqlx::PgPool,
+    ) {
+        let client = create_api_client(pool).await;
+
+        assert_eq!(
+            client
+                .get("/doctors?page=-1")
+                .header(ContentType::JSON)
+                .dispatch()
+                .await
+                .status(),
+            Status::UnprocessableEntity
+        );
+
+        assert_eq!(
+            client
+                .get("/doctors?page_size=0")
+                .header(ContentType::JSON)
+                .dispatch()
+                .await
+                .status(),
+            Status::UnprocessableEntity
+        );
     }
 }
