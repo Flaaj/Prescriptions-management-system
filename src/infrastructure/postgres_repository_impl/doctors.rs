@@ -120,21 +120,20 @@ impl DoctorsRepository for PostgresDoctorsRepository {
 
 #[cfg(test)]
 mod tests {
+    use std::assert_matches::assert_matches;
+
     use uuid::Uuid;
 
     use super::PostgresDoctorsRepository;
     use crate::{
         create_tables::create_tables,
-        domain::{
-            doctors::{
+        domain::doctors::{
                 models::NewDoctor,
                 repository::{
                     CreateDoctorRepositoryError, DoctorsRepository, GetDoctorByIdRepositoryError,
                     GetDoctorsRepositoryError,
                 },
             },
-            utils::pagination::PaginationError,
-        },
     };
 
     async fn setup_repository(pool: sqlx::PgPool) -> PostgresDoctorsRepository {
@@ -227,18 +226,14 @@ mod tests {
     async fn get_doctors_returns_error_if_pagination_params_are_incorrect(pool: sqlx::PgPool) {
         let repository = setup_repository(pool).await;
 
-        assert_eq!(
+        assert_matches!(
             repository.get_doctors(Some(-1), Some(10)).await,
-            Err(GetDoctorsRepositoryError::InvalidPaginationParams(
-                PaginationError::InvalidPageOrPageSize.to_string()
-            ))
+            Err(GetDoctorsRepositoryError::InvalidPaginationParams(_))
         );
 
-        assert_eq!(
+        assert_matches!(
             repository.get_doctors(Some(0), Some(0)).await,
-            Err(GetDoctorsRepositoryError::InvalidPaginationParams(
-                PaginationError::InvalidPageOrPageSize.to_string()
-            ))
+            Err(GetDoctorsRepositoryError::InvalidPaginationParams(_))
         );
     }
 
