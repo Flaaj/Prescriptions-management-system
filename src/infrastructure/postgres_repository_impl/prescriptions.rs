@@ -496,13 +496,13 @@ mod tests {
         assert_eq!(prescriptions[0], new_prescription);
 
         let prescriptions = repository.get_prescriptions(None, Some(20)).await.unwrap();
-        assert!(prescriptions.len() == 11);
+        assert_eq!(prescriptions.len(), 11);
 
         let prescriptions = repository
             .get_prescriptions(Some(1), Some(10))
             .await
             .unwrap();
-        assert!(prescriptions.len() == 1);
+        assert_eq!(prescriptions.len(), 1);
     }
 
     #[sqlx::test]

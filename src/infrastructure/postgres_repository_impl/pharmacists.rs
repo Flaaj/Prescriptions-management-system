@@ -160,7 +160,7 @@ mod tests {
 
         let pharmacists = repository.get_pharmacists(None, Some(10)).await.unwrap();
 
-        assert!(pharmacists.len() == 4);
+        assert_eq!(pharmacists.len(), 4);
         assert_eq!(pharmacists[0], new_pharmacist_0);
         assert_eq!(pharmacists[1], new_pharmacist_1);
         assert_eq!(pharmacists[2], new_pharmacist_2);
@@ -174,12 +174,12 @@ mod tests {
 
         let pharmacists = repository.get_pharmacists(Some(1), Some(3)).await.unwrap();
 
-        assert!(pharmacists.len() == 1);
+        assert_eq!(pharmacists.len(), 1);
         assert_eq!(pharmacists[0], new_pharmacist_3);
 
         let pharmacists = repository.get_pharmacists(Some(2), Some(3)).await.unwrap();
 
-        assert!(pharmacists.len() == 0);
+        assert_eq!(pharmacists.len(), 0);
     }
 
     #[sqlx::test]

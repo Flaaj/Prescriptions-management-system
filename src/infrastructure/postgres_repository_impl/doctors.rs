@@ -201,7 +201,7 @@ mod tests {
 
         let doctors = repository.get_doctors(None, Some(10)).await.unwrap();
 
-        assert!(doctors.len() == 4);
+        assert_eq!(doctors.len(), 4);
         assert_eq!(doctors[0], new_doctor_0);
         assert_eq!(doctors[1], new_doctor_1);
         assert_eq!(doctors[2], new_doctor_2);
@@ -215,12 +215,12 @@ mod tests {
 
         let doctors = repository.get_doctors(Some(1), Some(3)).await.unwrap();
 
-        assert!(doctors.len() == 1);
+        assert_eq!(doctors.len(), 1);
         assert_eq!(doctors[0], new_doctor_3);
 
         let doctors = repository.get_doctors(Some(2), Some(3)).await.unwrap();
 
-        assert!(doctors.len() == 0);
+        assert_eq!(doctors.len(), 0);
     }
 
     #[sqlx::test]
