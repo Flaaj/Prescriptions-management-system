@@ -4,7 +4,10 @@ use uuid::Uuid;
 use crate::domain::{
     patients::{
         models::{NewPatient, Patient},
-        repository::PatientsRepository,
+        repository::{
+            CreatePatientRepositoryError, GetPatientByIdRepositoryError,
+            GetPatientsRepositoryError, PatientsRepository,
+        },
     },
     utils::pagination::get_pagination_params,
 };
@@ -21,7 +24,10 @@ impl PostgresPatientsRepository {
 
 #[async_trait]
 impl PatientsRepository for PostgresPatientsRepository {
-    async fn create_patient(&self, patient: NewPatient) -> anyhow::Result<Patient> {
+    async fn create_patient(
+        &self,
+        patient: NewPatient,
+    ) -> Result<Patient, CreatePatientRepositoryError> {
         let result = sqlx::query!(
             r#"INSERT INTO patients (id, name, pesel_number) VALUES ($1, $2, $3) RETURNING id, name, pesel_number, created_at, updated_at"#,
             patient.id,
@@ -29,7 +35,15 @@ impl PatientsRepository for PostgresPatientsRepository {
             patient.pesel_number
         )
         .fetch_one(&self.pool)
-        .await?;
+        .await
+        .map_err(
+            |err| match err {
+                sqlx::Error::Database(err) if err.message().contains("duplicate key value violates unique constraint \"patients_pesel_number_key\"") => {
+                    CreatePatientRepositoryError::DuplicatedPeselNumber
+                },
+                _ => CreatePatientRepositoryError::DatabaseError(err.to_string()),
+            },
+        )?;
 
         Ok(Patient {
             id: result.id,
@@ -44,8 +58,9 @@ impl PatientsRepository for PostgresPatientsRepository {
         &self,
         page: Option<i64>,
         page_size: Option<i64>,
-    ) -> anyhow::Result<Vec<Patient>> {
-        let (page_size, offset) = get_pagination_params(page, page_size)?;
+    ) -> Result<Vec<Patient>, GetPatientsRepositoryError> {
+        let (page_size, offset) = get_pagination_params(page, page_size)
+            .map_err(|err| GetPatientsRepositoryError::InvalidPaginationParams(err.to_string()))?;
 
         let patients_from_db = sqlx::query!(
             r#"SELECT id, name, pesel_number, created_at, updated_at FROM patients LIMIT $1 OFFSET $2"#,
@@ -53,7 +68,8 @@ impl PatientsRepository for PostgresPatientsRepository {
             offset
         )
         .fetch_all(&self.pool)
-        .await?;
+        .await
+        .map_err(|err| GetPatientsRepositoryError::DatabaseError(err.to_string()))?;
 
         let patients = patients_from_db
             .into_iter()
@@ -69,13 +85,20 @@ impl PatientsRepository for PostgresPatientsRepository {
         Ok(patients)
     }
 
-    async fn get_patient_by_id(&self, patient_id: Uuid) -> anyhow::Result<Patient> {
+    async fn get_patient_by_id(
+        &self,
+        patient_id: Uuid,
+    ) -> Result<Patient, GetPatientByIdRepositoryError> {
         let patient_from_db = sqlx::query!(
             r#"SELECT id, name, pesel_number, created_at, updated_at FROM patients WHERE id = $1"#,
             patient_id
         )
         .fetch_one(&self.pool)
-        .await?;
+        .await
+        .map_err(|err| match err {
+            sqlx::Error::RowNotFound => GetPatientByIdRepositoryError::NotFound(patient_id),
+            _ => GetPatientByIdRepositoryError::DatabaseError(err.to_string()),
+        })?;
 
         Ok(Patient {
             id: patient_from_db.id,
@@ -89,10 +112,18 @@ impl PatientsRepository for PostgresPatientsRepository {
 
 #[cfg(test)]
 mod tests {
+    use std::assert_matches::assert_matches;
+
     use super::PostgresPatientsRepository;
     use crate::{
         create_tables::create_tables,
-        domain::patients::{models::NewPatient, repository::PatientsRepository},
+        domain::patients::{
+            models::NewPatient,
+            repository::{
+                CreatePatientRepositoryError, GetPatientByIdRepositoryError,
+                GetPatientsRepositoryError, PatientsRepository,
+            },
+        },
     };
     use uuid::Uuid;
 
@@ -120,10 +151,11 @@ mod tests {
     #[sqlx::test]
     async fn returns_error_if_patients_with_given_id_doesnt_exist(pool: sqlx::PgPool) {
         let repository = setup_repository(pool).await;
+        let patient_id = Uuid::new_v4();
 
-        let patient_from_repo = repository.get_patient_by_id(Uuid::new_v4()).await;
+        let patient_from_repo = repository.get_patient_by_id(patient_id).await;
 
-        assert!(patient_from_repo.is_err());
+        assert_eq!(patient_from_repo, Err(GetPatientByIdRepositoryError::NotFound(patient_id)));
     }
 
     #[sqlx::test]
@@ -177,6 +209,21 @@ mod tests {
     }
 
     #[sqlx::test]
+    async fn get_patients_returns_error_if_pagination_params_are_incorrect(pool: sqlx::PgPool) {
+        let repository = setup_repository(pool).await;
+
+        assert_matches!(
+            repository.get_patients(Some(-1), Some(10)).await,
+            Err(GetPatientsRepositoryError::InvalidPaginationParams(_))
+        );
+
+        assert_matches!(
+            repository.get_patients(Some(0), Some(0)).await,
+            Err(GetPatientsRepositoryError::InvalidPaginationParams(_))
+        );
+    }
+
+    #[sqlx::test]
     async fn doesnt_create_patient_if_pesel_number_is_duplicated(pool: sqlx::PgPool) {
         let repository = setup_repository(pool).await;
 
@@ -185,9 +232,11 @@ mod tests {
 
         let patient_with_duplicated_pesel_number =
             NewPatient::new("John Doe".into(), "96021817257".into()).unwrap();
-        assert!(repository
-            .create_patient(patient_with_duplicated_pesel_number)
-            .await
-            .is_err());
+        assert_eq!(
+            repository
+                .create_patient(patient_with_duplicated_pesel_number)
+                .await,
+            Err(CreatePatientRepositoryError::DuplicatedPeselNumber)
+        )
     }
 }

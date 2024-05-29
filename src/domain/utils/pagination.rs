@@ -1,6 +1,6 @@
 #[derive(thiserror::Error, Debug, PartialEq)]
 pub enum PaginationError {
-    #[error("Invalid page_size: page_size must be at least 1")]
+    #[error("Invalid page size: page size must be at least 1")]
     InvalidPageSize,
     #[error("Invalid page: page must be at least 0")]
     InvalidPage,

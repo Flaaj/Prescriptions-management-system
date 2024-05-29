@@ -7,15 +7,45 @@ use chrono::Utc;
 use std::sync::RwLock;
 use uuid::Uuid;
 
+#[derive(thiserror::Error, Debug, PartialEq)]
+pub enum CreatePatientRepositoryError {
+    #[error("PESEL number already exists")]
+    DuplicatedPeselNumber,
+    #[error("Database error: {0}")]
+    DatabaseError(String),
+}
+
+#[derive(thiserror::Error, Debug, PartialEq)]
+pub enum GetPatientsRepositoryError {
+    #[error("Invalid pagination parameters: {0}")]
+    InvalidPaginationParams(String),
+    #[error("Database error: {0}")]
+    DatabaseError(String),
+}
+
+#[derive(thiserror::Error, Debug, PartialEq)]
+pub enum GetPatientByIdRepositoryError {
+    #[error("Patient with this id not found ({0})")]
+    NotFound(Uuid),
+    #[error("Database error: {0}")]
+    DatabaseError(String),
+}
+
 #[async_trait]
 pub trait PatientsRepository {
-    async fn create_patient(&self, patient: NewPatient) -> anyhow::Result<Patient>;
+    async fn create_patient(
+        &self,
+        patient: NewPatient,
+    ) -> Result<Patient, CreatePatientRepositoryError>;
     async fn get_patients(
         &self,
         page: Option<i64>,
         page_size: Option<i64>,
-    ) -> anyhow::Result<Vec<Patient>>;
-    async fn get_patient_by_id(&self, patient_id: Uuid) -> anyhow::Result<Patient>;
+    ) -> Result<Vec<Patient>, GetPatientsRepositoryError>;
+    async fn get_patient_by_id(
+        &self,
+        patient_id: Uuid,
+    ) -> Result<Patient, GetPatientByIdRepositoryError>;
 }
 
 /// Used to test the service layer in isolation
@@ -34,7 +64,10 @@ impl InMemoryPatientsRepository {
 
 #[async_trait]
 impl PatientsRepository for InMemoryPatientsRepository {
-    async fn create_patient(&self, new_patient: NewPatient) -> anyhow::Result<Patient> {
+    async fn create_patient(
+        &self,
+        new_patient: NewPatient,
+    ) -> Result<Patient, CreatePatientRepositoryError> {
         let does_pesel_number_exist = self
             .patients
             .read()
@@ -43,7 +76,7 @@ impl PatientsRepository for InMemoryPatientsRepository {
             .any(|patient| patient.pesel_number == new_patient.pesel_number);
 
         if does_pesel_number_exist {
-            return Err(anyhow::anyhow!("PWZ or PESEL number already exists"));
+            return Err(CreatePatientRepositoryError::DuplicatedPeselNumber);
         }
 
         let patient = Patient {
@@ -63,8 +96,9 @@ impl PatientsRepository for InMemoryPatientsRepository {
         &self,
         page: Option<i64>,
         page_size: Option<i64>,
-    ) -> anyhow::Result<Vec<Patient>> {
-        let (page_size, offset) = get_pagination_params(page, page_size)?;
+    ) -> Result<Vec<Patient>, GetPatientsRepositoryError> {
+        let (page_size, offset) = get_pagination_params(page, page_size)
+            .map_err(|err| GetPatientsRepositoryError::InvalidPaginationParams(err.to_string()))?;
         let a = offset;
         let b = offset + page_size;
 
@@ -79,7 +113,10 @@ impl PatientsRepository for InMemoryPatientsRepository {
         Ok(patients)
     }
 
-    async fn get_patient_by_id(&self, patient_id: Uuid) -> anyhow::Result<Patient> {
+    async fn get_patient_by_id(
+        &self,
+        patient_id: Uuid,
+    ) -> Result<Patient, GetPatientByIdRepositoryError> {
         match self
             .patients
             .read()
@@ -88,7 +125,7 @@ impl PatientsRepository for InMemoryPatientsRepository {
             .find(|patient| patient.id == patient_id)
         {
             Some(patient) => Ok(patient.clone()),
-            None => Err(anyhow::anyhow!("Patient not found")),
+            None => Err(GetPatientByIdRepositoryError::NotFound(patient_id)),
         }
     }
 }

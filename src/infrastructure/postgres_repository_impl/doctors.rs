@@ -37,7 +37,8 @@ impl DoctorsRepository for PostgresDoctorsRepository {
             doctor.pesel_number,
         )
         .fetch_one(&self.pool)
-        .await.map_err(
+        .await
+        .map_err(
             |err| match err {
                 sqlx::Error::Database(err) if err.message().contains("duplicate key value violates unique constraint \"doctors_pwz_number_key\"") => {
                     CreateDoctorRepositoryError::DuplicatedPwzNumber
