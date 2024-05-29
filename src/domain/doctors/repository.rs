@@ -132,18 +132,17 @@ impl DoctorsRepository for InMemoryDoctorsRepository {
 #[cfg(test)]
 // the same tests as in postgres_repository_impl/doctors.rs to make sure fake repo works the same way
 mod tests {
+    use std::assert_matches::assert_matches;
+
     use uuid::Uuid;
 
     use super::InMemoryDoctorsRepository;
-    use crate::domain::{
-        doctors::{
-            models::NewDoctor,
-            repository::{
-                CreateDoctorRepositoryError, DoctorsRepository, GetDoctorByIdRepositoryError,
-                GetDoctorsRepositoryError,
-            },
+    use crate::domain::doctors::{
+        models::NewDoctor,
+        repository::{
+            CreateDoctorRepositoryError, DoctorsRepository, GetDoctorByIdRepositoryError,
+            GetDoctorsRepositoryError,
         },
-        utils::pagination::PaginationError,
     };
 
     async fn setup_repository() -> InMemoryDoctorsRepository {
@@ -223,30 +222,26 @@ mod tests {
 
         let doctors = repository.get_doctors(Some(1), Some(3)).await.unwrap();
 
-        assert_eq!(doctors.len(),  1);
+        assert_eq!(doctors.len(), 1);
         assert_eq!(doctors[0], new_doctor_3);
 
         let doctors = repository.get_doctors(Some(2), Some(3)).await.unwrap();
 
-        assert_eq!(doctors.len(),  0);
+        assert_eq!(doctors.len(), 0);
     }
 
     #[tokio::test]
     async fn get_doctors_returns_error_if_pagination_params_are_incorrect() {
         let repository = setup_repository().await;
 
-        assert_eq!(
+        assert_matches!(
             repository.get_doctors(Some(-1), Some(10)).await,
-            Err(GetDoctorsRepositoryError::InvalidPaginationParams(
-                PaginationError::InvalidPageOrPageSize.to_string()
-            ))
+            Err(GetDoctorsRepositoryError::InvalidPaginationParams(_))
         );
 
-        assert_eq!(
+        assert_matches!(
             repository.get_doctors(Some(0), Some(0)).await,
-            Err(GetDoctorsRepositoryError::InvalidPaginationParams(
-                PaginationError::InvalidPageOrPageSize.to_string()
-            ))
+            Err(GetDoctorsRepositoryError::InvalidPaginationParams(_))
         );
     }
 

@@ -78,7 +78,10 @@ impl<R: DoctorsRepository> DoctorsService<R> {
 
 #[cfg(test)]
 mod tests {
-    use super::DoctorsService;
+
+    use std::assert_matches::assert_matches;
+
+    use super::{CreateDoctorError, DoctorsService, GetDoctorByIdError};
     use crate::domain::doctors::{
         repository::DoctorsRepository, repository::InMemoryDoctorsRepository,
     };
@@ -116,7 +119,7 @@ mod tests {
             .create_doctor("John Doex".into(), "96021807251".into(), "5425740".into()) // invalid pesel
             .await;
 
-        assert!(result.is_err());
+        assert_matches!(result, Err(CreateDoctorError::DomainError(_)));
     }
 
     #[tokio::test]
@@ -132,13 +135,19 @@ mod tests {
             .create_doctor("John Doex".into(), "96021807250".into(), "8463856".into())
             .await;
 
-        assert!(duplicated_pesel_number_result.is_err());
+        assert_matches!(
+            duplicated_pesel_number_result,
+            Err(CreateDoctorError::RepositoryError(_))
+        );
 
         let duplicated_pwz_number_result = service
             .create_doctor("John Doex".into(), "99031301347".into(), "5425740".into())
             .await;
 
-        assert!(duplicated_pwz_number_result.is_err());
+        assert_matches!(
+            duplicated_pwz_number_result,
+            Err(CreateDoctorError::RepositoryError(_))
+        );
     }
 
     #[tokio::test]
@@ -147,7 +156,7 @@ mod tests {
 
         let result = service.get_doctor_by_id(Uuid::new_v4()).await;
 
-        assert!(result.is_err());
+        assert_matches!(result, Err(GetDoctorByIdError::RepositoryError(_)));
     }
 
     #[tokio::test]

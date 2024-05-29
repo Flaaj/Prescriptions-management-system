@@ -1,3 +1,4 @@
+#![feature(assert_matches)]
 pub mod api;
 mod create_tables;
 pub mod domain;

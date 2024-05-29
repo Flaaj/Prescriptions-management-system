@@ -7,7 +7,7 @@ pub enum PaginationError {
 pub fn get_pagination_params(
     page: Option<i64>,
     page_size: Option<i64>,
-) -> anyhow::Result<(i64, i64)> {
+) -> Result<(i64, i64), PaginationError> {
     let page = page.unwrap_or(0);
     let page_size = page_size.unwrap_or(10);
     if page_size < 1 || page < 0 {
@@ -20,6 +20,8 @@ pub fn get_pagination_params(
 
 #[cfg(test)]
 mod tests {
+    use std::assert_matches::assert_matches;
+
     use super::*;
 
     #[test]
@@ -30,7 +32,13 @@ mod tests {
         assert_eq!(get_pagination_params(Some(1), Some(5)).unwrap(), (5, 5));
         assert_eq!(get_pagination_params(Some(2), Some(5)).unwrap(), (5, 10));
         assert_eq!(get_pagination_params(Some(13), Some(7)).unwrap(), (7, 91));
-        assert!(get_pagination_params(Some(0), Some(0)).is_err());
-        assert!(get_pagination_params(Some(-1), Some(10)).is_err());
+        assert_matches!(
+            get_pagination_params(Some(0), Some(0)),
+            Err(PaginationError::InvalidPageOrPageSize)
+        );
+        assert_matches!(
+            get_pagination_params(Some(-1), Some(10)),
+            Err(PaginationError::InvalidPageOrPageSize)
+        );
     }
 }
