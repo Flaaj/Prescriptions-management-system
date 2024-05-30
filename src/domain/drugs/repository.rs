@@ -9,15 +9,37 @@ use crate::domain::{
     utils::pagination::get_pagination_params,
 };
 
+#[derive(thiserror::Error, Debug, PartialEq)]
+pub enum CreateDrugRepositoryError {
+    #[error("Database error: {0}")]
+    DatabaseError(String),
+}
+
+#[derive(thiserror::Error, Debug, PartialEq)]
+pub enum GetDrugsRepositoryError {
+    #[error("Invalid pagination parameters: {0}")]
+    InvalidPaginationParams(String),
+    #[error("Database error: {0}")]
+    DatabaseError(String),
+}
+
+#[derive(thiserror::Error, Debug, PartialEq)]
+pub enum GetDrugByIdRepositoryError {
+    #[error("Drug with this id not found ({0})")]
+    NotFound(Uuid),
+    #[error("Database error: {0}")]
+    DatabaseError(String),
+}
+
 #[async_trait]
 pub trait DrugsRepository {
-    async fn create_drug(&self, drug: NewDrug) -> anyhow::Result<Drug>;
+    async fn create_drug(&self, drug: NewDrug) -> Result<Drug, CreateDrugRepositoryError>;
     async fn get_drugs(
         &self,
         page: Option<i64>,
         page_size: Option<i64>,
-    ) -> anyhow::Result<Vec<Drug>>;
-    async fn get_drug_by_id(&self, drug_id: Uuid) -> anyhow::Result<Drug>;
+    ) -> Result<Vec<Drug>, GetDrugsRepositoryError>;
+    async fn get_drug_by_id(&self, drug_id: Uuid) -> Result<Drug, GetDrugByIdRepositoryError>;
 }
 
 /// Used to test the service layer in isolation
@@ -36,7 +58,7 @@ impl DrugsRepositoryFake {
 
 #[async_trait]
 impl DrugsRepository for DrugsRepositoryFake {
-    async fn create_drug(&self, new_drug: NewDrug) -> anyhow::Result<Drug> {
+    async fn create_drug(&self, new_drug: NewDrug) -> Result<Drug, CreateDrugRepositoryError> {
         let drug = Drug {
             id: new_drug.id,
             name: new_drug.name,
@@ -58,8 +80,9 @@ impl DrugsRepository for DrugsRepositoryFake {
         &self,
         page: Option<i64>,
         page_size: Option<i64>,
-    ) -> anyhow::Result<Vec<Drug>> {
-        let (page_size, offset) = get_pagination_params(page, page_size)?;
+    ) -> Result<Vec<Drug>, GetDrugsRepositoryError> {
+        let (page_size, offset) = get_pagination_params(page, page_size)
+            .map_err(|err| GetDrugsRepositoryError::InvalidPaginationParams(err.to_string()))?;
         let a = offset;
         let b = offset + page_size;
 
@@ -74,7 +97,7 @@ impl DrugsRepository for DrugsRepositoryFake {
         Ok(drugs)
     }
 
-    async fn get_drug_by_id(&self, drug_id: Uuid) -> anyhow::Result<Drug> {
+    async fn get_drug_by_id(&self, drug_id: Uuid) -> Result<Drug, GetDrugByIdRepositoryError> {
         match self
             .drugs
             .read()
@@ -83,14 +106,20 @@ impl DrugsRepository for DrugsRepositoryFake {
             .find(|drug| drug.id == drug_id)
         {
             Some(drug) => Ok(drug.clone()),
-            None => Err(anyhow::anyhow!("Drug not found")),
+            None => Err(GetDrugByIdRepositoryError::NotFound(drug_id)),
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{DrugsRepository, DrugsRepositoryFake};
+    use std::assert_matches::assert_matches;
+
+    use uuid::Uuid;
+
+    use super::{
+        DrugsRepository, DrugsRepositoryFake, GetDrugByIdRepositoryError, GetDrugsRepositoryError,
+    };
     use crate::domain::drugs::models::{DrugContentType, NewDrug};
 
     async fn setup_repository() -> DrugsRepositoryFake {
@@ -118,6 +147,19 @@ mod tests {
         let drug_from_repo = repository.get_drug_by_id(drug.id).await.unwrap();
 
         assert_eq!(drug, drug_from_repo);
+    }
+
+    #[tokio::test]
+    async fn returns_error_if_drug_with_given_id_doesnt_exist() {
+        let repository = setup_repository().await;
+        let drug_id = Uuid::new_v4();
+
+        let drug_from_repo = repository.get_drug_by_id(drug_id).await;
+
+        assert_eq!(
+            drug_from_repo,
+            Err(GetDrugByIdRepositoryError::NotFound(drug_id))
+        );
     }
 
     #[sqlx::test]
@@ -188,5 +230,20 @@ mod tests {
         let drugs = repository.get_drugs(Some(2), Some(3)).await.unwrap();
 
         assert_eq!(drugs.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn get_drugs_returns_error_if_pagination_params_are_incorrect() {
+        let repository = setup_repository().await;
+
+        assert_matches!(
+            repository.get_drugs(Some(-1), Some(10)).await,
+            Err(GetDrugsRepositoryError::InvalidPaginationParams(_))
+        );
+
+        assert_matches!(
+            repository.get_drugs(Some(0), Some(0)).await,
+            Err(GetDrugsRepositoryError::InvalidPaginationParams(_))
+        );
     }
 }
