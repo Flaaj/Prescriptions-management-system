@@ -79,11 +79,11 @@ impl<R: PatientsRepository> PatientsService<R> {
 #[cfg(test)]
 mod tests {
     use super::PatientsService;
-    use crate::domain::patients::repository::{InMemoryPatientsRepository, PatientsRepository};
+    use crate::domain::patients::repository::{PatientsRepositoryFake, PatientsRepository};
     use uuid::Uuid;
 
     fn setup_service() -> PatientsService<impl PatientsRepository> {
-        PatientsService::new(InMemoryPatientsRepository::new())
+        PatientsService::new(PatientsRepositoryFake::new())
     }
 
     #[tokio::test]

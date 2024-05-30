@@ -49,11 +49,11 @@ pub trait DoctorsRepository {
 }
 
 /// Used to test the service layer in isolation
-pub struct InMemoryDoctorsRepository {
+pub struct DoctorsRepositoryFake {
     doctors: RwLock<Vec<Doctor>>,
 }
 
-impl InMemoryDoctorsRepository {
+impl DoctorsRepositoryFake {
     #[allow(dead_code)]
     pub fn new() -> Self {
         Self {
@@ -63,7 +63,7 @@ impl InMemoryDoctorsRepository {
 }
 
 #[async_trait]
-impl DoctorsRepository for InMemoryDoctorsRepository {
+impl DoctorsRepository for DoctorsRepositoryFake {
     async fn create_doctor(
         &self,
         new_doctor: NewDoctor,
@@ -136,7 +136,7 @@ mod tests {
 
     use uuid::Uuid;
 
-    use super::InMemoryDoctorsRepository;
+    use super::DoctorsRepositoryFake;
     use crate::domain::doctors::{
         models::NewDoctor,
         repository::{
@@ -145,8 +145,8 @@ mod tests {
         },
     };
 
-    async fn setup_repository() -> InMemoryDoctorsRepository {
-        InMemoryDoctorsRepository::new()
+    async fn setup_repository() -> DoctorsRepositoryFake {
+        DoctorsRepositoryFake::new()
     }
 
     #[tokio::test]

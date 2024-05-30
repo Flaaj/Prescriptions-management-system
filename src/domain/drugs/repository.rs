@@ -21,11 +21,11 @@ pub trait DrugsRepository {
 }
 
 /// Used to test the service layer in isolation
-pub struct InMemoryDrugsRepository {
+pub struct DrugsRepositoryFake {
     drugs: RwLock<Vec<Drug>>,
 }
 
-impl InMemoryDrugsRepository {
+impl DrugsRepositoryFake {
     #[allow(dead_code)]
     pub fn new() -> Self {
         Self {
@@ -35,7 +35,7 @@ impl InMemoryDrugsRepository {
 }
 
 #[async_trait]
-impl DrugsRepository for InMemoryDrugsRepository {
+impl DrugsRepository for DrugsRepositoryFake {
     async fn create_drug(&self, new_drug: NewDrug) -> anyhow::Result<Drug> {
         let drug = Drug {
             id: new_drug.id,
@@ -90,11 +90,11 @@ impl DrugsRepository for InMemoryDrugsRepository {
 
 #[cfg(test)]
 mod tests {
-    use super::{DrugsRepository, InMemoryDrugsRepository};
+    use super::{DrugsRepository, DrugsRepositoryFake};
     use crate::domain::drugs::models::{DrugContentType, NewDrug};
 
-    async fn setup_repository() -> InMemoryDrugsRepository {
-        InMemoryDrugsRepository::new()
+    async fn setup_repository() -> DrugsRepositoryFake {
+        DrugsRepositoryFake::new()
     }
 
     #[sqlx::test]

@@ -11,7 +11,7 @@ pub enum PrescriptionFillError {
 }
 
 impl Prescription {
-    pub fn fill(&self, pharmacist_id: Uuid) -> anyhow::Result<NewPrescriptionFill> {
+    pub fn fill(&self, pharmacist_id: Uuid) -> Result<NewPrescriptionFill, PrescriptionFillError> {
         let now = Utc::now();
         if now < self.start_date || now > self.end_date {
             Err(PrescriptionFillError::InvalidDate)?;
@@ -92,24 +92,20 @@ mod tests {
     fn doesnt_fill_if_prescription_the_date_is_before_start_date() {
         let mut prescription = create_mock_prescription();
         prescription.start_date = Utc::now() + Duration::minutes(1);
-        let pharmacist_id = Uuid::new_v4();
 
-        let sut = prescription.fill(pharmacist_id);
+        let sut = prescription.fill(Uuid::new_v4());
 
-        let expected_err = PrescriptionFillError::InvalidDate;
-        assert_eq!(sut.unwrap_err().downcast_ref(), Some(&expected_err));
+        assert_eq!(sut, Err(PrescriptionFillError::InvalidDate));
     }
 
     #[test]
     fn doesnt_fill_if_prescription_the_date_is_after_end_date() {
         let mut prescription: Prescription = create_mock_prescription();
         prescription.end_date = Utc::now() - Duration::minutes(1);
-        let pharmacist_id = Uuid::new_v4();
 
-        let sut = prescription.fill(pharmacist_id);
+        let sut = prescription.fill(Uuid::new_v4());
 
-        let expected_err = PrescriptionFillError::InvalidDate;
-        assert_eq!(sut.unwrap_err().downcast_ref(), Some(&expected_err));
+        assert_eq!(sut, Err(PrescriptionFillError::InvalidDate));
     }
 
     #[test]
@@ -125,7 +121,6 @@ mod tests {
 
         let sut = prescription.fill(Uuid::new_v4());
 
-        let expected_err = PrescriptionFillError::AlreadyFilled;
-        assert_eq!(sut.unwrap_err().downcast_ref(), Some(&expected_err));
+        assert_eq!(sut, Err(PrescriptionFillError::AlreadyFilled));
     }
 }

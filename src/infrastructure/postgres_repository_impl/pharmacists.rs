@@ -4,7 +4,10 @@ use uuid::Uuid;
 use crate::domain::{
     pharmacists::{
         models::{NewPharmacist, Pharmacist},
-        repository::PharmacistsRepository,
+        repository::{
+            CreatePharmacistRepositoryError, GetPharmacistByIdRepositoryError,
+            GetPharmacistsRepositoryError, PharmacistsRepository,
+        },
     },
     utils::pagination::get_pagination_params,
 };
@@ -21,7 +24,10 @@ impl PostgresPharmacistsRepository {
 
 #[async_trait]
 impl PharmacistsRepository for PostgresPharmacistsRepository {
-    async fn create_pharmacist(&self, pharmacist: NewPharmacist) -> anyhow::Result<Pharmacist> {
+    async fn create_pharmacist(
+        &self,
+        pharmacist: NewPharmacist,
+    ) -> Result<Pharmacist, CreatePharmacistRepositoryError> {
         let result = sqlx::query!(
             r#"INSERT INTO pharmacists (id, name, pesel_number) VALUES ($1, $2, $3) RETURNING id, name, pesel_number, created_at, updated_at"#,
             pharmacist.id,
@@ -29,7 +35,8 @@ impl PharmacistsRepository for PostgresPharmacistsRepository {
             pharmacist.pesel_number
         )
         .fetch_one(&self.pool)
-        .await?;
+        .await.
+        map_err(|_| CreatePharmacistRepositoryError::DuplicatedPeselNumber)?;
 
         Ok(Pharmacist {
             id: result.id,
@@ -44,8 +51,10 @@ impl PharmacistsRepository for PostgresPharmacistsRepository {
         &self,
         page: Option<i64>,
         page_size: Option<i64>,
-    ) -> anyhow::Result<Vec<Pharmacist>> {
-        let (page_size, offset) = get_pagination_params(page, page_size)?;
+    ) -> Result<Vec<Pharmacist>, GetPharmacistsRepositoryError> {
+        let (page_size, offset) = get_pagination_params(page, page_size).map_err(|err| {
+            GetPharmacistsRepositoryError::InvalidPaginationParams(err.to_string())
+        })?;
 
         let pharmacists_from_db = sqlx::query!(
             r#"SELECT id, name, pesel_number, created_at, updated_at FROM pharmacists LIMIT $1 OFFSET $2"#,
@@ -53,7 +62,8 @@ impl PharmacistsRepository for PostgresPharmacistsRepository {
             offset
         )
         .fetch_all(&self.pool)
-        .await?;
+        .await
+        .map_err(|err| GetPharmacistsRepositoryError::DatabaseError(err.to_string()))?;
 
         let pharmacists = pharmacists_from_db
             .into_iter()
@@ -69,13 +79,17 @@ impl PharmacistsRepository for PostgresPharmacistsRepository {
         Ok(pharmacists)
     }
 
-    async fn get_pharmacist_by_id(&self, pharmacist_id: Uuid) -> anyhow::Result<Pharmacist> {
+    async fn get_pharmacist_by_id(
+        &self,
+        pharmacist_id: Uuid,
+    ) -> Result<Pharmacist, GetPharmacistByIdRepositoryError> {
         let pharmacist_from_db = sqlx::query!(
             r#"SELECT id, name, pesel_number, created_at, updated_at FROM pharmacists WHERE id = $1"#,
             pharmacist_id
         )
         .fetch_one(&self.pool)
-        .await?;
+        .await
+        .map_err(|_| GetPharmacistByIdRepositoryError::NotFound(pharmacist_id))?;
 
         Ok(Pharmacist {
             id: pharmacist_from_db.id,
@@ -89,12 +103,20 @@ impl PharmacistsRepository for PostgresPharmacistsRepository {
 
 #[cfg(test)]
 mod tests {
+    use std::assert_matches::assert_matches;
+
     use uuid::Uuid;
 
     use super::PostgresPharmacistsRepository;
     use crate::{
         create_tables::create_tables,
-        domain::pharmacists::{models::NewPharmacist, repository::PharmacistsRepository},
+        domain::pharmacists::{
+            models::NewPharmacist,
+            repository::{
+                CreatePharmacistRepositoryError, GetPharmacistByIdRepositoryError,
+                GetPharmacistsRepositoryError, PharmacistsRepository,
+            },
+        },
     };
 
     async fn setup_repository(pool: sqlx::PgPool) -> PostgresPharmacistsRepository {
@@ -126,10 +148,14 @@ mod tests {
     #[sqlx::test]
     async fn returns_error_if_pharmacists_with_given_id_doesnt_exist(pool: sqlx::PgPool) {
         let repository = setup_repository(pool).await;
+        let pharmacist_id = Uuid::new_v4();
 
-        let pharmacist_from_repo = repository.get_pharmacist_by_id(Uuid::new_v4()).await;
+        let pharmacist_from_repo = repository.get_pharmacist_by_id(pharmacist_id).await;
 
-        assert!(pharmacist_from_repo.is_err());
+        assert_eq!(
+            pharmacist_from_repo,
+            Err(GetPharmacistByIdRepositoryError::NotFound(pharmacist_id))
+        );
     }
 
     #[sqlx::test]
@@ -183,6 +209,21 @@ mod tests {
     }
 
     #[sqlx::test]
+    async fn get_patients_returns_error_if_pagination_params_are_incorrect(pool: sqlx::PgPool) {
+        let repository = setup_repository(pool).await;
+
+        assert_matches!(
+            repository.get_pharmacists(Some(-1), Some(10)).await,
+            Err(GetPharmacistsRepositoryError::InvalidPaginationParams(_))
+        );
+
+        assert_matches!(
+            repository.get_pharmacists(Some(0), Some(0)).await,
+            Err(GetPharmacistsRepositoryError::InvalidPaginationParams(_))
+        );
+    }
+
+    #[sqlx::test]
     async fn doesnt_create_pharmacist_if_pesel_number_is_duplicated(pool: sqlx::PgPool) {
         let repository = setup_repository(pool).await;
 
@@ -193,9 +234,11 @@ mod tests {
         let pharmacist_with_duplicated_pesel_number =
             NewPharmacist::new("John Doe".into(), "96021817257".into()).unwrap();
 
-        assert!(repository
-            .create_pharmacist(pharmacist_with_duplicated_pesel_number)
-            .await
-            .is_err());
+        assert_eq!(
+            repository
+                .create_pharmacist(pharmacist_with_duplicated_pesel_number)
+                .await,
+            Err(CreatePharmacistRepositoryError::DuplicatedPeselNumber)
+        );
     }
 }

@@ -83,12 +83,12 @@ mod tests {
 
     use super::{CreateDoctorError, DoctorsService, GetDoctorByIdError};
     use crate::domain::doctors::{
-        repository::DoctorsRepository, repository::InMemoryDoctorsRepository,
+        repository::DoctorsRepository, repository::DoctorsRepositoryFake,
     };
     use uuid::Uuid;
 
     fn setup_service() -> DoctorsService<impl DoctorsRepository> {
-        DoctorsService::new(InMemoryDoctorsRepository::new())
+        DoctorsService::new(DoctorsRepositoryFake::new())
     }
 
     #[tokio::test]

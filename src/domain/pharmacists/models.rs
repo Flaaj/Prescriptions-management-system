@@ -1,14 +1,14 @@
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct NewPharmacist {
     pub id: Uuid,
     pub name: String,
     pub pesel_number: String,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Pharmacist {
     pub id: Uuid,
     pub name: String,

@@ -43,7 +43,7 @@ impl NewPrescription {
         start_date: Option<DateTime<Utc>>,
         prescription_type: Option<PrescriptionType>,
         prescribed_drugs: Vec<NewPrescribedDrug>,
-    ) -> anyhow::Result<Self> {
+    ) -> Result<Self, NewPrescriptionValidationError> {
         if prescribed_drugs.is_empty() {
             Err(NewPrescriptionValidationError::NoPrescribedDrugs)?;
         }
@@ -229,21 +229,22 @@ mod tests {
     #[test]
     fn adds_prescribed_drug_to_prescription() {
         let drug_id = Uuid::new_v4();
+        let new_prescribed_drug = NewPrescribedDrug {
+            drug_id,
+            quantity: 2,
+        };
         let prescription = NewPrescription::new(
             Uuid::new_v4(),
             Uuid::new_v4(),
             None,
             None,
-            vec![NewPrescribedDrug {
-                drug_id,
-                quantity: 2,
-            }],
+            vec![new_prescribed_drug.clone()],
         )
         .unwrap();
 
         let sut = prescription.prescribed_drugs.get(0).unwrap();
-        assert_eq!(sut.drug_id, drug_id);
-        assert_eq!(sut.quantity, 2);
+
+        assert_eq!(sut, &new_prescribed_drug);
     }
 
     #[test]
@@ -290,8 +291,10 @@ mod tests {
             }],
         );
 
-        let expected_err = NewPrescriptionValidationError::InvalidDrugQuantity(drug_id);
-        assert_eq!(sut.unwrap_err().downcast_ref(), Some(&expected_err));
+        assert_eq!(
+            sut,
+            Err(NewPrescriptionValidationError::InvalidDrugQuantity(drug_id))
+        );
     }
 
     #[test]
@@ -315,15 +318,16 @@ mod tests {
             ],
         );
 
-        let expected_err = NewPrescriptionValidationError::DuplicateDrugId(drug_id);
-        assert_eq!(sut.unwrap_err().downcast_ref(), Some(&expected_err));
+        assert_eq!(
+            sut,
+            Err(NewPrescriptionValidationError::DuplicateDrugId(drug_id))
+        );
     }
 
     #[test]
     fn doesnt_create_prescription_when_no_drugs_are_added_to_prescription() {
         let sut = NewPrescription::new(Uuid::new_v4(), Uuid::new_v4(), None, None, vec![]);
 
-        let expected_err = NewPrescriptionValidationError::NoPrescribedDrugs;
-        assert_eq!(sut.unwrap_err().downcast_ref(), Some(&expected_err));
+        assert_eq!(sut, Err(NewPrescriptionValidationError::NoPrescribedDrugs));
     }
 }

@@ -80,22 +80,22 @@ impl<R: PrescriptionsRepository> PrescriptionsService<R> {
 mod tests {
     use super::PrescriptionsService;
     use crate::domain::{
-        doctors::{models::Doctor, repository::InMemoryDoctorsRepository, service::DoctorsService},
+        doctors::{models::Doctor, repository::DoctorsRepositoryFake, service::DoctorsService},
         drugs::{
             models::{Drug, DrugContentType},
-            repository::InMemoryDrugsRepository,
+            repository::DrugsRepositoryFake,
             service::DrugsService,
         },
         patients::{
-            models::Patient, repository::InMemoryPatientsRepository, service::PatientsService,
+            models::Patient, repository::PatientsRepositoryFake, service::PatientsService,
         },
         pharmacists::{
-            models::Pharmacist, repository::InMemoryPharmacistsRepository,
+            models::Pharmacist, repository::PharmacistsRepositoryFake,
             service::PharmacistsService,
         },
         prescriptions::{
             models::PrescriptionType,
-            repository::{InMemoryPrescriptionsRepository, PrescriptionsRepository},
+            repository::{PrescriptionsRepositoryFake, PrescriptionsRepository},
         },
     };
 
@@ -110,25 +110,25 @@ mod tests {
         PrescriptionsService<impl PrescriptionsRepository>,
         DatabaseSeeds,
     ) {
-        let doctors_service = DoctorsService::new(InMemoryDoctorsRepository::new());
+        let doctors_service = DoctorsService::new(DoctorsRepositoryFake::new());
         let created_doctor = doctors_service
             .create_doctor("John Doctor".into(), "92022900002".into(), "3123456".into())
             .await
             .unwrap();
 
-        let pharmacist_service = PharmacistsService::new(InMemoryPharmacistsRepository::new());
+        let pharmacist_service = PharmacistsService::new(PharmacistsRepositoryFake::new());
         let created_pharmacist = pharmacist_service
             .create_pharmacist("John Pharmacist".into(), "92022900002".into())
             .await
             .unwrap();
 
-        let patients_service = PatientsService::new(InMemoryPatientsRepository::new());
+        let patients_service = PatientsService::new(PatientsRepositoryFake::new());
         let created_patient = patients_service
             .create_patient("John Patient".into(), "92022900002".into())
             .await
             .unwrap();
 
-        let drugs_service = DrugsService::new(InMemoryDrugsRepository::new());
+        let drugs_service = DrugsService::new(DrugsRepositoryFake::new());
         let created_drug_0 = drugs_service
             .create_drug(
                 "Gripex".into(),
@@ -175,7 +175,7 @@ mod tests {
             .unwrap();
 
         (
-            PrescriptionsService::new(InMemoryPrescriptionsRepository::new(
+            PrescriptionsService::new(PrescriptionsRepositoryFake::new(
                 None,
                 Some(vec![created_doctor.clone()]),
                 Some(vec![created_patient.clone()]),

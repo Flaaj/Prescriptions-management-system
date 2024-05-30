@@ -80,12 +80,12 @@ impl<R: PharmacistsRepository> PharmacistsService<R> {
 mod tests {
     use super::PharmacistsService;
     use crate::domain::pharmacists::repository::{
-        InMemoryPharmacistsRepository, PharmacistsRepository,
+        PharmacistsRepositoryFake, PharmacistsRepository,
     };
     use uuid::Uuid;
 
     fn setup_service() -> PharmacistsService<impl PharmacistsRepository> {
-        PharmacistsService::new(InMemoryPharmacistsRepository::new())
+        PharmacistsService::new(PharmacistsRepositoryFake::new())
     }
 
     #[tokio::test]

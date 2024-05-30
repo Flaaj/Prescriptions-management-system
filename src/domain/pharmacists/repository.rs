@@ -9,23 +9,53 @@ use crate::domain::{
     utils::pagination::get_pagination_params,
 };
 
+#[derive(thiserror::Error, Debug, PartialEq)]
+pub enum CreatePharmacistRepositoryError {
+    #[error("PESEL number already exists")]
+    DuplicatedPeselNumber,
+    #[error("Database error: {0}")]
+    DatabaseError(String),
+}
+
+#[derive(thiserror::Error, Debug, PartialEq)]
+pub enum GetPharmacistsRepositoryError {
+    #[error("Invalid pagination parameters: {0}")]
+    InvalidPaginationParams(String),
+    #[error("Database error: {0}")]
+    DatabaseError(String),
+}
+
+#[derive(thiserror::Error, Debug, PartialEq)]
+pub enum GetPharmacistByIdRepositoryError {
+    #[error("Pharmacist with this id not found ({0})")]
+    NotFound(Uuid),
+    #[error("Database error: {0}")]
+    DatabaseError(String),
+}
+
 #[async_trait]
 pub trait PharmacistsRepository {
-    async fn create_pharmacist(&self, pharmacist: NewPharmacist) -> anyhow::Result<Pharmacist>;
+    async fn create_pharmacist(
+        &self,
+        pharmacist: NewPharmacist,
+    ) -> Result<Pharmacist, CreatePharmacistRepositoryError>;
     async fn get_pharmacists(
         &self,
         page: Option<i64>,
         page_size: Option<i64>,
-    ) -> anyhow::Result<Vec<Pharmacist>>;
-    async fn get_pharmacist_by_id(&self, pharmacist_id: Uuid) -> anyhow::Result<Pharmacist>;
+    ) -> Result<Vec<Pharmacist>, GetPharmacistsRepositoryError>;
+    async fn get_pharmacist_by_id(
+        &self,
+        pharmacist_id: Uuid,
+    ) -> Result<Pharmacist, GetPharmacistByIdRepositoryError>;
 }
 
 /// Used to test the service layer in isolation
-pub struct InMemoryPharmacistsRepository {
+pub struct PharmacistsRepositoryFake {
     pharmacists: RwLock<Vec<Pharmacist>>,
 }
 
-impl InMemoryPharmacistsRepository {
+impl PharmacistsRepositoryFake {
     #[allow(dead_code)]
     pub fn new() -> Self {
         Self {
@@ -35,8 +65,11 @@ impl InMemoryPharmacistsRepository {
 }
 
 #[async_trait]
-impl PharmacistsRepository for InMemoryPharmacistsRepository {
-    async fn create_pharmacist(&self, new_pharmacist: NewPharmacist) -> anyhow::Result<Pharmacist> {
+impl PharmacistsRepository for PharmacistsRepositoryFake {
+    async fn create_pharmacist(
+        &self,
+        new_pharmacist: NewPharmacist,
+    ) -> Result<Pharmacist, CreatePharmacistRepositoryError> {
         let does_pesel_number_exist = self
             .pharmacists
             .read()
@@ -45,7 +78,7 @@ impl PharmacistsRepository for InMemoryPharmacistsRepository {
             .any(|pharmacist| pharmacist.pesel_number == new_pharmacist.pesel_number);
 
         if does_pesel_number_exist {
-            return Err(anyhow::anyhow!("PWZ or PESEL number already exists"));
+            return Err(CreatePharmacistRepositoryError::DuplicatedPeselNumber);
         }
 
         let pharmacist = Pharmacist {
@@ -65,8 +98,10 @@ impl PharmacistsRepository for InMemoryPharmacistsRepository {
         &self,
         page: Option<i64>,
         page_size: Option<i64>,
-    ) -> anyhow::Result<Vec<Pharmacist>> {
-        let (page_size, offset) = get_pagination_params(page, page_size)?;
+    ) -> Result<Vec<Pharmacist>, GetPharmacistsRepositoryError> {
+        let (page_size, offset) = get_pagination_params(page, page_size).map_err(|err| {
+            GetPharmacistsRepositoryError::InvalidPaginationParams(err.to_string())
+        })?;
         let a = offset;
         let b = offset + page_size;
 
@@ -81,7 +116,10 @@ impl PharmacistsRepository for InMemoryPharmacistsRepository {
         Ok(pharmacists)
     }
 
-    async fn get_pharmacist_by_id(&self, pharmacist_id: Uuid) -> anyhow::Result<Pharmacist> {
+    async fn get_pharmacist_by_id(
+        &self,
+        pharmacist_id: Uuid,
+    ) -> Result<Pharmacist, GetPharmacistByIdRepositoryError> {
         match self
             .pharmacists
             .read()
@@ -90,20 +128,25 @@ impl PharmacistsRepository for InMemoryPharmacistsRepository {
             .find(|pharmacist| pharmacist.id == pharmacist_id)
         {
             Some(pharmacist) => Ok(pharmacist.clone()),
-            None => Err(anyhow::anyhow!("Pharmacist not found")),
+            None => Err(GetPharmacistByIdRepositoryError::NotFound(pharmacist_id)),
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::assert_matches::assert_matches;
+
     use uuid::Uuid;
 
-    use super::{InMemoryPharmacistsRepository, PharmacistsRepository};
+    use super::{
+        CreatePharmacistRepositoryError, GetPharmacistByIdRepositoryError,
+        GetPharmacistsRepositoryError, PharmacistsRepositoryFake, PharmacistsRepository,
+    };
     use crate::domain::pharmacists::models::NewPharmacist;
 
-    async fn setup_repository() -> InMemoryPharmacistsRepository {
-        InMemoryPharmacistsRepository::new()
+    async fn setup_repository() -> PharmacistsRepositoryFake {
+        PharmacistsRepositoryFake::new()
     }
 
     #[sqlx::test]
@@ -130,10 +173,14 @@ mod tests {
     #[sqlx::test]
     async fn returns_error_if_pharmacists_with_given_id_doesnt_exist() {
         let repository = setup_repository().await;
+        let pharmacist_id = Uuid::new_v4();
 
-        let pharmacist_from_repo = repository.get_pharmacist_by_id(Uuid::new_v4()).await;
+        let pharmacist_from_repo = repository.get_pharmacist_by_id(pharmacist_id).await;
 
-        assert!(pharmacist_from_repo.is_err());
+        assert_eq!(
+            pharmacist_from_repo,
+            Err(GetPharmacistByIdRepositoryError::NotFound(pharmacist_id))
+        );
     }
 
     #[sqlx::test]
@@ -186,6 +233,21 @@ mod tests {
         assert_eq!(pharmacists.len(), 0);
     }
 
+    #[tokio::test]
+    async fn get_patients_returns_error_if_pagination_params_are_incorrect() {
+        let repository = setup_repository().await;
+
+        assert_matches!(
+            repository.get_pharmacists(Some(-1), Some(10)).await,
+            Err(GetPharmacistsRepositoryError::InvalidPaginationParams(_))
+        );
+
+        assert_matches!(
+            repository.get_pharmacists(Some(0), Some(0)).await,
+            Err(GetPharmacistsRepositoryError::InvalidPaginationParams(_))
+        );
+    }
+
     #[sqlx::test]
     async fn doesnt_create_pharmacist_if_pesel_number_is_duplicated() {
         let repository = setup_repository().await;
@@ -197,9 +259,11 @@ mod tests {
         let pharmacist_with_duplicated_pesel_number =
             NewPharmacist::new("John Doe".into(), "96021817257".into()).unwrap();
 
-        assert!(repository
-            .create_pharmacist(pharmacist_with_duplicated_pesel_number)
-            .await
-            .is_err());
+        assert_eq!(
+            repository
+                .create_pharmacist(pharmacist_with_duplicated_pesel_number)
+                .await,
+            Err(CreatePharmacistRepositoryError::DuplicatedPeselNumber)
+        );
     }
 }

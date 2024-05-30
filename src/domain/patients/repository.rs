@@ -49,11 +49,11 @@ pub trait PatientsRepository {
 }
 
 /// Used to test the service layer in isolation
-pub struct InMemoryPatientsRepository {
+pub struct PatientsRepositoryFake {
     patients: RwLock<Vec<Patient>>,
 }
 
-impl InMemoryPatientsRepository {
+impl PatientsRepositoryFake {
     #[allow(dead_code)]
     pub fn new() -> Self {
         Self {
@@ -63,7 +63,7 @@ impl InMemoryPatientsRepository {
 }
 
 #[async_trait]
-impl PatientsRepository for InMemoryPatientsRepository {
+impl PatientsRepository for PatientsRepositoryFake {
     async fn create_patient(
         &self,
         new_patient: NewPatient,
@@ -132,12 +132,20 @@ impl PatientsRepository for InMemoryPatientsRepository {
 
 #[cfg(test)]
 mod tests {
-    use super::InMemoryPatientsRepository;
-    use crate::domain::patients::{models::NewPatient, repository::PatientsRepository};
+    use std::assert_matches::assert_matches;
+
+    use super::PatientsRepositoryFake;
+    use crate::domain::patients::{
+        models::NewPatient,
+        repository::{
+            CreatePatientRepositoryError, GetPatientByIdRepositoryError,
+            GetPatientsRepositoryError, PatientsRepository,
+        },
+    };
     use uuid::Uuid;
 
-    async fn setup_repository() -> InMemoryPatientsRepository {
-        InMemoryPatientsRepository::new()
+    async fn setup_repository() -> PatientsRepositoryFake {
+        PatientsRepositoryFake::new()
     }
 
     #[tokio::test]
@@ -159,10 +167,14 @@ mod tests {
     #[tokio::test]
     async fn returns_error_if_patients_with_given_id_doesnt_exist() {
         let repository = setup_repository().await;
+        let patient_id = Uuid::new_v4();
 
-        let patient_from_repo = repository.get_patient_by_id(Uuid::new_v4()).await;
+        let patient_from_repo = repository.get_patient_by_id(patient_id).await;
 
-        assert!(patient_from_repo.is_err());
+        assert_eq!(
+            patient_from_repo,
+            Err(GetPatientByIdRepositoryError::NotFound(patient_id))
+        );
     }
 
     #[tokio::test]
@@ -216,6 +228,21 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn get_patients_returns_error_if_pagination_params_are_incorrect() {
+        let repository = setup_repository().await;
+
+        assert_matches!(
+            repository.get_patients(Some(-1), Some(10)).await,
+            Err(GetPatientsRepositoryError::InvalidPaginationParams(_))
+        );
+
+        assert_matches!(
+            repository.get_patients(Some(0), Some(0)).await,
+            Err(GetPatientsRepositoryError::InvalidPaginationParams(_))
+        );
+    }
+
+    #[tokio::test]
     async fn doesnt_create_patient_if_pesel_number_is_duplicated() {
         let repository = setup_repository().await;
 
@@ -224,9 +251,11 @@ mod tests {
 
         let patient_with_duplicated_pesel_number =
             NewPatient::new("John Doe".into(), "96021817257".into()).unwrap();
-        assert!(repository
-            .create_patient(patient_with_duplicated_pesel_number)
-            .await
-            .is_err());
+        assert_eq!(
+            repository
+                .create_patient(patient_with_duplicated_pesel_number)
+                .await,
+            Err(CreatePatientRepositoryError::DuplicatedPeselNumber)
+        );
     }
 }

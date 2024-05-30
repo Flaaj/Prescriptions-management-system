@@ -37,7 +37,7 @@ pub trait PrescriptionsRepository {
 }
 
 /// Used to test the service layer in isolation
-pub struct InMemoryPrescriptionsRepository {
+pub struct PrescriptionsRepositoryFake {
     prescriptions: RwLock<Vec<Prescription>>,
     doctors: RwLock<Vec<Doctor>>,
     pharmacists: RwLock<Vec<Pharmacist>>,
@@ -45,7 +45,7 @@ pub struct InMemoryPrescriptionsRepository {
     drugs: RwLock<Vec<Drug>>,
 }
 
-impl InMemoryPrescriptionsRepository {
+impl PrescriptionsRepositoryFake {
     #[allow(dead_code)]
     pub fn new(
         initial_prescriptions: Option<Vec<Prescription>>,
@@ -65,7 +65,7 @@ impl InMemoryPrescriptionsRepository {
 }
 
 #[async_trait]
-impl PrescriptionsRepository for InMemoryPrescriptionsRepository {
+impl PrescriptionsRepository for PrescriptionsRepositoryFake {
     async fn create_prescription(
         &self,
         new_prescription: NewPrescription,
@@ -213,23 +213,23 @@ mod tests {
     use crate::domain::{
         doctors::{
             models::NewDoctor,
-            repository::{DoctorsRepository, InMemoryDoctorsRepository},
+            repository::{DoctorsRepository, DoctorsRepositoryFake},
         },
         drugs::{
             models::{DrugContentType, NewDrug},
-            repository::{DrugsRepository, InMemoryDrugsRepository},
+            repository::{DrugsRepository, DrugsRepositoryFake},
         },
         patients::{
             models::NewPatient,
-            repository::{InMemoryPatientsRepository, PatientsRepository},
+            repository::{PatientsRepositoryFake, PatientsRepository},
         },
         pharmacists::{
             models::NewPharmacist,
-            repository::{InMemoryPharmacistsRepository, PharmacistsRepository},
+            repository::{PharmacistsRepositoryFake, PharmacistsRepository},
         },
         prescriptions::{
             models::{NewPrescribedDrug, NewPrescription},
-            repository::{InMemoryPrescriptionsRepository, PrescriptionsRepository},
+            repository::{PrescriptionsRepositoryFake, PrescriptionsRepository},
         },
     };
 
@@ -241,9 +241,9 @@ mod tests {
     }
 
     async fn seed_in_memory_database(
-        prescriptions_repo: &InMemoryPrescriptionsRepository,
+        prescriptions_repo: &PrescriptionsRepositoryFake,
     ) -> anyhow::Result<DatabaseSeeds> {
-        let pharmacists_repo = InMemoryPharmacistsRepository::new();
+        let pharmacists_repo = PharmacistsRepositoryFake::new();
         let pharmacist = NewPharmacist::new(
             "John Pharmacist".into(), //
             "96021807250".into(),
@@ -257,7 +257,7 @@ mod tests {
             .unwrap()
             .push(created_pharmacist);
 
-        let patients_repo = InMemoryPatientsRepository::new();
+        let patients_repo = PatientsRepositoryFake::new();
         let patient = NewPatient::new(
             "John Patient".into(), //
             "96021807250".into(),
@@ -269,7 +269,7 @@ mod tests {
             .unwrap()
             .push(created_patient);
 
-        let doctors_repo = InMemoryDoctorsRepository::new();
+        let doctors_repo = DoctorsRepositoryFake::new();
         let doctor = NewDoctor::new(
             "John Doctor".into(), //
             "3123456".into(),
@@ -282,7 +282,7 @@ mod tests {
             .unwrap()
             .push(created_doctor);
 
-        let drugs_repo = InMemoryDrugsRepository::new();
+        let drugs_repo = DrugsRepositoryFake::new();
         let mut drugs = vec![];
         for _ in 0..4 {
             let drug = NewDrug::new(
@@ -306,8 +306,8 @@ mod tests {
         })
     }
 
-    async fn setup_repository() -> (InMemoryPrescriptionsRepository, DatabaseSeeds) {
-        let repository = InMemoryPrescriptionsRepository::new(None, None, None, None, None);
+    async fn setup_repository() -> (PrescriptionsRepositoryFake, DatabaseSeeds) {
+        let repository = PrescriptionsRepositoryFake::new(None, None, None, None, None);
         let seeds = seed_in_memory_database(&repository).await.unwrap();
         (repository, seeds)
     }

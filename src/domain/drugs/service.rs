@@ -90,13 +90,13 @@ mod tests {
 
     use crate::domain::drugs::{
         models::DrugContentType,
-        repository::{DrugsRepository, InMemoryDrugsRepository},
+        repository::{DrugsRepository, DrugsRepositoryFake},
     };
 
     use super::DrugsService;
 
     fn setup_service() -> DrugsService<impl DrugsRepository> {
-        DrugsService::new(InMemoryDrugsRepository::new())
+        DrugsService::new(DrugsRepositoryFake::new())
     }
 
     #[tokio::test]
