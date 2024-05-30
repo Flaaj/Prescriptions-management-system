@@ -1,5 +1,4 @@
-use std::sync::RwLock;
-
+use super::models::{PrescribedDrug, PrescriptionDoctor, PrescriptionPatient};
 use crate::domain::{
     doctors::models::Doctor,
     drugs::models::Drug,
@@ -10,30 +9,70 @@ use crate::domain::{
 };
 use async_trait::async_trait;
 use chrono::Utc;
+use std::sync::RwLock;
 use uuid::Uuid;
 
-use super::models::{PrescribedDrug, PrescriptionDoctor, PrescriptionPatient};
+#[derive(thiserror::Error, Debug, PartialEq)]
+pub enum CreatePrescriptionRepositoryError {
+    #[error("Doctor with id {0} not found")]
+    DoctorNotFound(Uuid),
+    #[error("Patient with id {0} not found")]
+    PatientNotFound(Uuid),
+    #[error("Drug with id {0} not found")]
+    DrugNotFound(Uuid),
+    #[error("Database error: {0}")]
+    DatabaseError(String),
+}
+
+#[derive(thiserror::Error, Debug, PartialEq)]
+pub enum GetPrescriptionsRepositoryError {
+    #[error("Invalid pagination parameters: {0}")]
+    InvalidPaginationParams(String),
+    #[error("Database error: {0}")]
+    DatabaseError(String),
+}
+
+#[derive(thiserror::Error, Debug, PartialEq)]
+pub enum GetPrescriptionByIdRepositoryError {
+    #[error("Prescription with id {0} not found")]
+    NotFound(Uuid),
+    #[error("Database error: {0}")]
+    DatabaseError(String),
+}
+
+#[derive(thiserror::Error, Debug, PartialEq)]
+pub enum FillPrescriptionRepositoryError {
+    #[error("Pharmacist with id {0} not found")]
+    PharmacistNotFound(Uuid),
+    #[error("Prescription is already filled")]
+    PrescriptionAlreadyFilled,
+    #[error("Database error: {0}")]
+    DatabaseError(String),
+}
 
 #[async_trait]
 pub trait PrescriptionsRepository: Send + Sync + 'static {
     async fn create_prescription(
         &self,
         prescription: NewPrescription,
-    ) -> anyhow::Result<Prescription>;
+    ) -> Result<Prescription, CreatePrescriptionRepositoryError>;
     async fn get_prescriptions(
         &self,
         page: Option<i64>,
         page_size: Option<i64>,
-    ) -> anyhow::Result<Vec<Prescription>>;
-    async fn get_prescription_by_id(&self, prescription_id: Uuid) -> anyhow::Result<Prescription>;
+    ) -> Result<Vec<Prescription>, GetPrescriptionsRepositoryError>;
+    async fn get_prescription_by_id(
+        &self,
+        prescription_id: Uuid,
+    ) -> Result<Prescription, GetPrescriptionByIdRepositoryError>;
     async fn fill_prescription(
         &self,
         prescription_fill: NewPrescriptionFill,
-    ) -> anyhow::Result<PrescriptionFill>;
-    // async fn get_prescriptions_by_prescription_id(&self, prescription_id: Uuid) -> anyhow::Result<Vec<Prescription>>;
-    // async fn get_prescriptions_by_patient_id(&self, patient_id: Uuid) -> anyhow::Result<Vec<Prescription>>;
-    // async fn update_prescription(&self, prescription: Prescription) -> anyhow::Result<()>;
-    // async fn delete_prescription(&self, prescription_id: Uuid) -> anyhow::Result<()>;
+    ) -> Result<PrescriptionFill, FillPrescriptionRepositoryError>;
+    // async fn get_prescriptions_by_prescription_id(&self, prescription_id: Uuid) -> Result<Vec<Prescription>>;
+    // async fn get_prescriptions_by_patient_id(&self, patient_id: Uuid) -> Result<Vec<Prescription>>;
+    // async fn update_prescription(&self, prescription: Prescription) -> Result<()>;
+    // async fn delete_prescription(&self, prescription_id: Uuid) -> Result<()>;
 }
 
 pub struct PrescriptionsRepositoryFake {
@@ -68,25 +107,31 @@ impl PrescriptionsRepository for PrescriptionsRepositoryFake {
     async fn create_prescription(
         &self,
         new_prescription: NewPrescription,
-    ) -> anyhow::Result<Prescription> {
+    ) -> Result<Prescription, CreatePrescriptionRepositoryError> {
         let patients = self.patients.read().unwrap();
         let found_patient = patients
             .iter()
             .find(|patient| patient.id == new_prescription.patient_id)
-            .ok_or(anyhow::format_err!("Patient not found"))?;
+            .ok_or(CreatePrescriptionRepositoryError::PatientNotFound(
+                new_prescription.patient_id,
+            ))?;
 
         let doctors = self.doctors.read().unwrap();
         let found_doctor = doctors
             .iter()
             .find(|doctor: &&Doctor| doctor.id == new_prescription.doctor_id)
-            .ok_or(anyhow::format_err!("Doctor not found"))?;
+            .ok_or(CreatePrescriptionRepositoryError::DoctorNotFound(
+                new_prescription.doctor_id,
+            ))?;
 
         let drugs = self.drugs.read().unwrap();
         for new_prescribed_drug in &new_prescription.prescribed_drugs {
             drugs
                 .iter()
                 .find(|drug| drug.id == new_prescribed_drug.drug_id)
-                .ok_or(anyhow::format_err!("Drug not found"))?;
+                .ok_or(CreatePrescriptionRepositoryError::DrugNotFound(
+                    new_prescribed_drug.drug_id,
+                ))?;
         }
 
         let prescription = Prescription {
@@ -135,8 +180,10 @@ impl PrescriptionsRepository for PrescriptionsRepositoryFake {
         &self,
         page: Option<i64>,
         page_size: Option<i64>,
-    ) -> anyhow::Result<Vec<Prescription>> {
-        let (page_size, offset) = get_pagination_params(page, page_size)?;
+    ) -> Result<Vec<Prescription>, GetPrescriptionsRepositoryError> {
+        let (page_size, offset) = get_pagination_params(page, page_size).map_err(|err| {
+            GetPrescriptionsRepositoryError::InvalidPaginationParams(err.to_string())
+        })?;
         let a = offset;
         let b = offset + page_size;
 
@@ -151,7 +198,10 @@ impl PrescriptionsRepository for PrescriptionsRepositoryFake {
         Ok(prescriptions)
     }
 
-    async fn get_prescription_by_id(&self, prescription_id: Uuid) -> anyhow::Result<Prescription> {
+    async fn get_prescription_by_id(
+        &self,
+        prescription_id: Uuid,
+    ) -> Result<Prescription, GetPrescriptionByIdRepositoryError> {
         match self
             .prescriptions
             .read()
@@ -160,19 +210,23 @@ impl PrescriptionsRepository for PrescriptionsRepositoryFake {
             .find(|prescription| prescription.id == prescription_id)
         {
             Some(prescription) => Ok(prescription.clone()),
-            None => Err(anyhow::anyhow!("Prescription not found")),
+            None => Err(GetPrescriptionByIdRepositoryError::NotFound(
+                prescription_id,
+            )),
         }
     }
 
     async fn fill_prescription(
         &self,
         new_prescription_fill: NewPrescriptionFill,
-    ) -> anyhow::Result<PrescriptionFill> {
+    ) -> Result<PrescriptionFill, FillPrescriptionRepositoryError> {
         let pharmacists = self.pharmacists.read().unwrap();
         pharmacists
             .iter()
             .find(|pharmacist| pharmacist.id == new_prescription_fill.pharmacist_id)
-            .ok_or(anyhow::format_err!("Pharmacist not found"))?;
+            .ok_or(FillPrescriptionRepositoryError::PharmacistNotFound(
+                new_prescription_fill.pharmacist_id,
+            ))?;
 
         let prescription_fill = PrescriptionFill {
             id: new_prescription_fill.id,
@@ -207,6 +261,8 @@ impl PrescriptionsRepository for PrescriptionsRepositoryFake {
 
 #[cfg(test)]
 mod tests {
+    use std::assert_matches::assert_matches;
+
     use uuid::Uuid;
 
     use crate::domain::{
@@ -228,7 +284,11 @@ mod tests {
         },
         prescriptions::{
             models::{NewPrescribedDrug, NewPrescription},
-            repository::{PrescriptionsRepository, PrescriptionsRepositoryFake},
+            repository::{
+                CreatePrescriptionRepositoryError, FillPrescriptionRepositoryError,
+                GetPrescriptionByIdRepositoryError, GetPrescriptionsRepositoryError,
+                PrescriptionsRepository, PrescriptionsRepositoryFake,
+            },
         },
     };
 
@@ -241,15 +301,17 @@ mod tests {
 
     async fn seed_in_memory_database(
         prescriptions_repo: &PrescriptionsRepositoryFake,
-    ) -> anyhow::Result<DatabaseSeeds> {
+    ) -> DatabaseSeeds {
         let pharmacists_repo = PharmacistsRepositoryFake::new();
         let pharmacist = NewPharmacist::new(
             "John Pharmacist".into(), //
             "96021807250".into(),
-        )?;
+        )
+        .unwrap();
         let created_pharmacist = pharmacists_repo
             .create_pharmacist(pharmacist.clone())
-            .await?;
+            .await
+            .unwrap();
         prescriptions_repo
             .pharmacists
             .write()
@@ -260,8 +322,9 @@ mod tests {
         let patient = NewPatient::new(
             "John Patient".into(), //
             "96021807250".into(),
-        )?;
-        let created_patient = patients_repo.create_patient(patient.clone()).await?;
+        )
+        .unwrap();
+        let created_patient = patients_repo.create_patient(patient.clone()).await.unwrap();
         prescriptions_repo
             .patients
             .write()
@@ -273,8 +336,9 @@ mod tests {
             "John Doctor".into(), //
             "3123456".into(),
             "96021807250".into(),
-        )?;
-        let created_doctor = doctors_repo.create_doctor(doctor.clone()).await?;
+        )
+        .unwrap();
+        let created_doctor = doctors_repo.create_doctor(doctor.clone()).await.unwrap();
         prescriptions_repo
             .doctors
             .write()
@@ -291,24 +355,146 @@ mod tests {
                 Some(300),
                 None,
                 None,
-            )?;
+            )
+            .unwrap();
             drugs.push(drug.clone());
-            let created_drug = drugs_repo.create_drug(drug).await?;
+            let created_drug = drugs_repo.create_drug(drug).await.unwrap();
             prescriptions_repo.drugs.write().unwrap().push(created_drug);
         }
 
-        Ok(DatabaseSeeds {
+        DatabaseSeeds {
             doctor,
             pharmacist,
             patient,
             drugs,
-        })
+        }
     }
 
     async fn setup_repository() -> (PrescriptionsRepositoryFake, DatabaseSeeds) {
         let repository = PrescriptionsRepositoryFake::new(None, None, None, None, None);
-        let seeds = seed_in_memory_database(&repository).await.unwrap();
+        let seeds = seed_in_memory_database(&repository).await;
         (repository, seeds)
+    }
+
+    #[tokio::test]
+    async fn creates_and_reads_prescription_by_id() {
+        let (repository, seeds) = setup_repository().await;
+
+        let new_prescription = NewPrescription::new(
+            seeds.doctor.id,
+            seeds.patient.id,
+            None,
+            None,
+            vec![
+                NewPrescribedDrug {
+                    drug_id: seeds.drugs[0].id,
+                    quantity: 1,
+                },
+                NewPrescribedDrug {
+                    drug_id: seeds.drugs[1].id,
+                    quantity: 1,
+                },
+            ],
+        )
+        .unwrap();
+
+        repository
+            .create_prescription(new_prescription.clone())
+            .await
+            .unwrap();
+
+        let prescription_from_db = repository
+            .get_prescription_by_id(new_prescription.id)
+            .await
+            .unwrap();
+
+        assert_eq!(prescription_from_db, new_prescription);
+    }
+
+    #[tokio::test]
+    async fn doesnt_create_prescription_if_relations_dont_exist() {
+        let (repository, seeds) = setup_repository().await;
+
+        let nonexistent_doctor_id = Uuid::new_v4();
+        let new_prescription_with_nonexisting_doctor_id = NewPrescription::new(
+            nonexistent_doctor_id,
+            seeds.patient.id,
+            None,
+            None,
+            vec![NewPrescribedDrug {
+                drug_id: seeds.drugs[0].id,
+                quantity: 1,
+            }],
+        )
+        .unwrap();
+
+        assert_eq!(
+            repository
+                .create_prescription(new_prescription_with_nonexisting_doctor_id)
+                .await,
+            Err(CreatePrescriptionRepositoryError::DoctorNotFound(
+                nonexistent_doctor_id
+            ))
+        );
+
+        let nonexistent_patient_id = Uuid::new_v4();
+        let new_prescription_with_nonexisting_patient_id = NewPrescription::new(
+            seeds.patient.id,
+            nonexistent_patient_id,
+            None,
+            None,
+            vec![NewPrescribedDrug {
+                drug_id: seeds.drugs[0].id,
+                quantity: 1,
+            }],
+        )
+        .unwrap();
+
+        assert_eq!(
+            repository
+                .create_prescription(new_prescription_with_nonexisting_patient_id)
+                .await,
+            Err(CreatePrescriptionRepositoryError::PatientNotFound(
+                nonexistent_patient_id
+            ))
+        );
+
+        let nonexistent_drug_id = Uuid::new_v4();
+        let new_prescription_with_nonexisting_drug_id = NewPrescription::new(
+            seeds.doctor.id,
+            seeds.patient.id,
+            None,
+            None,
+            vec![NewPrescribedDrug {
+                drug_id: nonexistent_drug_id,
+                quantity: 1,
+            }],
+        )
+        .unwrap();
+
+        assert_eq!(
+            repository
+                .create_prescription(new_prescription_with_nonexisting_drug_id)
+                .await,
+            Err(CreatePrescriptionRepositoryError::DrugNotFound(
+                nonexistent_drug_id
+            ))
+        );
+    }
+
+    #[tokio::test]
+    async fn get_prescription_by_id_returns_error_if_prescription_doesnt_exist() {
+        let (repository, _) = setup_repository().await;
+        let prescription_id = Uuid::new_v4();
+
+        let prescription_from_db = repository.get_prescription_by_id(prescription_id).await;
+
+        assert_eq!(
+            prescription_from_db,
+            Err(GetPrescriptionByIdRepositoryError::NotFound(
+                prescription_id
+            ))
+        );
     }
 
     #[tokio::test]
@@ -380,104 +566,18 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn creates_and_reads_prescription_by_id() {
-        let (repository, seeds) = setup_repository().await;
-
-        let new_prescription = NewPrescription::new(
-            seeds.doctor.id,
-            seeds.patient.id,
-            None,
-            None,
-            vec![
-                NewPrescribedDrug {
-                    drug_id: seeds.drugs[0].id,
-                    quantity: 1,
-                },
-                NewPrescribedDrug {
-                    drug_id: seeds.drugs[1].id,
-                    quantity: 1,
-                },
-            ],
-        )
-        .unwrap();
-
-        repository
-            .create_prescription(new_prescription.clone())
-            .await
-            .unwrap();
-
-        let prescription_from_db = repository
-            .get_prescription_by_id(new_prescription.id)
-            .await
-            .unwrap();
-
-        assert_eq!(prescription_from_db, new_prescription);
-    }
-
-    #[tokio::test]
-    async fn doesnt_create_prescription_if_relations_dont_exist() {
-        let (repository, seeds) = setup_repository().await;
-
-        let new_prescription_with_nonexisting_doctor_id = NewPrescription::new(
-            Uuid::new_v4(),
-            seeds.doctor.id,
-            None,
-            None,
-            vec![NewPrescribedDrug {
-                drug_id: seeds.drugs[0].id,
-                quantity: 1,
-            }],
-        )
-        .unwrap();
-
-        assert!(repository
-            .create_prescription(new_prescription_with_nonexisting_doctor_id)
-            .await
-            .is_err());
-
-        let new_prescription_with_nonexisting_patient_id = NewPrescription::new(
-            seeds.patient.id,
-            Uuid::new_v4(),
-            None,
-            None,
-            vec![NewPrescribedDrug {
-                drug_id: seeds.drugs[0].id,
-                quantity: 1,
-            }],
-        )
-        .unwrap();
-
-        assert!(repository
-            .create_prescription(new_prescription_with_nonexisting_patient_id)
-            .await
-            .is_err());
-
-        let new_prescription_with_nonexisting_drug_id = NewPrescription::new(
-            seeds.doctor.id,
-            seeds.patient.id,
-            None,
-            None,
-            vec![NewPrescribedDrug {
-                drug_id: Uuid::new_v4(),
-                quantity: 1,
-            }],
-        )
-        .unwrap();
-
-        assert!(repository
-            .create_prescription(new_prescription_with_nonexisting_drug_id)
-            .await
-            .is_err());
-    }
-
-    #[tokio::test]
-    async fn get_prescription_by_id_returns_error_if_prescription_doesnt_exist() {
+    async fn get_prescriptions_returns_error_if_pagination_params_are_incorrect() {
         let (repository, _) = setup_repository().await;
-        let prescription_id = Uuid::new_v4();
 
-        let prescription_from_db = repository.get_prescription_by_id(prescription_id).await;
+        assert_matches!(
+            repository.get_prescriptions(Some(-1), Some(10)).await,
+            Err(GetPrescriptionsRepositoryError::InvalidPaginationParams(_))
+        );
 
-        assert!(prescription_from_db.is_err());
+        assert_matches!(
+            repository.get_prescriptions(Some(0), Some(0)).await,
+            Err(GetPrescriptionsRepositoryError::InvalidPaginationParams(_))
+        );
     }
 
     #[tokio::test]
@@ -528,6 +628,7 @@ mod tests {
     async fn doesnt_fill_if_pharmacist_relation_doesnt_exist() {
         let (repository, seeds) = setup_repository().await;
 
+        let nonexistent_pharmacist_id = Uuid::new_v4();
         let new_prescription = NewPrescription::new(
             seeds.doctor.id,
             seeds.patient.id,
@@ -551,12 +652,17 @@ mod tests {
             .await
             .unwrap();
 
-        let new_prescription_fill_with_nonexistent_pharmacist_id =
-            prescription_from_db.fill(Uuid::new_v4()).unwrap();
+        let new_prescription_fill_with_nonexistent_pharmacist_id = prescription_from_db
+            .fill(nonexistent_pharmacist_id)
+            .unwrap();
 
-        assert!(repository
-            .fill_prescription(new_prescription_fill_with_nonexistent_pharmacist_id)
-            .await
-            .is_err());
+        assert_eq!(
+            repository
+                .fill_prescription(new_prescription_fill_with_nonexistent_pharmacist_id)
+                .await,
+            Err(FillPrescriptionRepositoryError::PharmacistNotFound(
+                nonexistent_pharmacist_id
+            ))
+        );
     }
 }
