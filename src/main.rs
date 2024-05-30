@@ -1,19 +1,19 @@
 #![feature(assert_matches)]
 pub mod api;
-mod create_tables;
 pub mod domain;
 pub mod infrastructure;
 use std::sync::Arc;
 
 use api::doctors_controller;
-use create_tables::create_tables;
 use domain::{
     doctors::service::DoctorsService, drugs::service::DrugsService,
     patients::service::PatientsService, pharmacists::service::PharmacistsService,
+    prescriptions::service::PrescriptionsService,
 };
 use infrastructure::postgres_repository_impl::{
-    doctors::PostgresDoctorsRepository, drugs::PostgresDrugsRepository,
-    patients::PostgresPatientsRepository, pharmacists::PostgresPharmacistsRepository,
+    create_tables::create_tables, doctors::PostgresDoctorsRepository,
+    drugs::PostgresDrugsRepository, patients::PostgresPatientsRepository,
+    pharmacists::PostgresPharmacistsRepository, prescriptions::PostgresPrescriptionsRepository,
 };
 use rocket::{launch, Build, Rocket};
 use rocket_okapi::swagger_ui::{make_swagger_ui, SwaggerUIConfig};
@@ -24,28 +24,36 @@ extern crate dotenv_codegen;
 
 #[derive(Clone)]
 pub struct Context {
-    pub doctors_service: Arc<DoctorsService<PostgresDoctorsRepository>>,
-    pub pharmacists_service: Arc<PharmacistsService<PostgresPharmacistsRepository>>,
-    pub patients_service: Arc<PatientsService<PostgresPatientsRepository>>,
-    pub drugs_service: Arc<DrugsService<PostgresDrugsRepository>>,
+    pub doctors_service: Arc<DoctorsService>,
+    pub pharmacists_service: Arc<PharmacistsService>,
+    pub patients_service: Arc<PatientsService>,
+    pub drugs_service: Arc<DrugsService>,
+    pub prescriptions_service: Arc<PrescriptionsService>,
 }
 pub type Ctx = rocket::State<Context>;
 
-pub fn setup_context(pool: PgPool) -> Context {
-    let doctors_repository = PostgresDoctorsRepository::new(pool.clone());
+fn setup_context(pool: PgPool) -> Context {
+    let doctors_repository = Box::new(PostgresDoctorsRepository::new(pool.clone()));
     let doctors_service = Arc::new(DoctorsService::new(doctors_repository));
-    let pharmacists_rerpository = PostgresPharmacistsRepository::new(pool.clone());
+    
+    let pharmacists_rerpository = Box::new(PostgresPharmacistsRepository::new(pool.clone()));
     let pharmacists_service = Arc::new(PharmacistsService::new(pharmacists_rerpository));
-    let patients_repository = PostgresPatientsRepository::new(pool.clone());
+    
+    let patients_repository = Box::new(PostgresPatientsRepository::new(pool.clone()));
     let patients_service = Arc::new(PatientsService::new(patients_repository));
-    let drugs_repository = PostgresDrugsRepository::new(pool.clone());
+    
+    let drugs_repository = Box::new(PostgresDrugsRepository::new(pool.clone()));
     let drugs_service = Arc::new(DrugsService::new(drugs_repository));
+    
+    let prescriptions_repository = Box::new(PostgresPrescriptionsRepository::new(pool.clone()));
+    let prescriptions_service = Arc::new(PrescriptionsService::new(prescriptions_repository));
 
     Context {
         doctors_service,
         pharmacists_service,
         patients_service,
         drugs_service,
+        prescriptions_service,
     }
 }
 

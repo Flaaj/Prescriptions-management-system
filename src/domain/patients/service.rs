@@ -21,13 +21,12 @@ pub enum GetPatientWithPaginationError {
     DomainError(String),
 }
 
-#[derive(Clone)]
-pub struct PatientsService<R: PatientsRepository> {
-    repository: R,
+pub struct PatientsService {
+    repository: Box<dyn PatientsRepository>,
 }
 
-impl<R: PatientsRepository> PatientsService<R> {
-    pub fn new(repository: R) -> Self {
+impl PatientsService {
+    pub fn new(repository: Box<dyn PatientsRepository>) -> Self {
         Self { repository }
     }
 
@@ -79,11 +78,11 @@ impl<R: PatientsRepository> PatientsService<R> {
 #[cfg(test)]
 mod tests {
     use super::PatientsService;
-    use crate::domain::patients::repository::{PatientsRepositoryFake, PatientsRepository};
+    use crate::domain::patients::repository::PatientsRepositoryFake;
     use uuid::Uuid;
 
-    fn setup_service() -> PatientsService<impl PatientsRepository> {
-        PatientsService::new(PatientsRepositoryFake::new())
+    fn setup_service() -> PatientsService {
+        PatientsService::new(Box::new(PatientsRepositoryFake::new()))
     }
 
     #[tokio::test]

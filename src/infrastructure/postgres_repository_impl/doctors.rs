@@ -127,14 +127,13 @@ mod tests {
 
     use super::PostgresDoctorsRepository;
     use crate::{
-        create_tables::create_tables,
         domain::doctors::{
                 models::NewDoctor,
                 repository::{
                     CreateDoctorRepositoryError, DoctorsRepository, GetDoctorByIdRepositoryError,
                     GetDoctorsRepositoryError,
                 },
-            },
+            }, infrastructure::postgres_repository_impl::create_tables::create_tables,
     };
 
     async fn setup_repository(pool: sqlx::PgPool) -> PostgresDoctorsRepository {

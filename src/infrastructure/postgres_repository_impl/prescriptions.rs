@@ -354,7 +354,6 @@ mod tests {
 
     use super::PostgresPrescriptionsRepository;
     use crate::{
-        create_tables::create_tables,
         domain::{
             doctors::{models::NewDoctor, repository::DoctorsRepository},
             drugs::{
@@ -369,8 +368,7 @@ mod tests {
             },
         },
         infrastructure::postgres_repository_impl::{
-            doctors::PostgresDoctorsRepository, drugs::PostgresDrugsRepository,
-            patients::PostgresPatientsRepository, pharmacists::PostgresPharmacistsRepository,
+            create_tables::create_tables, doctors::PostgresDoctorsRepository, drugs::PostgresDrugsRepository, patients::PostgresPatientsRepository, pharmacists::PostgresPharmacistsRepository
         },
     };
 

@@ -34,7 +34,7 @@ pub enum GetDoctorByIdRepositoryError {
 }
 
 #[async_trait]
-pub trait DoctorsRepository {
+pub trait DoctorsRepository: Send + Sync + 'static {
     async fn create_doctor(&self, doctor: NewDoctor)
         -> Result<Doctor, CreateDoctorRepositoryError>;
     async fn get_doctors(
@@ -48,7 +48,6 @@ pub trait DoctorsRepository {
     ) -> Result<Doctor, GetDoctorByIdRepositoryError>;
 }
 
-/// Used to test the service layer in isolation
 pub struct DoctorsRepositoryFake {
     doctors: RwLock<Vec<Doctor>>,
 }

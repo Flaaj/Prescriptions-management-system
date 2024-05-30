@@ -4,6 +4,10 @@ use crate::domain::pharmacists::{
 };
 use uuid::Uuid;
 
+pub struct PharmacistsService {
+    repository: Box<dyn PharmacistsRepository>,
+}
+
 #[derive(Debug)]
 pub enum CreatePharmacistError {
     DomainError(String),
@@ -21,13 +25,8 @@ pub enum GetPharmacistWithPaginationError {
     DomainError(String),
 }
 
-#[derive(Clone)]
-pub struct PharmacistsService<R: PharmacistsRepository> {
-    repository: R,
-}
-
-impl<R: PharmacistsRepository> PharmacistsService<R> {
-    pub fn new(repository: R) -> Self {
+impl PharmacistsService {
+    pub fn new(repository: Box<dyn PharmacistsRepository>) -> Self {
         Self { repository }
     }
 
@@ -79,13 +78,11 @@ impl<R: PharmacistsRepository> PharmacistsService<R> {
 #[cfg(test)]
 mod tests {
     use super::PharmacistsService;
-    use crate::domain::pharmacists::repository::{
-        PharmacistsRepositoryFake, PharmacistsRepository,
-    };
+    use crate::domain::pharmacists::repository::PharmacistsRepositoryFake;
     use uuid::Uuid;
 
-    fn setup_service() -> PharmacistsService<impl PharmacistsRepository> {
-        PharmacistsService::new(PharmacistsRepositoryFake::new())
+    fn setup_service() -> PharmacistsService {
+        PharmacistsService::new(Box::new(PharmacistsRepositoryFake::new()))
     }
 
     #[tokio::test]

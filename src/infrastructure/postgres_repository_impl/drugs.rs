@@ -110,13 +110,10 @@ mod tests {
     use uuid::Uuid;
 
     use super::{DrugsRepository, PostgresDrugsRepository};
-    use crate::{
-        create_tables::create_tables,
-        domain::drugs::{
-            models::{DrugContentType, NewDrug},
-            repository::{GetDrugByIdRepositoryError, GetDrugsRepositoryError},
-        },
-    };
+    use crate::{domain::drugs::{
+        models::{DrugContentType, NewDrug},
+        repository::{GetDrugByIdRepositoryError, GetDrugsRepositoryError},
+    }, infrastructure::postgres_repository_impl::create_tables::create_tables};
 
     async fn setup_repository(pool: sqlx::PgPool) -> PostgresDrugsRepository {
         create_tables(&pool, true).await.unwrap();

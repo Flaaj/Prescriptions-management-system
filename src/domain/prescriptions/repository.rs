@@ -15,7 +15,7 @@ use uuid::Uuid;
 use super::models::{PrescribedDrug, PrescriptionDoctor, PrescriptionPatient};
 
 #[async_trait]
-pub trait PrescriptionsRepository {
+pub trait PrescriptionsRepository: Send + Sync + 'static {
     async fn create_prescription(
         &self,
         prescription: NewPrescription,
@@ -36,7 +36,6 @@ pub trait PrescriptionsRepository {
     // async fn delete_prescription(&self, prescription_id: Uuid) -> anyhow::Result<()>;
 }
 
-/// Used to test the service layer in isolation
 pub struct PrescriptionsRepositoryFake {
     prescriptions: RwLock<Vec<Prescription>>,
     doctors: RwLock<Vec<Doctor>>,
@@ -221,15 +220,15 @@ mod tests {
         },
         patients::{
             models::NewPatient,
-            repository::{PatientsRepositoryFake, PatientsRepository},
+            repository::{PatientsRepository, PatientsRepositoryFake},
         },
         pharmacists::{
             models::NewPharmacist,
-            repository::{PharmacistsRepositoryFake, PharmacistsRepository},
+            repository::{PharmacistsRepository, PharmacistsRepositoryFake},
         },
         prescriptions::{
             models::{NewPrescribedDrug, NewPrescription},
-            repository::{PrescriptionsRepositoryFake, PrescriptionsRepository},
+            repository::{PrescriptionsRepository, PrescriptionsRepositoryFake},
         },
     };
 

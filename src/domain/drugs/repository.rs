@@ -32,7 +32,7 @@ pub enum GetDrugByIdRepositoryError {
 }
 
 #[async_trait]
-pub trait DrugsRepository {
+pub trait DrugsRepository: Send + Sync + 'static {
     async fn create_drug(&self, drug: NewDrug) -> Result<Drug, CreateDrugRepositoryError>;
     async fn get_drugs(
         &self,
@@ -42,7 +42,7 @@ pub trait DrugsRepository {
     async fn get_drug_by_id(&self, drug_id: Uuid) -> Result<Drug, GetDrugByIdRepositoryError>;
 }
 
-/// Used to test the service layer in isolation
+
 pub struct DrugsRepositoryFake {
     drugs: RwLock<Vec<Drug>>,
 }

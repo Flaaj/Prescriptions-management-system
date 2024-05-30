@@ -5,9 +5,8 @@ use super::{
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
-#[derive(Clone)]
-pub struct PrescriptionsService<R: PrescriptionsRepository> {
-    repository: R,
+pub struct PrescriptionsService {
+    repository: Box<dyn PrescriptionsRepository>,
 }
 
 #[derive(Debug)]
@@ -16,8 +15,8 @@ pub enum CreatePrescriptionError {
     DomainError(String),
 }
 
-impl<R: PrescriptionsRepository> PrescriptionsService<R> {
-    pub fn new(repository: R) -> Self {
+impl PrescriptionsService {
+    pub fn new(repository: Box<dyn PrescriptionsRepository>) -> Self {
         Self { repository }
     }
 
@@ -86,17 +85,11 @@ mod tests {
             repository::DrugsRepositoryFake,
             service::DrugsService,
         },
-        patients::{
-            models::Patient, repository::PatientsRepositoryFake, service::PatientsService,
-        },
+        patients::{models::Patient, repository::PatientsRepositoryFake, service::PatientsService},
         pharmacists::{
-            models::Pharmacist, repository::PharmacistsRepositoryFake,
-            service::PharmacistsService,
+            models::Pharmacist, repository::PharmacistsRepositoryFake, service::PharmacistsService,
         },
-        prescriptions::{
-            models::PrescriptionType,
-            repository::{PrescriptionsRepositoryFake, PrescriptionsRepository},
-        },
+        prescriptions::{models::PrescriptionType, repository::PrescriptionsRepositoryFake},
     };
 
     struct DatabaseSeeds {
@@ -106,29 +99,27 @@ mod tests {
         drugs: Vec<Drug>,
     }
 
-    async fn setup_services_and_seed_database() -> (
-        PrescriptionsService<impl PrescriptionsRepository>,
-        DatabaseSeeds,
-    ) {
-        let doctors_service = DoctorsService::new(DoctorsRepositoryFake::new());
+    async fn setup_services_and_seed_database() -> (PrescriptionsService, DatabaseSeeds) {
+        let doctors_service = DoctorsService::new(Box::new(DoctorsRepositoryFake::new()));
         let created_doctor = doctors_service
             .create_doctor("John Doctor".into(), "92022900002".into(), "3123456".into())
             .await
             .unwrap();
 
-        let pharmacist_service = PharmacistsService::new(PharmacistsRepositoryFake::new());
+        let pharmacist_service =
+            PharmacistsService::new(Box::new(PharmacistsRepositoryFake::new()));
         let created_pharmacist = pharmacist_service
             .create_pharmacist("John Pharmacist".into(), "92022900002".into())
             .await
             .unwrap();
 
-        let patients_service = PatientsService::new(PatientsRepositoryFake::new());
+        let patients_service = PatientsService::new(Box::new(PatientsRepositoryFake::new()));
         let created_patient = patients_service
             .create_patient("John Patient".into(), "92022900002".into())
             .await
             .unwrap();
 
-        let drugs_service = DrugsService::new(DrugsRepositoryFake::new());
+        let drugs_service = DrugsService::new(Box::new(DrugsRepositoryFake::new()));
         let created_drug_0 = drugs_service
             .create_drug(
                 "Gripex".into(),
@@ -175,7 +166,7 @@ mod tests {
             .unwrap();
 
         (
-            PrescriptionsService::new(PrescriptionsRepositoryFake::new(
+            PrescriptionsService::new(Box::new(PrescriptionsRepositoryFake::new(
                 None,
                 Some(vec![created_doctor.clone()]),
                 Some(vec![created_patient.clone()]),
@@ -186,7 +177,7 @@ mod tests {
                     created_drug_2.clone(),
                     created_drug_3.clone(),
                 ]),
-            )),
+            ))),
             DatabaseSeeds {
                 doctor: created_doctor,
                 pharmacist: created_pharmacist,

@@ -32,7 +32,7 @@ pub enum GetPatientByIdRepositoryError {
 }
 
 #[async_trait]
-pub trait PatientsRepository {
+pub trait PatientsRepository: Send + Sync + 'static {
     async fn create_patient(
         &self,
         patient: NewPatient,
@@ -48,7 +48,7 @@ pub trait PatientsRepository {
     ) -> Result<Patient, GetPatientByIdRepositoryError>;
 }
 
-/// Used to test the service layer in isolation
+
 pub struct PatientsRepositoryFake {
     patients: RwLock<Vec<Patient>>,
 }

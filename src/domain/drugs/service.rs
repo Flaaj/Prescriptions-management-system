@@ -5,8 +5,8 @@ use super::{
     repository::DrugsRepository,
 };
 
-pub struct DrugsService<R: DrugsRepository> {
-    repository: R,
+pub struct DrugsService {
+    repository: Box<dyn DrugsRepository>,
 }
 
 #[derive(Debug)]
@@ -26,8 +26,8 @@ pub enum GetDrugsWithPaginationError {
     DomainError(String),
 }
 
-impl<R: DrugsRepository> DrugsService<R> {
-    pub fn new(repository: R) -> Self {
+impl DrugsService {
+    pub fn new(repository: Box<dyn DrugsRepository>) -> Self {
         Self { repository }
     }
 
@@ -88,15 +88,12 @@ impl<R: DrugsRepository> DrugsService<R> {
 mod tests {
     use uuid::Uuid;
 
-    use crate::domain::drugs::{
-        models::DrugContentType,
-        repository::{DrugsRepository, DrugsRepositoryFake},
-    };
+    use crate::domain::drugs::{models::DrugContentType, repository::DrugsRepositoryFake};
 
     use super::DrugsService;
 
-    fn setup_service() -> DrugsService<impl DrugsRepository> {
-        DrugsService::new(DrugsRepositoryFake::new())
+    fn setup_service() -> DrugsService {
+        DrugsService::new(Box::new(DrugsRepositoryFake::new()))
     }
 
     #[tokio::test]

@@ -115,16 +115,13 @@ mod tests {
     use std::assert_matches::assert_matches;
 
     use super::PostgresPatientsRepository;
-    use crate::{
-        create_tables::create_tables,
-        domain::patients::{
-            models::NewPatient,
-            repository::{
-                CreatePatientRepositoryError, GetPatientByIdRepositoryError,
-                GetPatientsRepositoryError, PatientsRepository,
-            },
+    use crate::{domain::patients::{
+        models::NewPatient,
+        repository::{
+            CreatePatientRepositoryError, GetPatientByIdRepositoryError,
+            GetPatientsRepositoryError, PatientsRepository,
         },
-    };
+    }, infrastructure::postgres_repository_impl::create_tables::create_tables};
     use uuid::Uuid;
 
     async fn setup_repository(pool: sqlx::PgPool) -> PostgresPatientsRepository {
@@ -155,7 +152,10 @@ mod tests {
 
         let patient_from_repo = repository.get_patient_by_id(patient_id).await;
 
-        assert_eq!(patient_from_repo, Err(GetPatientByIdRepositoryError::NotFound(patient_id)));
+        assert_eq!(
+            patient_from_repo,
+            Err(GetPatientByIdRepositoryError::NotFound(patient_id))
+        );
     }
 
     #[sqlx::test]

@@ -108,16 +108,13 @@ mod tests {
     use uuid::Uuid;
 
     use super::PostgresPharmacistsRepository;
-    use crate::{
-        create_tables::create_tables,
-        domain::pharmacists::{
-            models::NewPharmacist,
-            repository::{
-                CreatePharmacistRepositoryError, GetPharmacistByIdRepositoryError,
-                GetPharmacistsRepositoryError, PharmacistsRepository,
-            },
+    use crate::{domain::pharmacists::{
+        models::NewPharmacist,
+        repository::{
+            CreatePharmacistRepositoryError, GetPharmacistByIdRepositoryError,
+            GetPharmacistsRepositoryError, PharmacistsRepository,
         },
-    };
+    }, infrastructure::postgres_repository_impl::create_tables::create_tables};
 
     async fn setup_repository(pool: sqlx::PgPool) -> PostgresPharmacistsRepository {
         create_tables(&pool, true).await.unwrap();

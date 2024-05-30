@@ -23,13 +23,12 @@ pub enum GetDoctorWithPaginationError {
     RepositoryError(GetDoctorsRepositoryError),
 }
 
-#[derive(Clone)]
-pub struct DoctorsService<R: DoctorsRepository> {
-    repository: R,
+pub struct DoctorsService {
+    repository: Box<dyn DoctorsRepository>,
 }
 
-impl<R: DoctorsRepository> DoctorsService<R> {
-    pub fn new(repository: R) -> Self {
+impl DoctorsService {
+    pub fn new(repository: Box<dyn DoctorsRepository>) -> Self {
         Self { repository }
     }
 
@@ -82,13 +81,11 @@ mod tests {
     use std::assert_matches::assert_matches;
 
     use super::{CreateDoctorError, DoctorsService, GetDoctorByIdError};
-    use crate::domain::doctors::{
-        repository::DoctorsRepository, repository::DoctorsRepositoryFake,
-    };
+    use crate::domain::doctors::repository::DoctorsRepositoryFake;
     use uuid::Uuid;
 
-    fn setup_service() -> DoctorsService<impl DoctorsRepository> {
-        DoctorsService::new(DoctorsRepositoryFake::new())
+    fn setup_service() -> DoctorsService {
+        DoctorsService::new(Box::new(DoctorsRepositoryFake::new()))
     }
 
     #[tokio::test]
