@@ -20,9 +20,7 @@ impl PostgresDrugsRepository {
     pub fn new(pool: sqlx::PgPool) -> Self {
         Self { pool }
     }
-}
 
-impl PostgresDrugsRepository {
     fn get_drug_from_pg_row(&self, row: PgRow) -> Result<Drug, sqlx::Error> {
         Ok(Drug {
             id: row.try_get(0)?,
