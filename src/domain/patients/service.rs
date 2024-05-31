@@ -4,21 +4,22 @@ use crate::domain::patients::{
 };
 use uuid::Uuid;
 
+use super::repository::{CreatePatientRepositoryError, GetPatientByIdRepositoryError, GetPatientsRepositoryError};
+
 #[derive(Debug)]
 pub enum CreatePatientError {
     DomainError(String),
-    RepositoryError(String),
+    RepositoryError(CreatePatientRepositoryError),
 }
 
 #[derive(Debug)]
 pub enum GetPatientByIdError {
-    DomainError,
-    RepositoryError(String),
+    RepositoryError(GetPatientByIdRepositoryError),
 }
 
 #[derive(Debug)]
-pub enum GetPatientWithPaginationError {
-    DomainError(String),
+pub enum GetPatientsWithPaginationError {
+    RepositoryError(GetPatientsRepositoryError),
 }
 
 pub struct PatientsService {
@@ -42,7 +43,7 @@ impl PatientsService {
             .repository
             .create_patient(new_patient)
             .await
-            .map_err(|err| CreatePatientError::RepositoryError(err.to_string()))?;
+            .map_err(|err| CreatePatientError::RepositoryError(err))?;
 
         Ok(created_patient)
     }
@@ -55,7 +56,7 @@ impl PatientsService {
             .repository
             .get_patient_by_id(patient_id)
             .await
-            .map_err(|err| GetPatientByIdError::RepositoryError(err.to_string()))?;
+            .map_err(|err| GetPatientByIdError::RepositoryError(err))?;
 
         Ok(patient)
     }
@@ -64,12 +65,12 @@ impl PatientsService {
         &self,
         page: Option<i64>,
         page_size: Option<i64>,
-    ) -> Result<Vec<Patient>, GetPatientWithPaginationError> {
+    ) -> Result<Vec<Patient>, GetPatientsWithPaginationError> {
         let patients = self
             .repository
             .get_patients(page, page_size)
             .await
-            .map_err(|err| GetPatientWithPaginationError::DomainError(err.to_string()))?;
+            .map_err(|err| GetPatientsWithPaginationError::RepositoryError(err))?;
 
         Ok(patients)
     }

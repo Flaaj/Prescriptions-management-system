@@ -1,4 +1,6 @@
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 #[derive(Clone, Debug)]
@@ -8,7 +10,7 @@ pub struct NewPatient {
     pub pesel_number: String,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct Patient {
     pub id: Uuid,
     pub name: String,

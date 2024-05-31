@@ -95,9 +95,9 @@ impl PrescriptionsRepositoryFake {
         Self {
             prescriptions: RwLock::new(initial_prescriptions.unwrap_or(Vec::new())),
             doctors: RwLock::new(initial_doctors.unwrap_or(Vec::new())),
-            drugs: RwLock::new(initial_drugs.unwrap_or(Vec::new())),
             patients: RwLock::new(initial_patients.unwrap_or(Vec::new())),
             pharmacists: RwLock::new(initial_pharmacists.unwrap_or(Vec::new())),
+            drugs: RwLock::new(initial_drugs.unwrap_or(Vec::new())),
         }
     }
 }

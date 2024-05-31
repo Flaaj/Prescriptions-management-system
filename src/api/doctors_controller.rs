@@ -38,11 +38,11 @@ fn example_pwz_number() -> &'static str {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CreateDoctorDto {
     #[schemars(example = "example_name")]
-    pub name: String,
+    name: String,
     #[schemars(example = "example_pesel_number")]
-    pub pesel_number: String,
+    pesel_number: String,
     #[schemars(example = "example_pwz_number")]
-    pub pwz_number: String,
+    pwz_number: String,
 }
 
 impl<'r> Responder<'r, 'static> for CreateDoctorError {
@@ -86,7 +86,7 @@ impl OpenApiResponderInner for CreateDoctorError {
             "409".to_string(),
             RefOr::Object(OpenApiReponse {
                 description:
-                    "Returned when the pwz_number or the pesel_number exist in the database"
+                    "Returned when the doctor with given pwz_number or pesel_number exist in the database"
                         .to_string(),
                 ..Default::default()
             }),
@@ -278,12 +278,16 @@ mod tests {
     async fn create_api_client() -> Client {
         let doctors_repository = Box::new(DoctorsRepositoryFake::new());
         let doctors_service = Arc::new(DoctorsService::new(doctors_repository));
+
         let pharmacists_rerpository = Box::new(PharmacistsRepositoryFake::new());
         let pharmacists_service = Arc::new(PharmacistsService::new(pharmacists_rerpository));
+
         let patients_repository = Box::new(PatientsRepositoryFake::new());
         let patients_service = Arc::new(PatientsService::new(patients_repository));
+
         let drugs_repository = Box::new(DrugsRepositoryFake::new());
         let drugs_service = Arc::new(DrugsService::new(drugs_repository));
+
         let prescriptions_repository = Box::new(PrescriptionsRepositoryFake::new(
             None, None, None, None, None,
         ));
