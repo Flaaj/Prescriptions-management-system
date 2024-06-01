@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use sqlx::Row;
 use uuid::Uuid;
 
 use crate::domain::{
@@ -20,6 +21,16 @@ impl PostgresPharmacistsRepository {
     pub fn new(pool: sqlx::PgPool) -> Self {
         Self { pool }
     }
+
+    fn parse_pharmacists_row(&self, row: sqlx::postgres::PgRow) -> Result<Pharmacist, sqlx::Error> {
+        Ok(Pharmacist {
+            id: row.try_get(0)?,
+            name: row.try_get(1)?,
+            pesel_number: row.try_get(2)?,
+            created_at: row.try_get(3)?,
+            updated_at: row.try_get(4)?,
+        })
+    }
 }
 
 #[async_trait]
@@ -28,23 +39,19 @@ impl PharmacistsRepository for PostgresPharmacistsRepository {
         &self,
         pharmacist: NewPharmacist,
     ) -> Result<Pharmacist, CreatePharmacistRepositoryError> {
-        let result = sqlx::query!(
-            r#"INSERT INTO pharmacists (id, name, pesel_number) VALUES ($1, $2, $3) RETURNING id, name, pesel_number, created_at, updated_at"#,
-            pharmacist.id,
-            pharmacist.name,
-            pharmacist.pesel_number
-        )
-        .fetch_one(&self.pool)
-        .await.
-        map_err(|_| CreatePharmacistRepositoryError::DuplicatedPeselNumber)?;
+        let result = sqlx::query(
+                r#"INSERT INTO pharmacists (id, name, pesel_number) VALUES ($1, $2, $3) RETURNING id, name, pesel_number, created_at, updated_at"#
+            )
+            .bind(pharmacist.id)
+            .bind(pharmacist.name)
+            .bind(pharmacist.pesel_number)
+            .fetch_one(&self.pool).await
+            .map_err(|_| CreatePharmacistRepositoryError::DuplicatedPeselNumber)?;
 
-        Ok(Pharmacist {
-            id: result.id,
-            name: result.name,
-            pesel_number: result.pesel_number,
-            created_at: result.created_at,
-            updated_at: result.updated_at,
-        })
+        let pharmacist = self
+            .parse_pharmacists_row(result)
+            .map_err(|err| CreatePharmacistRepositoryError::DatabaseError(err.to_string()))?;
+        Ok(pharmacist)
     }
 
     async fn get_pharmacists(
@@ -56,25 +63,21 @@ impl PharmacistsRepository for PostgresPharmacistsRepository {
             GetPharmacistsRepositoryError::InvalidPaginationParams(err.to_string())
         })?;
 
-        let pharmacists_from_db = sqlx::query!(
-            r#"SELECT id, name, pesel_number, created_at, updated_at FROM pharmacists LIMIT $1 OFFSET $2"#,
-            page_size,
-            offset
-        )
-        .fetch_all(&self.pool)
-        .await
-        .map_err(|err| GetPharmacistsRepositoryError::DatabaseError(err.to_string()))?;
+        let pharmacists_from_db = sqlx::query(
+                r#"SELECT id, name, pesel_number, created_at, updated_at FROM pharmacists LIMIT $1 OFFSET $2"#,
+            )
+            .bind(page_size)
+            .bind(offset)
+            .fetch_all(&self.pool).await
+            .map_err(|err| GetPharmacistsRepositoryError::DatabaseError(err.to_string()))?;
 
-        let pharmacists = pharmacists_from_db
-            .into_iter()
-            .map(|record| Pharmacist {
-                id: record.id,
-                name: record.name,
-                pesel_number: record.pesel_number,
-                created_at: record.created_at,
-                updated_at: record.updated_at,
-            })
-            .collect();
+        let mut pharmacists: Vec<Pharmacist> = Vec::new();
+        for record in pharmacists_from_db {
+            let pharmacist = self
+                .parse_pharmacists_row(record)
+                .map_err(|err| GetPharmacistsRepositoryError::DatabaseError(err.to_string()))?;
+            pharmacists.push(pharmacist);
+        }
 
         Ok(pharmacists)
     }
@@ -83,38 +86,34 @@ impl PharmacistsRepository for PostgresPharmacistsRepository {
         &self,
         pharmacist_id: Uuid,
     ) -> Result<Pharmacist, GetPharmacistByIdRepositoryError> {
-        let pharmacist_from_db = sqlx::query!(
-            r#"SELECT id, name, pesel_number, created_at, updated_at FROM pharmacists WHERE id = $1"#,
-            pharmacist_id
-        )
-        .fetch_one(&self.pool)
-        .await
-        .map_err(|_| GetPharmacistByIdRepositoryError::NotFound(pharmacist_id))?;
+        let pharmacist_from_db = sqlx::query(
+                r#"SELECT id, name, pesel_number, created_at, updated_at FROM pharmacists WHERE id = $1"#,
+            )
+            .bind(pharmacist_id)
+            .fetch_one(&self.pool).await
+            .map_err(|_| GetPharmacistByIdRepositoryError::NotFound(pharmacist_id))?;
 
-        Ok(Pharmacist {
-            id: pharmacist_from_db.id,
-            name: pharmacist_from_db.name,
-            pesel_number: pharmacist_from_db.pesel_number,
-            created_at: pharmacist_from_db.created_at,
-            updated_at: pharmacist_from_db.updated_at,
-        })
+        let pharmacist = self
+            .parse_pharmacists_row(pharmacist_from_db)
+            .map_err(|err| GetPharmacistByIdRepositoryError::DatabaseError(err.to_string()))?;
+        Ok(pharmacist)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::assert_matches::assert_matches;
-
-    use uuid::Uuid;
-
     use super::PostgresPharmacistsRepository;
-    use crate::{domain::pharmacists::{
-        models::NewPharmacist,
-        repository::{
-            CreatePharmacistRepositoryError, GetPharmacistByIdRepositoryError,
-            GetPharmacistsRepositoryError, PharmacistsRepository,
+    use crate::{
+        domain::pharmacists::{
+            models::NewPharmacist,
+            repository::{
+                CreatePharmacistRepositoryError, GetPharmacistByIdRepositoryError,
+                GetPharmacistsRepositoryError, PharmacistsRepository,
+            },
         },
-    }, infrastructure::postgres_repository_impl::create_tables::create_tables};
+        infrastructure::postgres_repository_impl::create_tables::create_tables,
+    };
+    use uuid::Uuid;
 
     async fn setup_repository(pool: sqlx::PgPool) -> PostgresPharmacistsRepository {
         create_tables(&pool, true).await.unwrap();
@@ -209,15 +208,15 @@ mod tests {
     async fn get_patients_returns_error_if_pagination_params_are_incorrect(pool: sqlx::PgPool) {
         let repository = setup_repository(pool).await;
 
-        assert_matches!(
-            repository.get_pharmacists(Some(-1), Some(10)).await,
-            Err(GetPharmacistsRepositoryError::InvalidPaginationParams(_))
-        );
+        assert!(match repository.get_pharmacists(Some(-1), Some(10)).await {
+            Err(GetPharmacistsRepositoryError::InvalidPaginationParams(_)) => true,
+            _ => false,
+        });
 
-        assert_matches!(
-            repository.get_pharmacists(Some(0), Some(0)).await,
-            Err(GetPharmacistsRepositoryError::InvalidPaginationParams(_))
-        );
+        assert!(match repository.get_pharmacists(Some(0), Some(0)).await {
+            Err(GetPharmacistsRepositoryError::InvalidPaginationParams(_)) => true,
+            _ => false,
+        });
     }
 
     #[sqlx::test]

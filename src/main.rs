@@ -1,4 +1,3 @@
-#![feature(assert_matches)]
 pub mod api;
 pub mod domain;
 pub mod infrastructure;
@@ -69,6 +68,13 @@ fn get_routes() -> Vec<Route> {
     ]
 }
 
+fn setup_swagger_ui() -> impl Into<Vec<Route>> {
+    make_swagger_ui(&SwaggerUIConfig {
+        url: "../openapi.json".to_owned(),
+        ..Default::default()
+    })
+}
+
 #[launch]
 async fn rocket() -> Rocket<Build> {
     let pool = PgPoolOptions::new()
@@ -77,16 +83,10 @@ async fn rocket() -> Rocket<Build> {
         .await
         .unwrap();
 
-    create_tables(&pool, true).await.unwrap();
+    create_tables(&pool, false).await.unwrap();
 
     rocket::build()
         .manage(setup_context(pool))
         .mount("/", get_routes())
-        .mount(
-            "/swagger-ui/",
-            make_swagger_ui(&SwaggerUIConfig {
-                url: "../openapi.json".to_owned(),
-                ..Default::default()
-            }),
-        )
+        .mount("/swagger-ui", setup_swagger_ui())
 }

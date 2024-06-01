@@ -1,35 +1,35 @@
 pub async fn create_tables(pool: &sqlx::PgPool, drop: bool) -> Result<(), sqlx::Error> {
     if drop {
-        sqlx::query!(r#"DROP TABLE IF EXISTS prescription_fills;"#)
+        sqlx::query(r#"DROP TABLE IF EXISTS prescription_fills;"#)
             .execute(pool)
             .await?;
-        sqlx::query!(r#"DROP TABLE IF EXISTS prescribed_drugs;"#)
+        sqlx::query(r#"DROP TABLE IF EXISTS prescribed_drugs;"#)
             .execute(pool)
             .await?;
-        sqlx::query!(r#"DROP TABLE IF EXISTS drugs;"#)
+        sqlx::query(r#"DROP TABLE IF EXISTS drugs;"#)
             .execute(pool)
             .await?;
-        sqlx::query!(r#"DROP TABLE IF EXISTS prescriptions;"#)
+        sqlx::query(r#"DROP TABLE IF EXISTS prescriptions;"#)
             .execute(pool)
             .await?;
-        sqlx::query!(r#"DROP TABLE IF EXISTS patients;"#)
+        sqlx::query(r#"DROP TABLE IF EXISTS patients;"#)
             .execute(pool)
             .await?;
-        sqlx::query!(r#"DROP TABLE IF EXISTS pharmacists;"#)
+        sqlx::query(r#"DROP TABLE IF EXISTS pharmacists;"#)
             .execute(pool)
             .await?;
-        sqlx::query!(r#"DROP TABLE IF EXISTS doctors;"#)
+        sqlx::query(r#"DROP TABLE IF EXISTS doctors;"#)
             .execute(pool)
             .await?;
-        sqlx::query!(r#"DROP TYPE IF EXISTS prescription_type;"#)
+        sqlx::query(r#"DROP TYPE IF EXISTS prescription_type;"#)
             .execute(pool)
             .await?;
-        sqlx::query!(r#"DROP TYPE IF EXISTS drug_content_type;"#)
+        sqlx::query(r#"DROP TYPE IF EXISTS drug_content_type;"#)
             .execute(pool)
             .await?;
     }
 
-    sqlx::query!(
+    sqlx::query(
         r#"
         DO $$
         BEGIN
@@ -42,7 +42,7 @@ pub async fn create_tables(pool: &sqlx::PgPool, drop: bool) -> Result<(), sqlx::
         .execute(pool)
         .await?;
 
-    sqlx::query!(
+    sqlx::query(
         r#"
         DO $$
         BEGIN
@@ -55,7 +55,7 @@ pub async fn create_tables(pool: &sqlx::PgPool, drop: bool) -> Result<(), sqlx::
         .execute(pool)
         .await?;
 
-    sqlx::query!(
+    sqlx::query(
         r#"
         CREATE TABLE IF NOT EXISTS doctors (
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -69,7 +69,7 @@ pub async fn create_tables(pool: &sqlx::PgPool, drop: bool) -> Result<(), sqlx::
     .execute(pool)
     .await?;
 
-    sqlx::query!(
+    sqlx::query(
         r#"
         CREATE TABLE IF NOT EXISTS pharmacists (
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -82,7 +82,7 @@ pub async fn create_tables(pool: &sqlx::PgPool, drop: bool) -> Result<(), sqlx::
     .execute(pool)
     .await?;
 
-    sqlx::query!(
+    sqlx::query(
         r#"
         CREATE TABLE IF NOT EXISTS patients (
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -95,7 +95,7 @@ pub async fn create_tables(pool: &sqlx::PgPool, drop: bool) -> Result<(), sqlx::
     .execute(pool)
     .await?;
 
-    sqlx::query!(
+    sqlx::query(
         r#"
         CREATE TABLE IF NOT EXISTS prescriptions (
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -112,7 +112,7 @@ pub async fn create_tables(pool: &sqlx::PgPool, drop: bool) -> Result<(), sqlx::
     .execute(pool)
     .await?;
 
-    sqlx::query!(
+    sqlx::query(
         r#"
         CREATE TABLE IF NOT EXISTS drugs (
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -129,7 +129,7 @@ pub async fn create_tables(pool: &sqlx::PgPool, drop: bool) -> Result<(), sqlx::
     .execute(pool)
     .await?;
 
-    sqlx::query!(
+    sqlx::query(
         r#"
         CREATE TABLE IF NOT EXISTS prescribed_drugs (
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -143,7 +143,7 @@ pub async fn create_tables(pool: &sqlx::PgPool, drop: bool) -> Result<(), sqlx::
     .execute(pool)
     .await?;
 
-    sqlx::query!(
+    sqlx::query(
         r#"
         CREATE TABLE IF NOT EXISTS prescription_fills (
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

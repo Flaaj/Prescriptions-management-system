@@ -131,17 +131,18 @@ impl DoctorsRepository for DoctorsRepositoryFake {
 #[cfg(test)]
 // the same tests as in postgres_repository_impl/doctors.rs to make sure fake repo works the same way
 mod tests {
-    use std::assert_matches::assert_matches;
-
     use uuid::Uuid;
 
     use super::DoctorsRepositoryFake;
-    use crate::domain::doctors::{
-        models::NewDoctor,
-        repository::{
-            CreateDoctorRepositoryError, DoctorsRepository, GetDoctorByIdRepositoryError,
-            GetDoctorsRepositoryError,
+    use crate::domain::{
+        doctors::{
+            models::NewDoctor,
+            repository::{
+                CreateDoctorRepositoryError, DoctorsRepository, GetDoctorByIdRepositoryError,
+                GetDoctorsRepositoryError,
+            },
         },
+        utils::pagination::PaginationError,
     };
 
     async fn setup_repository() -> DoctorsRepositoryFake {
@@ -233,14 +234,16 @@ mod tests {
     async fn get_doctors_returns_error_if_pagination_params_are_incorrect() {
         let repository = setup_repository().await;
 
-        assert_matches!(
-            repository.get_doctors(Some(-1), Some(10)).await,
-            Err(GetDoctorsRepositoryError::InvalidPaginationParams(_))
-        );
+        assert!(match repository.get_doctors(Some(-1), Some(10)).await {
+            Err(GetDoctorsRepositoryError::InvalidPaginationParams(_)) => true,
+            _ => false,
+        },);
 
-        assert_matches!(
+        assert_eq!(
             repository.get_doctors(Some(0), Some(0)).await,
-            Err(GetDoctorsRepositoryError::InvalidPaginationParams(_))
+            Err(GetDoctorsRepositoryError::InvalidPaginationParams(
+                PaginationError::InvalidPageSize.to_string()
+            ))
         );
     }
 

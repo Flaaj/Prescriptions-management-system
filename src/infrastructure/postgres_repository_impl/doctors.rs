@@ -1,6 +1,3 @@
-use async_trait::async_trait;
-use uuid::Uuid;
-
 use crate::domain::{
     doctors::{
         models::{Doctor, NewDoctor},
@@ -11,6 +8,9 @@ use crate::domain::{
     },
     utils::pagination::get_pagination_params,
 };
+use async_trait::async_trait;
+use sqlx::Row;
+use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct PostgresDoctorsRepository {
@@ -21,6 +21,17 @@ impl PostgresDoctorsRepository {
     pub fn new(pool: sqlx::PgPool) -> Self {
         Self { pool }
     }
+
+    fn parse_doctors_row(&self, row: sqlx::postgres::PgRow) -> Result<Doctor, sqlx::Error> {
+        Ok(Doctor {
+            id: row.try_get(0)?,
+            name: row.try_get(1)?,
+            pwz_number: row.try_get(2)?,
+            pesel_number: row.try_get(3)?,
+            created_at: row.try_get(4)?,
+            updated_at: row.try_get(5)?,
+        })
+    }
 }
 
 #[async_trait]
@@ -29,35 +40,43 @@ impl DoctorsRepository for PostgresDoctorsRepository {
         &self,
         doctor: NewDoctor,
     ) -> Result<Doctor, CreateDoctorRepositoryError> {
-        let result = sqlx::query!(
-            r#"INSERT INTO doctors (id, name, pwz_number, pesel_number) VALUES ($1, $2, $3, $4) RETURNING id, name, pwz_number, pesel_number, created_at, updated_at"#,
-            doctor.id,
-            doctor.name,
-            doctor.pwz_number,
-            doctor.pesel_number,
-        )
-        .fetch_one(&self.pool)
-        .await
-        .map_err(
-            |err| match err {
-                sqlx::Error::Database(err) if err.message().contains("duplicate key value violates unique constraint \"doctors_pwz_number_key\"") => {
-                    CreateDoctorRepositoryError::DuplicatedPwzNumber
-                },
-                sqlx::Error::Database(err) if err.message().contains("duplicate key value violates unique constraint \"doctors_pesel_number_key\"") => {
-                    CreateDoctorRepositoryError::DuplicatedPeselNumber
-                },
-                _ => CreateDoctorRepositoryError::DatabaseError(err.to_string()),
-            },
-        )?;
+        let result = sqlx::query(
+                r#"INSERT INTO doctors (id, name, pwz_number, pesel_number) VALUES ($1, $2, $3, $4) RETURNING id, name, pwz_number, pesel_number, created_at, updated_at"#
+            )
+            .bind(doctor.id)
+            .bind(doctor.name)
+            .bind(doctor.pwz_number)
+            .bind(doctor.pesel_number)
+            .fetch_one(&self.pool).await
+            .map_err(|err| {
+                match err {
+                    sqlx::Error::Database(err) if
+                        err
+                            .message()
+                            .contains(
+                                "duplicate key value violates unique constraint \"doctors_pwz_number_key\""
+                            )
+                    => {
+                        CreateDoctorRepositoryError::DuplicatedPwzNumber
+                    }
+                    sqlx::Error::Database(err) if
+                        err
+                            .message()
+                            .contains(
+                                "duplicate key value violates unique constraint \"doctors_pesel_number_key\""
+                            )
+                    => {
+                        CreateDoctorRepositoryError::DuplicatedPeselNumber
+                    }
+                    _ => CreateDoctorRepositoryError::DatabaseError(err.to_string()),
+                }
+            })?;
 
-        Ok(Doctor {
-            id: result.id,
-            name: result.name,
-            pwz_number: result.pwz_number,
-            pesel_number: result.pesel_number,
-            created_at: result.created_at,
-            updated_at: result.updated_at,
-        })
+        let doctor = self
+            .parse_doctors_row(result)
+            .map_err(|err| CreateDoctorRepositoryError::DatabaseError(err.to_string()))?;
+
+        Ok(doctor)
     }
 
     async fn get_doctors(
@@ -68,26 +87,21 @@ impl DoctorsRepository for PostgresDoctorsRepository {
         let (page_size, offset) = get_pagination_params(page, page_size)
             .map_err(|err| GetDoctorsRepositoryError::InvalidPaginationParams(err.to_string()))?;
 
-        let doctors_from_db = sqlx::query!(
-            r#"SELECT id, name, pwz_number, pesel_number, created_at, updated_at FROM doctors LIMIT $1 OFFSET $2"#,
-            page_size,
-            offset
-        )
-        .fetch_all(&self.pool)
-        .await;
+        let doctors_from_db = sqlx::query(
+                r#"SELECT id, name, pwz_number, pesel_number, created_at, updated_at FROM doctors LIMIT $1 OFFSET $2"#
+            )
+            .bind(page_size)
+            .bind(offset)
+            .fetch_all(&self.pool).await
+            .map_err(|err| GetDoctorsRepositoryError::DatabaseError(err.to_string()))?;
 
-        let doctors = doctors_from_db
-            .unwrap()
-            .into_iter()
-            .map(|record| Doctor {
-                id: record.id,
-                name: record.name,
-                pwz_number: record.pwz_number,
-                pesel_number: record.pesel_number,
-                created_at: record.created_at,
-                updated_at: record.updated_at,
-            })
-            .collect();
+        let mut doctors: Vec<Doctor> = Vec::new();
+        for record in doctors_from_db {
+            let doctor = self
+                .parse_doctors_row(record)
+                .map_err(|err| GetDoctorsRepositoryError::DatabaseError(err.to_string()))?;
+            doctors.push(doctor);
+        }
 
         Ok(doctors)
     }
@@ -96,45 +110,40 @@ impl DoctorsRepository for PostgresDoctorsRepository {
         &self,
         doctor_id: Uuid,
     ) -> Result<Doctor, GetDoctorByIdRepositoryError> {
-        let doctor_from_db = sqlx::query!(
-            r#"SELECT id, name, pwz_number, pesel_number, created_at, updated_at FROM doctors WHERE id = $1"#,
-            doctor_id
-        )
-        .fetch_one(&self.pool)
-        .await
-        .map_err(|err| match err {
-            sqlx::Error::RowNotFound => GetDoctorByIdRepositoryError::NotFound(doctor_id),
-            _ => GetDoctorByIdRepositoryError::DatabaseError(err.to_string()),
-        
-        })?;
+        let doctor_from_db = sqlx::query(
+                r#"SELECT id, name, pwz_number, pesel_number, created_at, updated_at FROM doctors WHERE id = $1"#
+            )
+            .bind(doctor_id)
+            .fetch_one(&self.pool).await
+            .map_err(|err| {
+                match err {
+                    sqlx::Error::RowNotFound => GetDoctorByIdRepositoryError::NotFound(doctor_id),
+                    _ => GetDoctorByIdRepositoryError::DatabaseError(err.to_string()),
+                }
+            })?;
 
-        Ok(Doctor {
-            id: doctor_from_db.id,
-            name: doctor_from_db.name,
-            pwz_number: doctor_from_db.pwz_number,
-            pesel_number: doctor_from_db.pesel_number,
-            created_at: doctor_from_db.created_at,
-            updated_at: doctor_from_db.updated_at,
-        })
+        let doctor = self
+            .parse_doctors_row(doctor_from_db)
+            .map_err(|err| GetDoctorByIdRepositoryError::DatabaseError(err.to_string()))?;
+
+        Ok(doctor)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::assert_matches::assert_matches;
-
-    use uuid::Uuid;
-
     use super::PostgresDoctorsRepository;
     use crate::{
         domain::doctors::{
-                models::NewDoctor,
-                repository::{
-                    CreateDoctorRepositoryError, DoctorsRepository, GetDoctorByIdRepositoryError,
-                    GetDoctorsRepositoryError,
-                },
-            }, infrastructure::postgres_repository_impl::create_tables::create_tables,
+            models::NewDoctor,
+            repository::{
+                CreateDoctorRepositoryError, DoctorsRepository, GetDoctorByIdRepositoryError,
+                GetDoctorsRepositoryError,
+            },
+        },
+        infrastructure::postgres_repository_impl::create_tables::create_tables,
     };
+    use uuid::Uuid;
 
     async fn setup_repository(pool: sqlx::PgPool) -> PostgresDoctorsRepository {
         create_tables(&pool, true).await.unwrap();
@@ -226,15 +235,15 @@ mod tests {
     async fn get_doctors_returns_error_if_pagination_params_are_incorrect(pool: sqlx::PgPool) {
         let repository = setup_repository(pool).await;
 
-        assert_matches!(
-            repository.get_doctors(Some(-1), Some(10)).await,
-            Err(GetDoctorsRepositoryError::InvalidPaginationParams(_))
-        );
+        assert!(match repository.get_doctors(Some(-1), Some(10)).await {
+            Err(GetDoctorsRepositoryError::InvalidPaginationParams(_)) => true,
+            _ => false,
+        });
 
-        assert_matches!(
-            repository.get_doctors(Some(0), Some(0)).await,
-            Err(GetDoctorsRepositoryError::InvalidPaginationParams(_))
-        );
+        assert!(match repository.get_doctors(Some(0), Some(0)).await {
+            Err(GetDoctorsRepositoryError::InvalidPaginationParams(_)) => true,
+            _ => false,
+        });
     }
 
     #[sqlx::test]

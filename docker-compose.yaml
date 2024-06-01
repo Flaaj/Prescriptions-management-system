@@ -8,3 +8,12 @@ services:
       POSTGRES_PASSWORD: postgres
     ports:
       - "2137:5432"
+  rust:
+    build: .
+    image: pms_backend
+    restart: always
+    volumes:
+      - .:/app
+    working_dir: /app
+  
+      

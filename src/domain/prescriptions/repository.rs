@@ -261,10 +261,6 @@ impl PrescriptionsRepository for PrescriptionsRepositoryFake {
 
 #[cfg(test)]
 mod tests {
-    use std::assert_matches::assert_matches;
-
-    use uuid::Uuid;
-
     use crate::domain::{
         doctors::{
             models::NewDoctor,
@@ -291,6 +287,7 @@ mod tests {
             },
         },
     };
+    use uuid::Uuid;
 
     struct DatabaseSeeds {
         doctor: NewDoctor,
@@ -569,15 +566,17 @@ mod tests {
     async fn get_prescriptions_returns_error_if_pagination_params_are_incorrect() {
         let (repository, _) = setup_repository().await;
 
-        assert_matches!(
-            repository.get_prescriptions(Some(-1), Some(10)).await,
-            Err(GetPrescriptionsRepositoryError::InvalidPaginationParams(_))
+        assert!(
+            match repository.get_prescriptions(Some(-1), Some(10)).await {
+                Err(GetPrescriptionsRepositoryError::InvalidPaginationParams(_)) => true,
+                _ => false,
+            },
         );
 
-        assert_matches!(
-            repository.get_prescriptions(Some(0), Some(0)).await,
-            Err(GetPrescriptionsRepositoryError::InvalidPaginationParams(_))
-        );
+        assert!(match repository.get_prescriptions(Some(0), Some(0)).await {
+            Err(GetPrescriptionsRepositoryError::InvalidPaginationParams(_)) => true,
+            _ => false,
+        });
     }
 
     #[tokio::test]

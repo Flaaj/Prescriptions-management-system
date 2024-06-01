@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use sqlx::{postgres::PgRow, Row};
+use sqlx::Row;
 use uuid::Uuid;
 
 use crate::domain::{
@@ -53,7 +53,10 @@ impl PostgresPrescriptionsRepository {
         Self { pool }
     }
 
-    fn parse_prescription_row(&self, row: PgRow) -> Result<PrescriptionsRow, sqlx::Error> {
+    fn parse_prescriptions_row(
+        &self,
+        row: sqlx::postgres::PgRow,
+    ) -> Result<PrescriptionsRow, sqlx::Error> {
         Ok(PrescriptionsRow {
             prescription_id: row.try_get(0)?,
             prescription_code: row.try_get(1)?,
@@ -80,6 +83,19 @@ impl PostgresPrescriptionsRepository {
             prescription_fill_updated_at: row.try_get(22)?,
         })
     }
+
+    fn parse_prescription_fills_row(
+        &self,
+        row: sqlx::postgres::PgRow,
+    ) -> Result<PrescriptionFill, sqlx::Error> {
+        Ok(PrescriptionFill {
+            id: row.try_get(0)?,
+            prescription_id: row.try_get(1)?,
+            pharmacist_id: row.try_get(2)?,
+            created_at: row.try_get(3)?,
+            updated_at: row.try_get(4)?,
+        })
+    }
 }
 
 #[async_trait]
@@ -94,16 +110,16 @@ impl PrescriptionsRepository for PostgresPrescriptionsRepository {
             .await
             .map_err(|err| CreatePrescriptionRepositoryError::DatabaseError(err.to_string()))?;
 
-        sqlx::query!(
+        sqlx::query(
             r#"INSERT INTO prescriptions (id, patient_id, doctor_id, code, prescription_type, start_date, end_date) VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
-            prescription.id,
-            prescription.patient_id,
-            prescription.doctor_id,
-            prescription.code,
-            prescription.prescription_type as _,
-            prescription.start_date,
-            prescription.end_date
         )
+        .bind(prescription.id)
+        .bind(prescription.patient_id)
+        .bind(prescription.doctor_id)
+        .bind(prescription.code)
+        .bind(prescription.prescription_type)
+        .bind(prescription.start_date)
+        .bind(prescription.end_date)
         .execute(&self.pool)
         .await.map_err(|err| match err {
             sqlx::Error::Database(err) if err.message().contains("insert or update on table \"prescriptions\" violates foreign key constraint \"prescriptions_doctor_id_fkey\"") => {
@@ -116,13 +132,12 @@ impl PrescriptionsRepository for PostgresPrescriptionsRepository {
         })?;
 
         for prescribed_drug in &prescription.prescribed_drugs {
-            sqlx::query!(
-                r#"INSERT INTO prescribed_drugs (id, prescription_id, drug_id, quantity) VALUES ($1, $2, $3, $4)"#,
-                Uuid::new_v4(),
-                prescription.id,
-                prescribed_drug.drug_id,
-                prescribed_drug.quantity as i32
+            sqlx::query(
+                r#"INSERT INTO prescribed_drugs (prescription_id, drug_id, quantity) VALUES ($1, $2, $3)"#,
             )
+            .bind(prescription.id)
+            .bind(prescribed_drug.drug_id)
+            .bind(prescribed_drug.quantity as i32)
             .execute(&self.pool)
             .await.map_err(|err| {
                 match err {
@@ -201,7 +216,7 @@ impl PrescriptionsRepository for PostgresPrescriptionsRepository {
 
         let mut prescriptions: Vec<Prescription> = vec![];
 
-        for row in prescriptions_from_db {
+        for record in prescriptions_from_db {
             let PrescriptionsRow {
                 prescription_id,
                 prescription_code,
@@ -227,7 +242,7 @@ impl PrescriptionsRepository for PostgresPrescriptionsRepository {
                 prescription_fill_created_at,
                 prescription_fill_updated_at,
             } = self
-                .parse_prescription_row(row)
+                .parse_prescriptions_row(record)
                 .map_err(|err| GetPrescriptionsRepositoryError::DatabaseError(err.to_string()))?;
 
             let prescription = prescriptions.iter_mut().find(|p| p.id == prescription_id);
@@ -334,7 +349,7 @@ impl PrescriptionsRepository for PostgresPrescriptionsRepository {
 
         let mut prescriptions: Vec<Prescription> = vec![];
 
-        for row in prescription_from_db {
+        for record in prescription_from_db {
             let PrescriptionsRow {
                 prescription_id,
                 prescription_code,
@@ -359,7 +374,7 @@ impl PrescriptionsRepository for PostgresPrescriptionsRepository {
                 prescription_fill_pharmacist_id,
                 prescription_fill_created_at,
                 prescription_fill_updated_at,
-            } = self.parse_prescription_row(row).map_err(|err| {
+            } = self.parse_prescriptions_row(record).map_err(|err| {
                 GetPrescriptionByIdRepositoryError::DatabaseError(err.to_string())
             })?;
 
@@ -426,12 +441,12 @@ impl PrescriptionsRepository for PostgresPrescriptionsRepository {
         &self,
         prescription_fill: NewPrescriptionFill,
     ) -> Result<PrescriptionFill, FillPrescriptionRepositoryError> {
-        let result = sqlx::query!(
+        let result = sqlx::query(
             r#"INSERT INTO prescription_fills (id, prescription_id, pharmacist_id) VALUES ($1, $2, $3) RETURNING id, prescription_id, pharmacist_id, created_at, updated_at"#,
-            prescription_fill.id,
-            prescription_fill.prescription_id,
-            prescription_fill.pharmacist_id
         )
+        .bind(prescription_fill.id)
+        .bind(prescription_fill.prescription_id)
+        .bind(prescription_fill.pharmacist_id)
         .fetch_one(&self.pool)
         .await.map_err(|err| {
             match err {
@@ -442,22 +457,15 @@ impl PrescriptionsRepository for PostgresPrescriptionsRepository {
             }
         })?;
 
-        Ok(PrescriptionFill {
-            id: result.id,
-            prescription_id: result.prescription_id,
-            pharmacist_id: result.pharmacist_id,
-            created_at: result.created_at,
-            updated_at: result.updated_at,
-        })
+        let prescription_fill = self
+            .parse_prescription_fills_row(result)
+            .map_err(|err| FillPrescriptionRepositoryError::DatabaseError(err.to_string()))?;
+        Ok(prescription_fill)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::assert_matches::assert_matches;
-
-    use uuid::Uuid;
-
     use super::PostgresPrescriptionsRepository;
     use crate::{
         domain::{
@@ -483,6 +491,7 @@ mod tests {
             pharmacists::PostgresPharmacistsRepository,
         },
     };
+    use uuid::Uuid;
 
     struct DatabaseSeedData {
         doctor: NewDoctor,
@@ -747,15 +756,17 @@ mod tests {
     ) {
         let (repository, _) = setup_repository(pool).await;
 
-        assert_matches!(
-            repository.get_prescriptions(Some(-1), Some(10)).await,
-            Err(GetPrescriptionsRepositoryError::InvalidPaginationParams(_))
+        assert!(
+            match repository.get_prescriptions(Some(-1), Some(10)).await {
+                Err(GetPrescriptionsRepositoryError::InvalidPaginationParams(_)) => true,
+                _ => false,
+            }
         );
 
-        assert_matches!(
-            repository.get_prescriptions(Some(0), Some(0)).await,
-            Err(GetPrescriptionsRepositoryError::InvalidPaginationParams(_))
-        );
+        assert!(match repository.get_prescriptions(Some(0), Some(0)).await {
+            Err(GetPrescriptionsRepositoryError::InvalidPaginationParams(_)) => true,
+            _ => false,
+        },);
     }
 
     #[sqlx::test]

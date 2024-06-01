@@ -77,9 +77,6 @@ impl DoctorsService {
 
 #[cfg(test)]
 mod tests {
-
-    use std::assert_matches::assert_matches;
-
     use super::{CreateDoctorError, DoctorsService, GetDoctorByIdError};
     use crate::domain::doctors::repository::DoctorsRepositoryFake;
     use uuid::Uuid;
@@ -116,7 +113,10 @@ mod tests {
             .create_doctor("John Doex".into(), "96021807251".into(), "5425740".into()) // invalid pesel
             .await;
 
-        assert_matches!(result, Err(CreateDoctorError::DomainError(_)));
+        assert!(match result {
+            Err(CreateDoctorError::DomainError(_)) => true,
+            _ => false,
+        });
     }
 
     #[tokio::test]
@@ -132,19 +132,19 @@ mod tests {
             .create_doctor("John Doex".into(), "96021807250".into(), "8463856".into())
             .await;
 
-        assert_matches!(
-            duplicated_pesel_number_result,
-            Err(CreateDoctorError::RepositoryError(_))
-        );
+        assert!(match duplicated_pesel_number_result {
+            Err(CreateDoctorError::RepositoryError(_)) => true,
+            _ => false,
+        });
 
         let duplicated_pwz_number_result = service
             .create_doctor("John Doex".into(), "99031301347".into(), "5425740".into())
             .await;
 
-        assert_matches!(
-            duplicated_pwz_number_result,
-            Err(CreateDoctorError::RepositoryError(_))
-        );
+        assert!(match duplicated_pwz_number_result {
+            Err(CreateDoctorError::RepositoryError(_)) => true,
+            _ => false,
+        });
     }
 
     #[tokio::test]
@@ -153,7 +153,10 @@ mod tests {
 
         let result = service.get_doctor_by_id(Uuid::new_v4()).await;
 
-        assert_matches!(result, Err(GetDoctorByIdError::RepositoryError(_)));
+        assert!(match result {
+            Err(GetDoctorByIdError::RepositoryError(_)) => true,
+            _ => false,
+        });
     }
 
     #[tokio::test]

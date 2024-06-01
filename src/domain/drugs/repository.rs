@@ -42,7 +42,6 @@ pub trait DrugsRepository: Send + Sync + 'static {
     async fn get_drug_by_id(&self, drug_id: Uuid) -> Result<Drug, GetDrugByIdRepositoryError>;
 }
 
-
 pub struct DrugsRepositoryFake {
     drugs: RwLock<Vec<Drug>>,
 }
@@ -113,14 +112,11 @@ impl DrugsRepository for DrugsRepositoryFake {
 
 #[cfg(test)]
 mod tests {
-    use std::assert_matches::assert_matches;
-
-    use uuid::Uuid;
-
     use super::{
         DrugsRepository, DrugsRepositoryFake, GetDrugByIdRepositoryError, GetDrugsRepositoryError,
     };
     use crate::domain::drugs::models::{DrugContentType, NewDrug};
+    use uuid::Uuid;
 
     async fn setup_repository() -> DrugsRepositoryFake {
         DrugsRepositoryFake::new()
@@ -236,14 +232,14 @@ mod tests {
     async fn get_drugs_returns_error_if_pagination_params_are_incorrect() {
         let repository = setup_repository().await;
 
-        assert_matches!(
-            repository.get_drugs(Some(-1), Some(10)).await,
-            Err(GetDrugsRepositoryError::InvalidPaginationParams(_))
-        );
+        assert!(match repository.get_drugs(Some(-1), Some(10)).await {
+            Err(GetDrugsRepositoryError::InvalidPaginationParams(_)) => true,
+            _ => false,
+        });
 
-        assert_matches!(
-            repository.get_drugs(Some(0), Some(0)).await,
-            Err(GetDrugsRepositoryError::InvalidPaginationParams(_))
-        );
+        assert!(match repository.get_drugs(Some(0), Some(0)).await {
+            Err(GetDrugsRepositoryError::InvalidPaginationParams(_)) => true,
+            _ => false,
+        });
     }
 }

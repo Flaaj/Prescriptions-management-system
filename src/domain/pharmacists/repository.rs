@@ -50,7 +50,6 @@ pub trait PharmacistsRepository: Send + Sync + 'static {
     ) -> Result<Pharmacist, GetPharmacistByIdRepositoryError>;
 }
 
-
 pub struct PharmacistsRepositoryFake {
     pharmacists: RwLock<Vec<Pharmacist>>,
 }
@@ -135,15 +134,12 @@ impl PharmacistsRepository for PharmacistsRepositoryFake {
 
 #[cfg(test)]
 mod tests {
-    use std::assert_matches::assert_matches;
-
-    use uuid::Uuid;
-
     use super::{
         CreatePharmacistRepositoryError, GetPharmacistByIdRepositoryError,
-        GetPharmacistsRepositoryError, PharmacistsRepositoryFake, PharmacistsRepository,
+        GetPharmacistsRepositoryError, PharmacistsRepository, PharmacistsRepositoryFake,
     };
     use crate::domain::pharmacists::models::NewPharmacist;
+    use uuid::Uuid;
 
     async fn setup_repository() -> PharmacistsRepositoryFake {
         PharmacistsRepositoryFake::new()
@@ -237,15 +233,15 @@ mod tests {
     async fn get_patients_returns_error_if_pagination_params_are_incorrect() {
         let repository = setup_repository().await;
 
-        assert_matches!(
-            repository.get_pharmacists(Some(-1), Some(10)).await,
-            Err(GetPharmacistsRepositoryError::InvalidPaginationParams(_))
-        );
+        assert!(match repository.get_pharmacists(Some(-1), Some(10)).await {
+            Err(GetPharmacistsRepositoryError::InvalidPaginationParams(_)) => true,
+            _ => false,
+        });
 
-        assert_matches!(
-            repository.get_pharmacists(Some(0), Some(0)).await,
-            Err(GetPharmacistsRepositoryError::InvalidPaginationParams(_))
-        );
+        assert!(match repository.get_pharmacists(Some(0), Some(0)).await {
+            Err(GetPharmacistsRepositoryError::InvalidPaginationParams(_)) => true,
+            _ => false,
+        });
     }
 
     #[sqlx::test]

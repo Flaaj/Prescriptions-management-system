@@ -9,7 +9,7 @@ use crate::domain::{
     utils::pagination::get_pagination_params,
 };
 use async_trait::async_trait;
-use sqlx::{postgres::PgRow, Row};
+use sqlx::Row;
 use uuid::Uuid;
 
 pub struct PostgresDrugsRepository {
@@ -21,7 +21,7 @@ impl PostgresDrugsRepository {
         Self { pool }
     }
 
-    fn get_drug_from_pg_row(&self, row: PgRow) -> Result<Drug, sqlx::Error> {
+    fn get_drug_from_pg_row(&self, row: sqlx::postgres::PgRow) -> Result<Drug, sqlx::Error> {
         Ok(Drug {
             id: row.try_get(0)?,
             name: row.try_get(1)?,
@@ -105,15 +105,15 @@ impl DrugsRepository for PostgresDrugsRepository {
 
 #[cfg(test)]
 mod tests {
-    use std::assert_matches::assert_matches;
-
-    use uuid::Uuid;
-
     use super::{DrugsRepository, PostgresDrugsRepository};
-    use crate::{domain::drugs::{
-        models::{DrugContentType, NewDrug},
-        repository::{GetDrugByIdRepositoryError, GetDrugsRepositoryError},
-    }, infrastructure::postgres_repository_impl::create_tables::create_tables};
+    use crate::{
+        domain::drugs::{
+            models::{DrugContentType, NewDrug},
+            repository::{GetDrugByIdRepositoryError, GetDrugsRepositoryError},
+        },
+        infrastructure::postgres_repository_impl::create_tables::create_tables,
+    };
+    use uuid::Uuid;
 
     async fn setup_repository(pool: sqlx::PgPool) -> PostgresDrugsRepository {
         create_tables(&pool, true).await.unwrap();
@@ -230,14 +230,14 @@ mod tests {
     async fn get_drugs_returns_error_if_pagination_params_are_incorrect(pool: sqlx::PgPool) {
         let repository = setup_repository(pool).await;
 
-        assert_matches!(
-            repository.get_drugs(Some(-1), Some(10)).await,
-            Err(GetDrugsRepositoryError::InvalidPaginationParams(_))
-        );
+        assert!(match repository.get_drugs(Some(-1), Some(10)).await {
+            Err(GetDrugsRepositoryError::InvalidPaginationParams(_)) => true,
+            _ => false,
+        },);
 
-        assert_matches!(
-            repository.get_drugs(Some(0), Some(0)).await,
-            Err(GetDrugsRepositoryError::InvalidPaginationParams(_))
-        );
+        assert!(match repository.get_drugs(Some(0), Some(0)).await {
+            Err(GetDrugsRepositoryError::InvalidPaginationParams(_)) => true,
+            _ => false,
+        },);
     }
 }

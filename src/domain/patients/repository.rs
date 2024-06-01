@@ -48,7 +48,6 @@ pub trait PatientsRepository: Send + Sync + 'static {
     ) -> Result<Patient, GetPatientByIdRepositoryError>;
 }
 
-
 pub struct PatientsRepositoryFake {
     patients: RwLock<Vec<Patient>>,
 }
@@ -132,8 +131,6 @@ impl PatientsRepository for PatientsRepositoryFake {
 
 #[cfg(test)]
 mod tests {
-    use std::assert_matches::assert_matches;
-
     use super::PatientsRepositoryFake;
     use crate::domain::patients::{
         models::NewPatient,
@@ -231,15 +228,15 @@ mod tests {
     async fn get_patients_returns_error_if_pagination_params_are_incorrect() {
         let repository = setup_repository().await;
 
-        assert_matches!(
-            repository.get_patients(Some(-1), Some(10)).await,
-            Err(GetPatientsRepositoryError::InvalidPaginationParams(_))
-        );
+        assert!(match repository.get_patients(Some(-1), Some(10)).await {
+            Err(GetPatientsRepositoryError::InvalidPaginationParams(_)) => true,
+            _ => false,
+        });
 
-        assert_matches!(
-            repository.get_patients(Some(0), Some(0)).await,
-            Err(GetPatientsRepositoryError::InvalidPaginationParams(_))
-        );
+        assert!(match repository.get_patients(Some(0), Some(0)).await {
+            Err(GetPatientsRepositoryError::InvalidPaginationParams(_)) => true,
+            _ => false,
+        });
     }
 
     #[tokio::test]
