@@ -11,7 +11,7 @@ COPY . .
 RUN cargo build --release
 
 # Use a minimal image for the final stage
-FROM debian:latest as runtime
+FROM debian:latest
 
 # Copy the binary from the builder stage
 COPY --from=builder /app/target/release/pms_v_0 /usr/local/bin/pms_v_0
