@@ -6,6 +6,8 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
+    ports:
+      - "2137:5432"
   rust:
     build: .
     image: pms_backend
@@ -20,5 +22,5 @@ services:
       ROCKET_ADDRESS: 0.0.0.0
       ROCKET_PORT: 8000
     ports:
-      - "8000:8000"
+      - "2138:8000"
     
