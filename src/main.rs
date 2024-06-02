@@ -18,10 +18,7 @@ use rocket_okapi::{
     swagger_ui::{make_swagger_ui, SwaggerUIConfig},
 };
 use sqlx::{postgres::PgPoolOptions, PgPool};
-use std::sync::Arc;
-
-#[macro_use]
-extern crate dotenv_codegen;
+use std::{env, sync::Arc};
 
 #[derive(Clone)]
 pub struct Context {
@@ -77,10 +74,18 @@ fn setup_swagger_ui() -> impl Into<Vec<Route>> {
 
 #[launch]
 async fn rocket() -> Rocket<Build> {
+    let db_connection_string = &env::var("DATABASE_URL").unwrap();
     let pool = PgPoolOptions::new()
         .max_connections(5)
-        .connect(dotenv!("DATABASE_URL"))
+        .connect(db_connection_string)
         .await
+        .map_err(|err| {
+            eprintln!(
+                "Failed to connect to the database: {:?}, connection string: {}",
+                err, db_connection_string
+            );
+            err
+        })
         .unwrap();
 
     create_tables(&pool, false).await.unwrap();

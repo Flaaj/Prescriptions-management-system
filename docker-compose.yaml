@@ -8,9 +8,11 @@ services:
       POSTGRES_PASSWORD: postgres
     ports:
       - "2137:5432"
+    networks:
+      - pms_network
   backend:
-    build: .
-    image: pms_backend
+    # build: .
+    image: flaaj/pms_backend
     restart: always
     volumes:
       - .:/app
@@ -23,4 +25,9 @@ services:
       ROCKET_PORT: 8000
     ports:
       - "2138:8000"
+    networks:
+      - pms_network
+networks:
+  pms_network:
+    driver: bridge
     
