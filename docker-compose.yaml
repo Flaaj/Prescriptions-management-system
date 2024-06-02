@@ -11,7 +11,7 @@ services:
     networks:
       - pms_network
   backend:
-    # build: .
+    build: .
     image: flaaj/pms_backend
     restart: always
     volumes:
