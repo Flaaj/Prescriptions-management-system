@@ -80,13 +80,6 @@ impl OpenApiResponderInner for CreatePatientError {
                 ..Default::default()
             }),
         );
-        responses.insert(
-            "500".to_string(),
-            RefOr::Object(OpenApiReponse {
-                description: "Unexpected server error - please contact developer".to_string(),
-                ..Default::default()
-            }),
-        );
         Ok(Responses {
             responses,
             ..Default::default()
@@ -146,13 +139,6 @@ impl OpenApiResponderInner for GetPatientByIdError {
                 ..Default::default()
             }),
         );
-        responses.insert(
-            "500".to_string(),
-            RefOr::Object(OpenApiReponse {
-                description: "Unexpected server error - please contact developer".to_string(),
-                ..Default::default()
-            }),
-        );
         Ok(Responses {
             responses,
             ..Default::default()
@@ -196,16 +182,9 @@ impl OpenApiResponderInner for GetPatientsWithPaginationError {
 
         let mut responses = Map::new();
         responses.insert(
-            "400".to_string(),
+            "422".to_string(),
             RefOr::Object(OpenApiReponse {
                 description: "Returned when the the page < 0 or page_size < 1".to_string(),
-                ..Default::default()
-            }),
-        );
-        responses.insert(
-            "500".to_string(),
-            RefOr::Object(OpenApiReponse {
-                description: "Unexpected server error - please contact developer".to_string(),
                 ..Default::default()
             }),
         );
@@ -299,7 +278,7 @@ mod tests {
 
         let create_patient_response = client
             .post("/patients")
-            .body(r#"{"name":"John Doex", "pesel_number":"96021807250", "pwz_number":"5425740"}"#)
+            .body(r#"{"name":"John Doex", "pesel_number":"96021807250"}"#)
             .header(ContentType::JSON)
             .dispatch()
             .await;
@@ -333,7 +312,7 @@ mod tests {
 
         let request_with_wrong_key = client
             .post("/patients")
-            .body(r#"{"name":"John Doex", "pesel_numberr":"96021807250", "pwz_number":"5425740"}"#)
+            .body(r#"{"name":"John Doex", "pesel_numberr":"96021807250"}"#)
             .header(ContentType::JSON);
         let response = request_with_wrong_key.dispatch().await;
 
@@ -346,7 +325,7 @@ mod tests {
 
         let mut request_with_incorrect_value = client
             .post("/patients")
-            .body(r#"{"name":"John Doex", "pesel_number":"96021807251", "pwz_number":"5425740"}"#);
+            .body(r#"{"name":"John Doex", "pesel_number":"96021807251"}"#);
         request_with_incorrect_value.add_header(ContentType::JSON);
         let response = request_with_incorrect_value.dispatch().await;
 
@@ -354,7 +333,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn create_patient_returns_conflict_if_pwz_number_is_duplicated() {
+    async fn create_patient_returns_conflict_if_pesel_number_is_duplicated() {
         let client = create_api_client().await;
 
         let request = client

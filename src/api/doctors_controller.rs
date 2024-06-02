@@ -89,13 +89,6 @@ impl OpenApiResponderInner for CreateDoctorError {
                 ..Default::default()
             }),
         );
-        responses.insert(
-            "500".to_string(),
-            RefOr::Object(OpenApiReponse {
-                description: "Unexpected server error - please contact developer".to_string(),
-                ..Default::default()
-            }),
-        );
         Ok(Responses {
             responses,
             ..Default::default()
@@ -154,13 +147,6 @@ impl OpenApiResponderInner for GetDoctorByIdError {
                 ..Default::default()
             }),
         );
-        responses.insert(
-            "500".to_string(),
-            RefOr::Object(OpenApiReponse {
-                description: "Unexpected server error - please contact developer".to_string(),
-                ..Default::default()
-            }),
-        );
         Ok(Responses {
             responses,
             ..Default::default()
@@ -204,16 +190,9 @@ impl OpenApiResponderInner for GetDoctorWithPaginationError {
 
         let mut responses = Map::new();
         responses.insert(
-            "400".to_string(),
+            "422".to_string(),
             RefOr::Object(OpenApiReponse {
                 description: "Returned when the the page < 0 or page_size < 1".to_string(),
-                ..Default::default()
-            }),
-        );
-        responses.insert(
-            "500".to_string(),
-            RefOr::Object(OpenApiReponse {
-                description: "Unexpected server error - please contact developer".to_string(),
                 ..Default::default()
             }),
         );
