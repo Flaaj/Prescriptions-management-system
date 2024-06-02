@@ -74,7 +74,7 @@ fn setup_swagger_ui() -> impl Into<Vec<Route>> {
 
 #[launch]
 async fn rocket() -> Rocket<Build> {
-    let db_connection_string = &env::var("DATABASE_URL").unwrap();
+    let db_connection_string = "postgres://postgres:postgres@localhost:2137";
     let pool = PgPoolOptions::new()
         .max_connections(5)
         .connect(db_connection_string)

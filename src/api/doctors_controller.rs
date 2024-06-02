@@ -11,11 +11,11 @@ use crate::{
 use okapi::openapi3::Responses;
 use rocket::{
     get,
-    http::{ContentType, Status},
+    http::Status,
     post,
     response::{status::Created, Responder},
     serde::json::Json,
-    Request, Response, Route,
+    Request, Route,
 };
 use rocket_okapi::{
     gen::OpenApiGenerator, okapi::schemars, response::OpenApiResponderInner, OpenApiError,
@@ -24,6 +24,8 @@ use rocket_okapi::{openapi, openapi_get_routes, JsonSchema};
 use schemars::Map;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+
+use super::error::ApiError;
 
 fn example_name() -> &'static str {
     "John Doe"
@@ -46,7 +48,7 @@ pub struct CreateDoctorDto {
 }
 
 impl<'r> Responder<'r, 'static> for CreateDoctorError {
-    fn respond_to(self, _: &'r Request<'_>) -> rocket::response::Result<'static> {
+    fn respond_to(self, req: &'r Request<'_>) -> rocket::response::Result<'static> {
         let (message, status) = match self {
             Self::DomainError(message) => (message, Status::UnprocessableEntity),
             Self::RepositoryError(repository_err) => {
@@ -60,11 +62,7 @@ impl<'r> Responder<'r, 'static> for CreateDoctorError {
             }
         };
 
-        Response::build()
-            .sized_body(message.len(), std::io::Cursor::new(message))
-            .header(ContentType::JSON)
-            .status(status)
-            .ok()
+        ApiError::build_rocker_response(req, message, status)
     }
 }
 
@@ -121,7 +119,7 @@ pub async fn create_doctor(
 }
 
 impl<'r> Responder<'r, 'static> for GetDoctorByIdError {
-    fn respond_to(self, _: &'r Request<'_>) -> rocket::response::Result<'static> {
+    fn respond_to(self, req: &'r Request<'_>) -> rocket::response::Result<'static> {
         let (message, status) = match self {
             Self::RepositoryError(repository_err) => {
                 let message = repository_err.to_string();
@@ -133,11 +131,7 @@ impl<'r> Responder<'r, 'static> for GetDoctorByIdError {
             }
         };
 
-        Response::build()
-            .sized_body(message.len(), std::io::Cursor::new(message))
-            .header(ContentType::JSON)
-            .status(status)
-            .ok()
+        ApiError::build_rocker_response(req, message, status)
     }
 }
 
@@ -186,7 +180,7 @@ pub async fn get_doctor_by_id(
 }
 
 impl<'r> Responder<'r, 'static> for GetDoctorWithPaginationError {
-    fn respond_to(self, _: &'r Request<'_>) -> rocket::response::Result<'static> {
+    fn respond_to(self, req: &'r Request<'_>) -> rocket::response::Result<'static> {
         let (message, status) = match self {
             Self::RepositoryError(repository_err) => {
                 let message = repository_err.to_string();
@@ -200,11 +194,7 @@ impl<'r> Responder<'r, 'static> for GetDoctorWithPaginationError {
             }
         };
 
-        Response::build()
-            .sized_body(message.len(), std::io::Cursor::new(message))
-            .header(ContentType::JSON)
-            .status(status)
-            .ok()
+        ApiError::build_rocker_response(req, message, status)
     }
 }
 
