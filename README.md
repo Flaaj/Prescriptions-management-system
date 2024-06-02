@@ -19,6 +19,10 @@ A system for managing prescriptions.
 ###### Run development:
 - `cargo run`
 
+###### Hosted preview:
+- base url: https://prescriptions-management-system.onrender.com/
+- swagger: https://prescriptions-management-system.onrender.com/swagger-ui
+
 #### TODO:
 - [ ] pharmacists controller
 - [ ] drugs controller
