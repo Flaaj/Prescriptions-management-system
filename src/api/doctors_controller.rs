@@ -62,7 +62,7 @@ impl<'r> Responder<'r, 'static> for CreateDoctorError {
             }
         };
 
-        ApiError::build_rocker_response(req, message, status)
+        ApiError::build_rocket_response(req, message, status)
     }
 }
 
@@ -131,7 +131,7 @@ impl<'r> Responder<'r, 'static> for GetDoctorByIdError {
             }
         };
 
-        ApiError::build_rocker_response(req, message, status)
+        ApiError::build_rocket_response(req, message, status)
     }
 }
 
@@ -194,7 +194,7 @@ impl<'r> Responder<'r, 'static> for GetDoctorWithPaginationError {
             }
         };
 
-        ApiError::build_rocker_response(req, message, status)
+        ApiError::build_rocket_response(req, message, status)
     }
 }
 

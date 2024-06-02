@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use rocket::{
     http::{self, ContentType},
     Request, Response,
@@ -30,7 +30,7 @@ impl ApiError {
         )
     }
 
-    pub fn build_rocker_response<'r>(
+    pub fn build_rocket_response<'r>(
         req: &'r Request<'_>,
         message: String,
         status: http::Status,
