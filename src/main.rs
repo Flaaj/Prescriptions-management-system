@@ -1,7 +1,7 @@
 pub mod api;
 pub mod domain;
 pub mod infrastructure;
-use api::{doctors_controller, patients_controller};
+use api::{doctors_controller, patients_controller, pharmacists_controller};
 use domain::{
     doctors::service::DoctorsService, drugs::service::DrugsService,
     patients::service::PatientsService, pharmacists::service::PharmacistsService,
@@ -19,6 +19,24 @@ use rocket_okapi::{
 };
 use sqlx::{postgres::PgPoolOptions, PgPool};
 use std::{env, sync::Arc};
+
+async fn setup_database_connection() -> PgPool {
+    let db_connection_string =
+        &env::var("DATABASE_URL").unwrap_or("postgres://postgres:postgres@localhost:2137".into());
+
+    PgPoolOptions::new()
+        .max_connections(5)
+        .connect(db_connection_string)
+        .await
+        .map_err(|err| {
+            eprintln!(
+                "Failed to connect to the database: {:?}, connection string: {}",
+                err, db_connection_string
+            );
+            err
+        })
+        .unwrap()
+}
 
 #[derive(Clone)]
 pub struct Context {
@@ -62,6 +80,10 @@ fn get_routes() -> Vec<Route> {
         doctors_controller::get_doctors_with_pagination,
         patients_controller::create_patient,
         patients_controller::get_patient_by_id,
+        patients_controller::get_patients_with_pagination,
+        pharmacists_controller::create_pharmacist,
+        pharmacists_controller::get_pharmacist_by_id,
+        pharmacists_controller::get_pharmacists_with_pagination,
     ]
 }
 
@@ -74,19 +96,7 @@ fn setup_swagger_ui() -> impl Into<Vec<Route>> {
 
 #[launch]
 async fn rocket() -> Rocket<Build> {
-    let db_connection_string = &env::var("DATABASE_URL").unwrap();
-    let pool = PgPoolOptions::new()
-        .max_connections(5)
-        .connect(db_connection_string)
-        .await
-        .map_err(|err| {
-            eprintln!(
-                "Failed to connect to the database: {:?}, connection string: {}",
-                err, db_connection_string
-            );
-            err
-        })
-        .unwrap();
+    let pool = setup_database_connection().await;
 
     create_tables(&pool, false).await.unwrap();
 

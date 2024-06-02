@@ -4,6 +4,11 @@ use crate::domain::pharmacists::{
 };
 use uuid::Uuid;
 
+use super::repository::{
+    CreatePharmacistRepositoryError, GetPharmacistByIdRepositoryError,
+    GetPharmacistsRepositoryError,
+};
+
 pub struct PharmacistsService {
     repository: Box<dyn PharmacistsRepository>,
 }
@@ -11,18 +16,17 @@ pub struct PharmacistsService {
 #[derive(Debug)]
 pub enum CreatePharmacistError {
     DomainError(String),
-    RepositoryError(String),
+    RepositoryError(CreatePharmacistRepositoryError),
 }
 
 #[derive(Debug)]
 pub enum GetPharmacistByIdError {
-    DomainError,
-    RepositoryError(String),
+    RepositoryError(GetPharmacistByIdRepositoryError),
 }
 
 #[derive(Debug)]
-pub enum GetPharmacistWithPaginationError {
-    DomainError(String),
+pub enum GetPharmacistsWithPaginationError {
+    RepositoryError(GetPharmacistsRepositoryError),
 }
 
 impl PharmacistsService {
@@ -42,7 +46,7 @@ impl PharmacistsService {
             .repository
             .create_pharmacist(new_pharmacist)
             .await
-            .map_err(|err| CreatePharmacistError::RepositoryError(err.to_string()))?;
+            .map_err(|err| CreatePharmacistError::RepositoryError(err))?;
 
         Ok(created_pharmacist)
     }
@@ -55,7 +59,7 @@ impl PharmacistsService {
             .repository
             .get_pharmacist_by_id(pharmacist_id)
             .await
-            .map_err(|err| GetPharmacistByIdError::RepositoryError(err.to_string()))?;
+            .map_err(|err| GetPharmacistByIdError::RepositoryError(err))?;
 
         Ok(pharmacist)
     }
@@ -64,12 +68,12 @@ impl PharmacistsService {
         &self,
         page: Option<i64>,
         page_size: Option<i64>,
-    ) -> Result<Vec<Pharmacist>, GetPharmacistWithPaginationError> {
+    ) -> Result<Vec<Pharmacist>, GetPharmacistsWithPaginationError> {
         let pharmacists = self
             .repository
             .get_pharmacists(page, page_size)
             .await
-            .map_err(|err| GetPharmacistWithPaginationError::DomainError(err.to_string()))?;
+            .map_err(|err| GetPharmacistsWithPaginationError::RepositoryError(err))?;
 
         Ok(pharmacists)
     }

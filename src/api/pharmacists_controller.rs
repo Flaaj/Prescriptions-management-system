@@ -1,10 +1,11 @@
 use crate::{
-    domain::patients::{
-        models::Patient,
+    domain::pharmacists::{
+        models::Pharmacist,
         repository::{
-            CreatePatientRepositoryError, GetPatientByIdRepositoryError, GetPatientsRepositoryError,
+            CreatePharmacistRepositoryError, GetPharmacistByIdRepositoryError,
+            GetPharmacistsRepositoryError,
         },
-        service::{CreatePatientError, GetPatientByIdError, GetPatientsWithPaginationError},
+        service::{CreatePharmacistError, GetPharmacistByIdError, GetPharmacistsWithPaginationError},
     },
     Ctx,
 };
@@ -35,22 +36,24 @@ fn example_pesel_number() -> &'static str {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct CreatePatientDto {
+pub struct CreatePharmacistDto {
     #[schemars(example = "example_name")]
     name: String,
     #[schemars(example = "example_pesel_number")]
     pesel_number: String,
 }
 
-impl<'r> Responder<'r, 'static> for CreatePatientError {
+impl<'r> Responder<'r, 'static> for CreatePharmacistError {
     fn respond_to(self, req: &'r Request<'_>) -> rocket::response::Result<'static> {
         let (message, status) = match self {
             Self::DomainError(message) => (message, Status::UnprocessableEntity),
             Self::RepositoryError(repository_err) => {
                 let message = repository_err.to_string();
                 let status = match repository_err {
-                    CreatePatientRepositoryError::DuplicatedPeselNumber => Status::Conflict,
-                    CreatePatientRepositoryError::DatabaseError(_) => Status::InternalServerError,
+                    CreatePharmacistRepositoryError::DuplicatedPeselNumber => Status::Conflict,
+                    CreatePharmacistRepositoryError::DatabaseError(_) => {
+                        Status::InternalServerError
+                    }
                 };
                 (message, status)
             }
@@ -60,7 +63,7 @@ impl<'r> Responder<'r, 'static> for CreatePatientError {
     }
 }
 
-impl OpenApiResponderInner for CreatePatientError {
+impl OpenApiResponderInner for CreatePharmacistError {
     fn responses(_generator: &mut OpenApiGenerator) -> Result<Responses, OpenApiError> {
         use rocket_okapi::okapi::openapi3::{RefOr, Response as OpenApiReponse};
 
@@ -75,8 +78,9 @@ impl OpenApiResponderInner for CreatePatientError {
         responses.insert(
             "409".to_string(),
             RefOr::Object(OpenApiReponse {
-                description: "Returned when patient with given pesel_number exist in the database"
-                    .to_string(),
+                description:
+                    "Returned when pharmacist with given pesel_number exist in the database"
+                        .to_string(),
                 ..Default::default()
             }),
         );
@@ -94,29 +98,31 @@ impl OpenApiResponderInner for CreatePatientError {
     }
 }
 
-#[openapi(tag = "Patients")]
-#[post("/patients", format = "application/json", data = "<dto>")]
-pub async fn create_patient(
+#[openapi(tag = "Pharmacists")]
+#[post("/pharmacists", format = "application/json", data = "<dto>")]
+pub async fn create_pharmacist(
     ctx: &Ctx,
-    dto: Json<CreatePatientDto>,
-) -> Result<Created<Json<Patient>>, CreatePatientError> {
-    let created_patient = ctx
-        .patients_service
-        .create_patient(dto.0.name, dto.0.pesel_number)
+    dto: Json<CreatePharmacistDto>,
+) -> Result<Created<Json<Pharmacist>>, CreatePharmacistError> {
+    let created_pharmacist = ctx
+        .pharmacists_service
+        .create_pharmacist(dto.0.name, dto.0.pesel_number)
         .await?;
 
-    let location = format!("/patients/{}", created_patient.id);
-    Ok(Created::new(location).body(Json(created_patient)))
+    let location = format!("/pharmacists/{}", created_pharmacist.id);
+    Ok(Created::new(location).body(Json(created_pharmacist)))
 }
 
-impl<'r> Responder<'r, 'static> for GetPatientByIdError {
+impl<'r> Responder<'r, 'static> for GetPharmacistByIdError {
     fn respond_to(self, req: &'r Request<'_>) -> rocket::response::Result<'static> {
         let (message, status) = match self {
             Self::RepositoryError(repository_err) => {
                 let message = repository_err.to_string();
                 let status = match repository_err {
-                    GetPatientByIdRepositoryError::NotFound(_) => Status::NotFound,
-                    GetPatientByIdRepositoryError::DatabaseError(_) => Status::InternalServerError,
+                    GetPharmacistByIdRepositoryError::NotFound(_) => Status::NotFound,
+                    GetPharmacistByIdRepositoryError::DatabaseError(_) => {
+                        Status::InternalServerError
+                    }
                 };
                 (message, status)
             }
@@ -126,7 +132,7 @@ impl<'r> Responder<'r, 'static> for GetPatientByIdError {
     }
 }
 
-impl OpenApiResponderInner for GetPatientByIdError {
+impl OpenApiResponderInner for GetPharmacistByIdError {
     fn responses(_generator: &mut OpenApiGenerator) -> Result<Responses, OpenApiError> {
         use rocket_okapi::okapi::openapi3::{RefOr, Response as OpenApiReponse};
 
@@ -134,7 +140,7 @@ impl OpenApiResponderInner for GetPatientByIdError {
         responses.insert(
             "404".to_string(),
             RefOr::Object(OpenApiReponse {
-                description: "Returned when the the patient with given id doesn't exist"
+                description: "Returned when the the pharmacist with given id doesn't exist"
                     .to_string(),
                 ..Default::default()
             }),
@@ -160,27 +166,30 @@ impl OpenApiResponderInner for GetPatientByIdError {
     }
 }
 
-#[openapi(tag = "Patients")]
-#[get("/patients/<patient_id>", format = "application/json")]
-pub async fn get_patient_by_id(
+#[openapi(tag = "Pharmacists")]
+#[get("/pharmacists/<pharmacist_id>", format = "application/json")]
+pub async fn get_pharmacist_by_id(
     ctx: &Ctx,
-    patient_id: Uuid,
-) -> Result<Json<Patient>, GetPatientByIdError> {
-    let patient = ctx.patients_service.get_patient_by_id(patient_id).await?;
+    pharmacist_id: Uuid,
+) -> Result<Json<Pharmacist>, GetPharmacistByIdError> {
+    let pharmacist = ctx
+        .pharmacists_service
+        .get_pharmacist_by_id(pharmacist_id)
+        .await?;
 
-    Ok(Json(patient))
+    Ok(Json(pharmacist))
 }
 
-impl<'r> Responder<'r, 'static> for GetPatientsWithPaginationError {
+impl<'r> Responder<'r, 'static> for GetPharmacistsWithPaginationError {
     fn respond_to(self, req: &'r Request<'_>) -> rocket::response::Result<'static> {
         let (message, status) = match self {
             Self::RepositoryError(repository_err) => {
                 let message = repository_err.to_string();
                 let status = match repository_err {
-                    GetPatientsRepositoryError::InvalidPaginationParams(_) => {
+                    GetPharmacistsRepositoryError::InvalidPaginationParams(_) => {
                         Status::UnprocessableEntity
                     }
-                    GetPatientsRepositoryError::DatabaseError(_) => Status::InternalServerError,
+                    GetPharmacistsRepositoryError::DatabaseError(_) => Status::InternalServerError,
                 };
                 (message, status)
             }
@@ -190,7 +199,7 @@ impl<'r> Responder<'r, 'static> for GetPatientsWithPaginationError {
     }
 }
 
-impl OpenApiResponderInner for GetPatientsWithPaginationError {
+impl OpenApiResponderInner for GetPharmacistsWithPaginationError {
     fn responses(_generator: &mut OpenApiGenerator) -> Result<Responses, OpenApiError> {
         use rocket_okapi::okapi::openapi3::{RefOr, Response as OpenApiReponse};
 
@@ -216,26 +225,26 @@ impl OpenApiResponderInner for GetPatientsWithPaginationError {
     }
 }
 
-#[openapi(tag = "Patients")]
-#[get("/patients?<page>&<page_size>", format = "application/json")]
-pub async fn get_patients_with_pagination(
+#[openapi(tag = "Pharmacists")]
+#[get("/pharmacists?<page>&<page_size>", format = "application/json")]
+pub async fn get_pharmacists_with_pagination(
     ctx: &Ctx,
     page: Option<i64>,
     page_size: Option<i64>,
-) -> Result<Json<Vec<Patient>>, GetPatientsWithPaginationError> {
-    let patients = ctx
-        .patients_service
-        .get_patients_with_pagination(page, page_size)
+) -> Result<Json<Vec<Pharmacist>>, GetPharmacistsWithPaginationError> {
+    let pharmacists = ctx
+        .pharmacists_service
+        .get_pharmacists_with_pagination(page, page_size)
         .await?;
 
-    Ok(Json(patients))
+    Ok(Json(pharmacists))
 }
 
 pub fn get_routes() -> Vec<Route> {
     openapi_get_routes![
-        create_patient,
-        get_patient_by_id,
-        get_patients_with_pagination,
+        create_pharmacist,
+        get_pharmacist_by_id,
+        get_pharmacists_with_pagination,
     ]
 }
 
@@ -253,10 +262,11 @@ mod tests {
         domain::{
             doctors::{repository::DoctorsRepositoryFake, service::DoctorsService},
             drugs::{repository::DrugsRepositoryFake, service::DrugsService},
-            patients::{
-                models::Patient, repository::PatientsRepositoryFake, service::PatientsService,
+            patients::{repository::PatientsRepositoryFake, service::PatientsService},
+            pharmacists::{
+                models::Pharmacist, repository::PharmacistsRepositoryFake,
+                service::PharmacistsService,
             },
-            pharmacists::{repository::PharmacistsRepositoryFake, service::PharmacistsService},
             prescriptions::{
                 repository::PrescriptionsRepositoryFake, service::PrescriptionsService,
             },
@@ -265,10 +275,10 @@ mod tests {
     };
 
     async fn create_api_client() -> Client {
-        let patients_repository = Box::new(PatientsRepositoryFake::new());
-        let patients_service = Arc::new(PatientsService::new(patients_repository));
-        let pharmacists_rerpository = Box::new(PharmacistsRepositoryFake::new());
-        let pharmacists_service = Arc::new(PharmacistsService::new(pharmacists_rerpository));
+        let pharmacists_repository = Box::new(PharmacistsRepositoryFake::new());
+        let pharmacists_service = Arc::new(PharmacistsService::new(pharmacists_repository));
+        let patients_rerpository = Box::new(PatientsRepositoryFake::new());
+        let patients_service = Arc::new(PatientsService::new(patients_rerpository));
         let doctors_repository = Box::new(DoctorsRepositoryFake::new());
         let doctors_service = Arc::new(DoctorsService::new(doctors_repository));
         let drugs_repository = Box::new(DrugsRepositoryFake::new());
@@ -279,8 +289,8 @@ mod tests {
         let prescriptions_service = Arc::new(PrescriptionsService::new(prescriptions_repository));
 
         let context = Context {
-            patients_service,
             pharmacists_service,
+            patients_service,
             doctors_service,
             drugs_service,
             prescriptions_service,
@@ -294,45 +304,45 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn creates_patient_and_reads_by_id() {
+    async fn creates_pharmacist_and_reads_by_id() {
         let client = create_api_client().await;
 
-        let create_patient_response = client
-            .post("/patients")
+        let create_pharmacist_response = client
+            .post("/pharmacists")
             .body(r#"{"name":"John Doex", "pesel_number":"96021807250", "pwz_number":"5425740"}"#)
             .header(ContentType::JSON)
             .dispatch()
             .await;
 
-        assert_eq!(create_patient_response.status(), Status::Created);
+        assert_eq!(create_pharmacist_response.status(), Status::Created);
 
-        let created_patient: Patient =
-            json::from_str(&create_patient_response.into_string().await.unwrap()).unwrap();
+        let created_pharmacist: Pharmacist =
+            json::from_str(&create_pharmacist_response.into_string().await.unwrap()).unwrap();
 
-        assert_eq!(created_patient.name, "John Doex");
-        assert_eq!(created_patient.pesel_number, "96021807250");
+        assert_eq!(created_pharmacist.name, "John Doex");
+        assert_eq!(created_pharmacist.pesel_number, "96021807250");
 
-        let get_patient_by_id_response = client
-            .get(format!("/patients/{}", created_patient.id))
+        let get_pharmacist_by_id_response = client
+            .get(format!("/pharmacists/{}", created_pharmacist.id))
             .header(ContentType::JSON)
             .dispatch()
             .await;
 
-        assert_eq!(get_patient_by_id_response.status(), Status::Ok);
+        assert_eq!(get_pharmacist_by_id_response.status(), Status::Ok);
 
-        let patient: Patient =
-            json::from_str(&get_patient_by_id_response.into_string().await.unwrap()).unwrap();
+        let pharmacist: Pharmacist =
+            json::from_str(&get_pharmacist_by_id_response.into_string().await.unwrap()).unwrap();
 
-        assert_eq!(patient.name, "John Doex");
-        assert_eq!(patient.pesel_number, "96021807250");
+        assert_eq!(pharmacist.name, "John Doex");
+        assert_eq!(pharmacist.pesel_number, "96021807250");
     }
 
     #[tokio::test]
-    async fn create_patient_returns_unprocessable_entity_if_body_has_incorrect_keys() {
+    async fn create_pharmacist_returns_unprocessable_entity_if_body_has_incorrect_keys() {
         let client = create_api_client().await;
 
         let request_with_wrong_key = client
-            .post("/patients")
+            .post("/pharmacists")
             .body(r#"{"name":"John Doex", "pesel_numberr":"96021807250", "pwz_number":"5425740"}"#)
             .header(ContentType::JSON);
         let response = request_with_wrong_key.dispatch().await;
@@ -341,11 +351,12 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn create_patient_returns_unprocessable_entity_if_body_has_incorrect_value_incorrect() {
+    async fn create_pharmacist_returns_unprocessable_entity_if_body_has_incorrect_value_incorrect()
+    {
         let client = create_api_client().await;
 
         let mut request_with_incorrect_value = client
-            .post("/patients")
+            .post("/pharmacists")
             .body(r#"{"name":"John Doex", "pesel_number":"96021807251", "pwz_number":"5425740"}"#);
         request_with_incorrect_value.add_header(ContentType::JSON);
         let response = request_with_incorrect_value.dispatch().await;
@@ -354,17 +365,17 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn create_patient_returns_conflict_if_pwz_number_is_duplicated() {
+    async fn create_pharmacist_returns_conflict_if_pwz_number_is_duplicated() {
         let client = create_api_client().await;
 
         let request = client
-            .post("/patients")
+            .post("/pharmacists")
             .body(r#"{"name":"John Doex", "pesel_number":"96021807250"}"#)
             .header(ContentType::JSON);
         request.dispatch().await;
 
         let request_with_duplicated_pesel = client
-            .post("/patients")
+            .post("/pharmacists")
             .body(r#"{"name":"John Doex", "pesel_number":"96021807250"}"#)
             .header(ContentType::JSON);
         let response = request_with_duplicated_pesel.dispatch().await;
@@ -373,21 +384,21 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn get_patient_by_id_returns_unprocessable_entity_if_id_param_is_invalid() {
+    async fn get_pharmacist_by_id_returns_unprocessable_entity_if_id_param_is_invalid() {
         let client = create_api_client().await;
 
-        let request = client.get("/patients/10").header(ContentType::JSON);
+        let request = client.get("/pharmacists/10").header(ContentType::JSON);
         let response = request.dispatch().await;
 
         assert_eq!(response.status(), Status::UnprocessableEntity);
     }
 
     #[tokio::test]
-    async fn get_patient_by_id_returns_not_found_if_such_patient_does_not_exist() {
+    async fn get_pharmacist_by_id_returns_not_found_if_such_pharmacist_does_not_exist() {
         let client = create_api_client().await;
 
         let request = client
-            .get("/patients/00000000-0000-0000-0000-000000000000")
+            .get("/pharmacists/00000000-0000-0000-0000-000000000000")
             .header(ContentType::JSON);
         let response = request.dispatch().await;
 
@@ -395,55 +406,55 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn gets_patients_with_pagination() {
+    async fn gets_pharmacists_with_pagination() {
         let client = create_api_client().await;
         client
-            .post("/patients")
+            .post("/pharmacists")
             .body(r#"{"name":"John Doex", "pesel_number":"96021817257"}"#)
             .header(ContentType::JSON)
             .dispatch()
             .await;
         client
-            .post("/patients")
+            .post("/pharmacists")
             .body(r#"{"name":"John Doey", "pesel_number":"99031301347"}"#)
             .header(ContentType::JSON)
             .dispatch()
             .await;
         client
-            .post("/patients")
+            .post("/pharmacists")
             .body(r#"{"name":"John Doez", "pesel_number":"92022900002"}"#)
             .header(ContentType::JSON)
             .dispatch()
             .await;
         client
-            .post("/patients")
+            .post("/pharmacists")
             .body(r#"{"name":"John Doeq", "pesel_number":"96021807250"}"#)
             .header(ContentType::JSON)
             .dispatch()
             .await;
 
         let response = client
-            .get("/patients?page=1&page_size=2")
+            .get("/pharmacists?page=1&page_size=2")
             .header(ContentType::JSON)
             .dispatch()
             .await;
 
         assert_eq!(response.status(), Status::Ok);
 
-        let patients: Vec<Patient> =
+        let pharmacists: Vec<Pharmacist> =
             json::from_str(&response.into_string().await.unwrap()).unwrap();
 
-        assert_eq!(patients.len(), 2);
+        assert_eq!(pharmacists.len(), 2);
     }
 
     #[tokio::test]
-    async fn get_patients_with_pagination_returns_unprocessable_entity_if_page_or_page_size_is_invalid(
+    async fn get_pharmacists_with_pagination_returns_unprocessable_entity_if_page_or_page_size_is_invalid(
     ) {
         let client = create_api_client().await;
 
         assert_eq!(
             client
-                .get("/patients?page=-1")
+                .get("/pharmacists?page=-1")
                 .header(ContentType::JSON)
                 .dispatch()
                 .await
@@ -453,7 +464,7 @@ mod tests {
 
         assert_eq!(
             client
-                .get("/patients?page_size=0")
+                .get("/pharmacists?page_size=0")
                 .header(ContentType::JSON)
                 .dispatch()
                 .await
