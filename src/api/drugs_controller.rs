@@ -29,17 +29,17 @@ fn example_drug_name() -> &'static str {
 fn example_drug_content_type() -> DrugContentType {
     DrugContentType::SolidPills
 }
-fn example_pills_count() -> i32 {
-    30
+fn example_pills_count() -> Option<i32> {
+    Some(30)
 }
-fn example_mg_per_pill() -> i32 {
-    300
+fn example_mg_per_pill() -> Option<i32> {
+    Some(300)
 }
-fn example_ml_per_pill() -> i32 {
-    30
+fn example_ml_per_pill() -> Option<i32> {
+    None
 }
-fn example_volume_ml() -> i32 {
-    1000
+fn example_volume_ml() -> Option<i32> {
+    None
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -270,7 +270,7 @@ mod tests {
         let routes = routes![
             super::create_drug,
             super::get_drug_by_id,
-            super::get_drugs_with_pagination, //
+            super::get_drugs_with_pagination,
         ];
 
         let rocket = rocket::build().manage(context).mount("/", routes);
