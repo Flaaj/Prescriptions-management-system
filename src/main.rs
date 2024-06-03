@@ -15,7 +15,7 @@ use infrastructure::postgres_repository_impl::{
     drugs::PostgresDrugsRepository, patients::PostgresPatientsRepository,
     pharmacists::PostgresPharmacistsRepository, prescriptions::PostgresPrescriptionsRepository,
 };
-use rocket::{launch, Build, Rocket, Route};
+use rocket::{get, launch, routes, Build, Rocket, Route};
 use rocket_okapi::{
     openapi_get_routes,
     swagger_ui::{make_swagger_ui, SwaggerUIConfig},
@@ -104,6 +104,11 @@ fn setup_swagger_ui() -> impl Into<Vec<Route>> {
     })
 }
 
+#[get("/")]
+fn redirect_to_swagger_ui() -> rocket::response::Redirect {
+    rocket::response::Redirect::to("/swagger-ui")
+}
+
 #[launch]
 async fn rocket() -> Rocket<Build> {
     let pool = setup_database_connection().await;
@@ -113,5 +118,6 @@ async fn rocket() -> Rocket<Build> {
     rocket::build()
         .manage(setup_context(pool))
         .mount("/", get_routes())
+        .mount("/", routes![redirect_to_swagger_ui])
         .mount("/swagger-ui", setup_swagger_ui())
 }
