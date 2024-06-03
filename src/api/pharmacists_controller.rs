@@ -5,7 +5,9 @@ use crate::{
             CreatePharmacistRepositoryError, GetPharmacistByIdRepositoryError,
             GetPharmacistsRepositoryError,
         },
-        service::{CreatePharmacistError, GetPharmacistByIdError, GetPharmacistsWithPaginationError},
+        service::{
+            CreatePharmacistError, GetPharmacistByIdError, GetPharmacistsWithPaginationError,
+        },
     },
     Ctx,
 };
@@ -16,11 +18,10 @@ use rocket::{
     post,
     response::{status::Created, Responder},
     serde::json::Json,
-    Request, Route,
+    Request,
 };
 use rocket_okapi::{
-    gen::OpenApiGenerator, okapi::schemars, openapi, openapi_get_routes,
-    response::OpenApiResponderInner, OpenApiError,
+    gen::OpenApiGenerator, okapi::schemars, openapi, response::OpenApiResponderInner, OpenApiError,
 };
 use schemars::{JsonSchema, Map};
 use serde::{Deserialize, Serialize};
@@ -47,9 +48,9 @@ impl<'r> Responder<'r, 'static> for CreatePharmacistError {
     fn respond_to(self, req: &'r Request<'_>) -> rocket::response::Result<'static> {
         let (message, status) = match self {
             Self::DomainError(message) => (message, Status::UnprocessableEntity),
-            Self::RepositoryError(repository_err) => {
-                let message = repository_err.to_string();
-                let status = match repository_err {
+            Self::RepositoryError(err) => {
+                let message = err.to_string();
+                let status = match err {
                     CreatePharmacistRepositoryError::DuplicatedPeselNumber => Status::Conflict,
                     CreatePharmacistRepositoryError::DatabaseError(_) => {
                         Status::InternalServerError
@@ -64,12 +65,12 @@ impl<'r> Responder<'r, 'static> for CreatePharmacistError {
 }
 
 impl OpenApiResponderInner for CreatePharmacistError {
-    fn responses(_generator: &mut OpenApiGenerator) -> Result<Responses, OpenApiError> {
+    fn responses(_: &mut OpenApiGenerator) -> Result<Responses, OpenApiError> {
         use rocket_okapi::okapi::openapi3::{RefOr, Response as OpenApiReponse};
 
         let mut responses = Map::new();
         responses.insert(
-            "421".to_string(),
+            "422".to_string(),
             RefOr::Object(OpenApiReponse {
                 description: "Returned when the name or the pesel_number are incorrect".to_string(),
                 ..Default::default()
@@ -109,9 +110,9 @@ pub async fn create_pharmacist(
 impl<'r> Responder<'r, 'static> for GetPharmacistByIdError {
     fn respond_to(self, req: &'r Request<'_>) -> rocket::response::Result<'static> {
         let (message, status) = match self {
-            Self::RepositoryError(repository_err) => {
-                let message = repository_err.to_string();
-                let status = match repository_err {
+            Self::RepositoryError(err) => {
+                let message = err.to_string();
+                let status = match err {
                     GetPharmacistByIdRepositoryError::NotFound(_) => Status::NotFound,
                     GetPharmacistByIdRepositoryError::DatabaseError(_) => {
                         Status::InternalServerError
@@ -126,7 +127,7 @@ impl<'r> Responder<'r, 'static> for GetPharmacistByIdError {
 }
 
 impl OpenApiResponderInner for GetPharmacistByIdError {
-    fn responses(_generator: &mut OpenApiGenerator) -> Result<Responses, OpenApiError> {
+    fn responses(_: &mut OpenApiGenerator) -> Result<Responses, OpenApiError> {
         use rocket_okapi::okapi::openapi3::{RefOr, Response as OpenApiReponse};
 
         let mut responses = Map::new();
@@ -139,9 +140,9 @@ impl OpenApiResponderInner for GetPharmacistByIdError {
             }),
         );
         responses.insert(
-            "421".to_string(),
+            "422".to_string(),
             RefOr::Object(OpenApiReponse {
-                description: "Returned when the the id is not UUID".to_string(),
+                description: "Returned when the the pharmacist_id is not a valid UUID".to_string(),
                 ..Default::default()
             }),
         );
@@ -169,9 +170,9 @@ pub async fn get_pharmacist_by_id(
 impl<'r> Responder<'r, 'static> for GetPharmacistsWithPaginationError {
     fn respond_to(self, req: &'r Request<'_>) -> rocket::response::Result<'static> {
         let (message, status) = match self {
-            Self::RepositoryError(repository_err) => {
-                let message = repository_err.to_string();
-                let status = match repository_err {
+            Self::RepositoryError(err) => {
+                let message = err.to_string();
+                let status = match err {
                     GetPharmacistsRepositoryError::InvalidPaginationParams(_) => {
                         Status::UnprocessableEntity
                     }
@@ -186,7 +187,7 @@ impl<'r> Responder<'r, 'static> for GetPharmacistsWithPaginationError {
 }
 
 impl OpenApiResponderInner for GetPharmacistsWithPaginationError {
-    fn responses(_generator: &mut OpenApiGenerator) -> Result<Responses, OpenApiError> {
+    fn responses(_: &mut OpenApiGenerator) -> Result<Responses, OpenApiError> {
         use rocket_okapi::okapi::openapi3::{RefOr, Response as OpenApiReponse};
 
         let mut responses = Map::new();
@@ -219,24 +220,8 @@ pub async fn get_pharmacists_with_pagination(
     Ok(Json(pharmacists))
 }
 
-pub fn get_routes() -> Vec<Route> {
-    openapi_get_routes![
-        create_pharmacist,
-        get_pharmacist_by_id,
-        get_pharmacists_with_pagination,
-    ]
-}
-
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
-
-    use rocket::{
-        http::{ContentType, Status},
-        local::asynchronous::Client,
-        serde::json,
-    };
-
     use crate::{
         domain::{
             doctors::{repository::DoctorsRepositoryFake, service::DoctorsService},
@@ -252,6 +237,13 @@ mod tests {
         },
         Context,
     };
+    use rocket::{
+        http::{ContentType, Status},
+        local::asynchronous::Client,
+        routes,
+        serde::json,
+    };
+    use std::sync::Arc;
 
     async fn create_api_client() -> Client {
         let pharmacists_repository = Box::new(PharmacistsRepositoryFake::new());
@@ -275,9 +267,13 @@ mod tests {
             prescriptions_service,
         };
 
-        let rocket = rocket::build()
-            .manage(context)
-            .mount("/", super::get_routes());
+        let routes = routes![
+            super::create_pharmacist,
+            super::get_pharmacist_by_id,
+            super::get_pharmacists_with_pagination
+        ];
+
+        let rocket = rocket::build().manage(context).mount("/", routes);
 
         Client::tracked(rocket).await.unwrap()
     }

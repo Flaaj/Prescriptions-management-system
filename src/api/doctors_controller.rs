@@ -4,7 +4,7 @@ use crate::{
         repository::{
             CreateDoctorRepositoryError, GetDoctorByIdRepositoryError, GetDoctorsRepositoryError,
         },
-        service::{CreateDoctorError, GetDoctorByIdError, GetDoctorWithPaginationError},
+        service::{CreateDoctorError, GetDoctorByIdError, GetDoctorsWithPaginationError},
     },
     Ctx,
 };
@@ -15,12 +15,12 @@ use rocket::{
     post,
     response::{status::Created, Responder},
     serde::json::Json,
-    Request, Route,
+    Request,
 };
 use rocket_okapi::{
     gen::OpenApiGenerator, okapi::schemars, response::OpenApiResponderInner, OpenApiError,
 };
-use rocket_okapi::{openapi, openapi_get_routes, JsonSchema};
+use rocket_okapi::{openapi, JsonSchema};
 use schemars::Map;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -51,9 +51,9 @@ impl<'r> Responder<'r, 'static> for CreateDoctorError {
     fn respond_to(self, req: &'r Request<'_>) -> rocket::response::Result<'static> {
         let (message, status) = match self {
             Self::DomainError(message) => (message, Status::UnprocessableEntity),
-            Self::RepositoryError(repository_err) => {
-                let message = repository_err.to_string();
-                let status = match repository_err {
+            Self::RepositoryError(err) => {
+                let message = err.to_string();
+                let status = match err {
                     CreateDoctorRepositoryError::DuplicatedPeselNumber => Status::Conflict,
                     CreateDoctorRepositoryError::DuplicatedPwzNumber => Status::Conflict,
                     CreateDoctorRepositoryError::DatabaseError(_) => Status::InternalServerError,
@@ -67,12 +67,12 @@ impl<'r> Responder<'r, 'static> for CreateDoctorError {
 }
 
 impl OpenApiResponderInner for CreateDoctorError {
-    fn responses(_generator: &mut OpenApiGenerator) -> Result<Responses, OpenApiError> {
+    fn responses(_: &mut OpenApiGenerator) -> Result<Responses, OpenApiError> {
         use rocket_okapi::okapi::openapi3::{RefOr, Response as OpenApiReponse};
 
         let mut responses = Map::new();
         responses.insert(
-            "421".to_string(),
+            "422".to_string(),
             RefOr::Object(OpenApiReponse {
                 description:
                     "Returned when the name, the pesel_number or the pwz_number are incorrect"
@@ -114,9 +114,9 @@ pub async fn create_doctor(
 impl<'r> Responder<'r, 'static> for GetDoctorByIdError {
     fn respond_to(self, req: &'r Request<'_>) -> rocket::response::Result<'static> {
         let (message, status) = match self {
-            Self::RepositoryError(repository_err) => {
-                let message = repository_err.to_string();
-                let status = match repository_err {
+            Self::RepositoryError(err) => {
+                let message = err.to_string();
+                let status = match err {
                     GetDoctorByIdRepositoryError::NotFound(_) => Status::NotFound,
                     GetDoctorByIdRepositoryError::DatabaseError(_) => Status::InternalServerError,
                 };
@@ -129,7 +129,7 @@ impl<'r> Responder<'r, 'static> for GetDoctorByIdError {
 }
 
 impl OpenApiResponderInner for GetDoctorByIdError {
-    fn responses(_generator: &mut OpenApiGenerator) -> Result<Responses, OpenApiError> {
+    fn responses(_: &mut OpenApiGenerator) -> Result<Responses, OpenApiError> {
         use rocket_okapi::okapi::openapi3::{RefOr, Response as OpenApiReponse};
 
         let mut responses = Map::new();
@@ -141,9 +141,9 @@ impl OpenApiResponderInner for GetDoctorByIdError {
             }),
         );
         responses.insert(
-            "421".to_string(),
+            "422".to_string(),
             RefOr::Object(OpenApiReponse {
-                description: "Returned when the the id is not UUID".to_string(),
+                description: "Returned when the the doctor_id is not a valid UUID".to_string(),
                 ..Default::default()
             }),
         );
@@ -165,12 +165,12 @@ pub async fn get_doctor_by_id(
     Ok(Json(doctor))
 }
 
-impl<'r> Responder<'r, 'static> for GetDoctorWithPaginationError {
+impl<'r> Responder<'r, 'static> for GetDoctorsWithPaginationError {
     fn respond_to(self, req: &'r Request<'_>) -> rocket::response::Result<'static> {
         let (message, status) = match self {
-            Self::RepositoryError(repository_err) => {
-                let message = repository_err.to_string();
-                let status = match repository_err {
+            Self::RepositoryError(err) => {
+                let message = err.to_string();
+                let status = match err {
                     GetDoctorsRepositoryError::InvalidPaginationParams(_) => {
                         Status::UnprocessableEntity
                     }
@@ -184,8 +184,8 @@ impl<'r> Responder<'r, 'static> for GetDoctorWithPaginationError {
     }
 }
 
-impl OpenApiResponderInner for GetDoctorWithPaginationError {
-    fn responses(_generator: &mut OpenApiGenerator) -> Result<Responses, OpenApiError> {
+impl OpenApiResponderInner for GetDoctorsWithPaginationError {
+    fn responses(_: &mut OpenApiGenerator) -> Result<Responses, OpenApiError> {
         use rocket_okapi::okapi::openapi3::{RefOr, Response as OpenApiReponse};
 
         let mut responses = Map::new();
@@ -209,17 +209,13 @@ pub async fn get_doctors_with_pagination(
     ctx: &Ctx,
     page: Option<i64>,
     page_size: Option<i64>,
-) -> Result<Json<Vec<Doctor>>, GetDoctorWithPaginationError> {
+) -> Result<Json<Vec<Doctor>>, GetDoctorsWithPaginationError> {
     let doctors = ctx
         .doctors_service
         .get_doctors_with_pagination(page, page_size)
         .await?;
 
     Ok(Json(doctors))
-}
-
-pub fn get_routes() -> Vec<Route> {
-    openapi_get_routes![create_doctor, get_doctor_by_id, get_doctors_with_pagination]
 }
 
 #[cfg(test)]
@@ -241,6 +237,7 @@ mod tests {
     use rocket::{
         http::{ContentType, Status},
         local::asynchronous::Client,
+        routes,
         serde::json,
     };
 
@@ -270,9 +267,13 @@ mod tests {
             prescriptions_service,
         };
 
-        let rocket = rocket::build()
-            .manage(context)
-            .mount("/", super::get_routes());
+        let routes = routes![
+            super::create_doctor,
+            super::get_doctor_by_id,
+            super::get_doctors_with_pagination
+        ];
+
+        let rocket = rocket::build().manage(context).mount("/", routes);
 
         Client::tracked(rocket).await.unwrap()
     }

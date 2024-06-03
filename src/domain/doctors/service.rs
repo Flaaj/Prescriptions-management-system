@@ -19,7 +19,7 @@ pub enum GetDoctorByIdError {
 }
 
 #[derive(Debug)]
-pub enum GetDoctorWithPaginationError {
+pub enum GetDoctorsWithPaginationError {
     RepositoryError(GetDoctorsRepositoryError),
 }
 
@@ -64,12 +64,12 @@ impl DoctorsService {
         &self,
         page: Option<i64>,
         page_size: Option<i64>,
-    ) -> Result<Vec<Doctor>, GetDoctorWithPaginationError> {
+    ) -> Result<Vec<Doctor>, GetDoctorsWithPaginationError> {
         let doctors = self
             .repository
             .get_doctors(page, page_size)
             .await
-            .map_err(|err| GetDoctorWithPaginationError::RepositoryError(err))?;
+            .map_err(|err| GetDoctorsWithPaginationError::RepositoryError(err))?;
 
         Ok(doctors)
     }

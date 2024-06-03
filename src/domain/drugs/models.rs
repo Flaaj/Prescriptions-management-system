@@ -1,8 +1,11 @@
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Debug, PartialEq, sqlx::Type, Clone, Copy)]
+#[derive(Debug, PartialEq, sqlx::Type, Clone, Copy, Deserialize, Serialize, JsonSchema)]
 #[sqlx(type_name = "drug_content_type", rename_all = "snake_case")]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum DrugContentType {
     BottleOfLiquid,
     SolidPills,
@@ -20,7 +23,7 @@ pub struct NewDrug {
     pub volume_ml: Option<i32>,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Deserialize, Serialize, JsonSchema)]
 pub struct Drug {
     pub id: Uuid,
     pub name: String,

@@ -2,7 +2,7 @@ use uuid::Uuid;
 
 use super::{
     models::{Drug, DrugContentType, NewDrug},
-    repository::DrugsRepository,
+    repository::{CreateDrugRepositoryError, DrugsRepository, GetDrugByIdRepositoryError, GetDrugsRepositoryError},
 };
 
 pub struct DrugsService {
@@ -12,18 +12,17 @@ pub struct DrugsService {
 #[derive(Debug)]
 pub enum CreateDrugError {
     DomainError(String),
-    RepositoryError(String),
+    RepositoryError(CreateDrugRepositoryError),
 }
 
 #[derive(Debug)]
 pub enum GetDrugByIdError {
-    DomainError,
-    RepositoryError(String),
+    RepositoryError(GetDrugByIdRepositoryError),
 }
 
 #[derive(Debug)]
 pub enum GetDrugsWithPaginationError {
-    DomainError(String),
+    RepositoryError(GetDrugsRepositoryError),
 }
 
 impl DrugsService {
@@ -54,7 +53,7 @@ impl DrugsService {
             .repository
             .create_drug(new_drug)
             .await
-            .map_err(|err| CreateDrugError::RepositoryError(err.to_string()))?;
+            .map_err(|err| CreateDrugError::RepositoryError(err))?;
 
         Ok(created_drug)
     }
@@ -64,7 +63,7 @@ impl DrugsService {
             .repository
             .get_drug_by_id(drug_id)
             .await
-            .map_err(|err| GetDrugByIdError::RepositoryError(err.to_string()))?;
+            .map_err(|err| GetDrugByIdError::RepositoryError(err))?;
 
         Ok(doctor)
     }
@@ -78,7 +77,7 @@ impl DrugsService {
             .repository
             .get_drugs(page, page_size)
             .await
-            .map_err(|err| GetDrugsWithPaginationError::DomainError(err.to_string()))?;
+            .map_err(|err| GetDrugsWithPaginationError::RepositoryError(err))?;
 
         Ok(result)
     }

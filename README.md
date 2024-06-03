@@ -24,9 +24,7 @@ A system for managing prescriptions.
 - swagger: https://prescriptions-management-system.onrender.com/swagger-ui
 
 #### TODO:
-- [ ] pharmacists controller
 - [ ] drugs controller
-- [ ] patients controller
 - [ ] prescriptions controller
 - [ ] authorization
 - [ ] images service for storing drug images

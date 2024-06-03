@@ -38,7 +38,7 @@ impl ApiError {
         let path = req.uri().path().to_string();
         let method = req.method();
 
-        let body = ApiError::new(message, path, status, method).to_json_string();
+        let body = Self::new(message, path, status, method).to_json_string();
 
         Response::build()
             .sized_body(body.len(), std::io::Cursor::new(body))
