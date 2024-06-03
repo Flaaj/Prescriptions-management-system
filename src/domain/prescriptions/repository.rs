@@ -44,8 +44,8 @@ pub enum GetPrescriptionByIdRepositoryError {
 pub enum FillPrescriptionRepositoryError {
     #[error("Pharmacist with id {0} not found")]
     PharmacistNotFound(Uuid),
-    #[error("Prescription is already filled")]
-    PrescriptionAlreadyFilled,
+    #[error("Prescription with id {0} not found")]
+    PrescriptionNotFound(Uuid),
     #[error("Database error: {0}")]
     DatabaseError(String),
 }

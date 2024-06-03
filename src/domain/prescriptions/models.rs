@@ -1,8 +1,11 @@
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Debug, PartialEq, sqlx::Type, Clone, Copy)]
+#[derive(Debug, PartialEq, sqlx::Type, Clone, Copy, Serialize, Deserialize, JsonSchema)]
 #[sqlx(type_name = "prescription_type", rename_all = "snake_case")]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum PrescriptionType {
     Regular,
     ForAntibiotics,
@@ -28,7 +31,7 @@ pub struct NewPrescription {
     pub end_date: DateTime<Utc>,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PrescribedDrug {
     pub id: Uuid,
     pub prescription_id: Uuid,
@@ -38,14 +41,14 @@ pub struct PrescribedDrug {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PrescriptionPatient {
     pub id: Uuid,
     pub name: String,
     pub pesel_number: String,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PrescriptionDoctor {
     pub id: Uuid,
     pub name: String,
@@ -53,7 +56,7 @@ pub struct PrescriptionDoctor {
     pub pwz_number: String,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct Prescription {
     pub id: Uuid,
     pub doctor: PrescriptionDoctor,
@@ -94,7 +97,7 @@ pub struct NewPrescriptionFill {
     pub pharmacist_id: Uuid,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize, JsonSchema)]
 pub struct PrescriptionFill {
     pub id: Uuid,
     pub prescription_id: Uuid,

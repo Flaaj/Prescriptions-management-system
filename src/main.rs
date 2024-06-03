@@ -78,15 +78,15 @@ fn get_routes() -> Vec<Route> {
         doctors_controller::create_doctor,
         doctors_controller::get_doctor_by_id,
         doctors_controller::get_doctors_with_pagination,
-        drugs_controller::create_drug,
-        drugs_controller::get_drug_by_id,
-        drugs_controller::get_drugs_with_pagination,
         patients_controller::create_patient,
         patients_controller::get_patient_by_id,
         patients_controller::get_patients_with_pagination,
         pharmacists_controller::create_pharmacist,
         pharmacists_controller::get_pharmacist_by_id,
         pharmacists_controller::get_pharmacists_with_pagination,
+        drugs_controller::create_drug,
+        drugs_controller::get_drug_by_id,
+        drugs_controller::get_drugs_with_pagination
     ]
 }
 
