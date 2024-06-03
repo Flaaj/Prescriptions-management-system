@@ -1,9 +1,12 @@
 use chrono::Utc;
 use rocket::{
     http::{self, ContentType},
+    serde::json,
     Request, Response,
 };
+use serde::Serialize;
 
+#[derive(Serialize)]
 pub struct ApiError {
     pub message: String,
     pub path: String,
@@ -23,13 +26,6 @@ impl ApiError {
         }
     }
 
-    fn to_json_string(&self) -> String {
-        format!(
-            r#"{{"message":"{}","path":"{}","status":{},"method":"{}","timestamp_ms":{}}}"#,
-            self.message, self.path, self.status.code, self.method, self.timestamp_ms
-        )
-    }
-
     pub fn build_rocket_response<'r>(
         req: &'r Request<'_>,
         message: String,
@@ -38,7 +34,8 @@ impl ApiError {
         let path = req.uri().path().to_string();
         let method = req.method();
 
-        let body = Self::new(message, path, status, method).to_json_string();
+        let error = Self::new(message, path, status, method);
+        let body = json::to_string(&error).unwrap();
 
         Response::build()
             .sized_body(body.len(), std::io::Cursor::new(body))
