@@ -110,43 +110,66 @@ impl PrescriptionsRepository for PostgresPrescriptionsRepository {
             .await
             .map_err(|err| CreatePrescriptionRepositoryError::DatabaseError(err.to_string()))?;
 
-        sqlx::query(
-            r#"INSERT INTO prescriptions (id, patient_id, doctor_id, code, prescription_type, start_date, end_date) VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
-        )
-        .bind(prescription.id)
-        .bind(prescription.patient_id)
-        .bind(prescription.doctor_id)
-        .bind(prescription.code)
-        .bind(prescription.prescription_type)
-        .bind(prescription.start_date)
-        .bind(prescription.end_date)
-        .execute(&self.pool)
-        .await.map_err(|err| match err {
-            sqlx::Error::Database(err) if err.message().contains("insert or update on table \"prescriptions\" violates foreign key constraint \"prescriptions_doctor_id_fkey\"") => {
-                CreatePrescriptionRepositoryError::DoctorNotFound(prescription.doctor_id)
-            },
-            sqlx::Error::Database(err) if err.message().contains("insert or update on table \"prescriptions\" violates foreign key constraint \"prescriptions_patient_id_fkey\"") => {
-                CreatePrescriptionRepositoryError::PatientNotFound(prescription.patient_id)
-            },
-            err => CreatePrescriptionRepositoryError::DatabaseError(err.to_string()),
-        })?;
-
-        for prescribed_drug in &prescription.prescribed_drugs {
-            sqlx::query(
-                r#"INSERT INTO prescribed_drugs (prescription_id, drug_id, quantity) VALUES ($1, $2, $3)"#,
+        sqlx
+            ::query(
+                r#"INSERT INTO prescriptions (id, patient_id, doctor_id, code, prescription_type, start_date, end_date) VALUES ($1, $2, $3, $4, $5, $6, $7)"#
             )
             .bind(prescription.id)
-            .bind(prescribed_drug.drug_id)
-            .bind(prescribed_drug.quantity as i32)
-            .execute(&self.pool)
-            .await.map_err(|err| {
+            .bind(prescription.patient_id)
+            .bind(prescription.doctor_id)
+            .bind(prescription.code)
+            .bind(prescription.prescription_type)
+            .bind(prescription.start_date)
+            .bind(prescription.end_date)
+            .execute(&self.pool).await
+            .map_err(|err| {
                 match err {
-                    sqlx::Error::Database(err) if err.message().contains("insert or update on table \"prescribed_drugs\" violates foreign key constraint \"prescribed_drugs_drug_id_fkey\"") => {
-                        CreatePrescriptionRepositoryError::DrugNotFound(prescribed_drug.drug_id)
-                    },
+                    sqlx::Error::Database(err) if err.is_foreign_key_violation() => {
+                        match err.constraint() {
+                            Some("prescriptions_doctor_id_fkey") => {
+                                CreatePrescriptionRepositoryError::DoctorNotFound(
+                                    prescription.doctor_id
+                                )
+                            }
+                            Some("prescriptions_patient_id_fkey") => {
+                                CreatePrescriptionRepositoryError::PatientNotFound(
+                                    prescription.patient_id
+                                )
+                            }
+                            _ => CreatePrescriptionRepositoryError::DatabaseError(err.to_string()),
+                        }
+                    }
                     err => CreatePrescriptionRepositoryError::DatabaseError(err.to_string()),
                 }
             })?;
+
+        for prescribed_drug in &prescription.prescribed_drugs {
+            sqlx
+                ::query(
+                    r#"INSERT INTO prescribed_drugs (prescription_id, drug_id, quantity) VALUES ($1, $2, $3)"#
+                )
+                .bind(prescription.id)
+                .bind(prescribed_drug.drug_id)
+                .bind(prescribed_drug.quantity as i32)
+                .execute(&self.pool).await
+                .map_err(|err| {
+                    match err {
+                        sqlx::Error::Database(err) if err.is_foreign_key_violation() => {
+                            match err.constraint() {
+                                Some("prescribed_drugs_drug_id_fkey") => {
+                                    CreatePrescriptionRepositoryError::DrugNotFound(
+                                        prescribed_drug.drug_id
+                                    )
+                                }
+                                _ =>
+                                    CreatePrescriptionRepositoryError::DatabaseError(
+                                        err.to_string()
+                                    ),
+                            }
+                        }
+                        _ => CreatePrescriptionRepositoryError::DatabaseError(err.to_string()),
+                    }
+                })?;
         }
 
         let prescription = self
@@ -441,21 +464,29 @@ impl PrescriptionsRepository for PostgresPrescriptionsRepository {
         &self,
         prescription_fill: NewPrescriptionFill,
     ) -> Result<PrescriptionFill, FillPrescriptionRepositoryError> {
-        let result = sqlx::query(
-            r#"INSERT INTO prescription_fills (id, prescription_id, pharmacist_id) VALUES ($1, $2, $3) RETURNING id, prescription_id, pharmacist_id, created_at, updated_at"#,
-        )
-        .bind(prescription_fill.id)
-        .bind(prescription_fill.prescription_id)
-        .bind(prescription_fill.pharmacist_id)
-        .fetch_one(&self.pool)
-        .await.map_err(|err| {
-            match err {
-                sqlx::Error::Database(err) if err.message().contains("insert or update on table \"prescription_fills\" violates foreign key constraint \"prescription_fills_pharmacist_id_fkey\"") => {
-                    FillPrescriptionRepositoryError::PharmacistNotFound(prescription_fill.pharmacist_id)
-                },
-                err => FillPrescriptionRepositoryError::DatabaseError(err.to_string()),
-            }
-        })?;
+        let result = sqlx
+            ::query(
+                r#"INSERT INTO prescription_fills (id, prescription_id, pharmacist_id) VALUES ($1, $2, $3) RETURNING id, prescription_id, pharmacist_id, created_at, updated_at"#
+            )
+            .bind(prescription_fill.id)
+            .bind(prescription_fill.prescription_id)
+            .bind(prescription_fill.pharmacist_id)
+            .fetch_one(&self.pool).await
+            .map_err(|err| {
+                match err {
+                    sqlx::Error::Database(err) if err.is_foreign_key_violation() => {
+                        match err.constraint() {
+                            Some("prescription_fills_pharmacist_id_fkey") => {
+                                FillPrescriptionRepositoryError::PharmacistNotFound(
+                                    prescription_fill.pharmacist_id
+                                )
+                            }
+                            _ => FillPrescriptionRepositoryError::DatabaseError(err.to_string()),
+                        }
+                    }
+                    err => FillPrescriptionRepositoryError::DatabaseError(err.to_string()),
+                }
+            })?;
 
         let prescription_fill = self
             .parse_prescription_fills_row(result)
@@ -766,7 +797,7 @@ mod tests {
         assert!(match repository.get_prescriptions(Some(0), Some(0)).await {
             Err(GetPrescriptionsRepositoryError::InvalidPaginationParams(_)) => true,
             _ => false,
-        },);
+        });
     }
 
     #[sqlx::test]

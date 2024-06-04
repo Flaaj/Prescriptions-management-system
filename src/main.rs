@@ -121,3 +121,11 @@ async fn rocket() -> Rocket<Build> {
         .mount("/", routes![redirect_to_swagger_ui])
         .mount("/swagger-ui", setup_swagger_ui())
 }
+
+// define( 'DB_NAME', 'LendideaCms' );
+
+// /** Database username */
+// define( 'DB_USER', 'lendideaAdmin' );
+
+// /** Database password */
+// define( 'DB_PASSWORD', 'o3he8e3q' );
