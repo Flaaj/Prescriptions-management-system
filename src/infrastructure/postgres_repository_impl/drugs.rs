@@ -22,7 +22,7 @@ impl PostgresDrugsRepository {
         Self { pool }
     }
 
-    fn get_drug_from_pg_row(&self, row: sqlx::postgres::PgRow) -> Result<Drug, sqlx::Error> {
+    fn parse_drugs_row(&self, row: sqlx::postgres::PgRow) -> Result<Drug, sqlx::Error> {
         Ok(Drug {
             id: row.try_get(0)?,
             name: row.try_get(1)?,
@@ -54,7 +54,7 @@ impl DrugsRepository for PostgresDrugsRepository {
             .map_err(|err| CreateDrugRepositoryError::DatabaseError(err.to_string()))?;
 
         Ok(self
-            .get_drug_from_pg_row(result)
+            .parse_drugs_row(result)
             .map_err(|err| CreateDrugRepositoryError::DatabaseError(err.to_string()))?)
     }
 
@@ -77,7 +77,7 @@ impl DrugsRepository for PostgresDrugsRepository {
         let mut drugs = vec![];
         for record in drugs_from_db {
             let drug = self
-                .get_drug_from_pg_row(record)
+                .parse_drugs_row(record)
                 .map_err(|err| GetDrugsRepositoryError::DatabaseError(err.to_string()))?;
             drugs.push(drug);
         }
@@ -99,7 +99,7 @@ impl DrugsRepository for PostgresDrugsRepository {
             })?;
 
         Ok(self
-            .get_drug_from_pg_row(drug_from_db)
+            .parse_drugs_row(drug_from_db)
             .map_err(|err| GetDrugByIdRepositoryError::DatabaseError(err.to_string()))?)
     }
 }
