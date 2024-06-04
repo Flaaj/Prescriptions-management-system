@@ -41,7 +41,7 @@ pub struct CreatePrescriptionDto {
     patient_id: Uuid,
     prescription_type: Option<PrescriptionType>,
     start_date: Option<DateTime<Utc>>,
-    #[schemars(example = "example_prescribed_drug")]
+    #[schemars(example = "example_prescribed_drug", description = "List of tuples with drug_id and quantity")]
     prescribed_drugs: Vec<PrescribedDrugDto>,
 }
 
@@ -75,14 +75,15 @@ impl OpenApiResponderInner for CreatePrescriptionError {
         responses.insert(
             "422".to_string(),
             RefOr::Object(OpenApiReponse {
-                description: "Returned when the name or the pesel_number are incorrect".to_string(),
+                description: "Returned when the body parameters are invalid, or the doctor_id, patient_id or drug_id is not a valid UUID"
+                    .to_string(),
                 ..Default::default()
             }),
         );
         responses.insert(
-            "409".to_string(),
+            "404".to_string(),
             RefOr::Object(OpenApiReponse {
-                description: "Returned when patient with given pesel_number exist in the database"
+                description: "Returned when doctor, patient or drug with given id doesn't exist"
                     .to_string(),
                 ..Default::default()
             }),
@@ -150,8 +151,9 @@ impl OpenApiResponderInner for GetPrescriptionByIdError {
         responses.insert(
             "422".to_string(),
             RefOr::Object(OpenApiReponse {
-                description: "Returned when the the prescription_id is not a valid UUID"
-                    .to_string(),
+                description:
+                    "Returned when the the prescription_id or pharmacist_id is not a valid UUID"
+                        .to_string(),
                 ..Default::default()
             }),
         );
