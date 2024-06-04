@@ -134,12 +134,13 @@ impl PharmacistsRepository for PharmacistsRepositoryFake {
 
 #[cfg(test)]
 mod tests {
+    use uuid::Uuid;
+
     use super::{
         CreatePharmacistRepositoryError, GetPharmacistByIdRepositoryError,
         GetPharmacistsRepositoryError, PharmacistsRepository, PharmacistsRepositoryFake,
     };
     use crate::domain::pharmacists::models::NewPharmacist;
-    use uuid::Uuid;
 
     async fn setup_repository() -> PharmacistsRepositoryFake {
         PharmacistsRepositoryFake::new()

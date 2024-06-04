@@ -1,3 +1,5 @@
+use uuid::Uuid;
+
 use super::{
     models::{Doctor, NewDoctor},
     repository::{
@@ -5,7 +7,6 @@ use super::{
         GetDoctorsRepositoryError,
     },
 };
-use uuid::Uuid;
 
 #[derive(Debug)]
 pub enum CreateDoctorError {
@@ -77,9 +78,10 @@ impl DoctorsService {
 
 #[cfg(test)]
 mod tests {
+    use uuid::Uuid;
+
     use super::{CreateDoctorError, DoctorsService, GetDoctorByIdError};
     use crate::domain::doctors::repository::DoctorsRepositoryFake;
-    use uuid::Uuid;
 
     fn setup_service() -> DoctorsService {
         DoctorsService::new(Box::new(DoctorsRepositoryFake::new()))

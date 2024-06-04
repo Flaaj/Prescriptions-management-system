@@ -1,3 +1,9 @@
+use std::sync::RwLock;
+
+use async_trait::async_trait;
+use chrono::Utc;
+use uuid::Uuid;
+
 use super::models::{PrescribedDrug, PrescriptionDoctor, PrescriptionPatient};
 use crate::domain::{
     doctors::models::Doctor,
@@ -7,10 +13,6 @@ use crate::domain::{
     prescriptions::models::{NewPrescription, NewPrescriptionFill, Prescription, PrescriptionFill},
     utils::pagination::get_pagination_params,
 };
-use async_trait::async_trait;
-use chrono::Utc;
-use std::sync::RwLock;
-use uuid::Uuid;
 
 #[derive(thiserror::Error, Debug, PartialEq)]
 pub enum CreatePrescriptionRepositoryError {
@@ -69,10 +71,11 @@ pub trait PrescriptionsRepository: Send + Sync + 'static {
         &self,
         prescription_fill: NewPrescriptionFill,
     ) -> Result<PrescriptionFill, FillPrescriptionRepositoryError>;
-    // async fn get_prescriptions_by_prescription_id(&self, prescription_id: Uuid) -> Result<Vec<Prescription>>;
-    // async fn get_prescriptions_by_patient_id(&self, patient_id: Uuid) -> Result<Vec<Prescription>>;
-    // async fn update_prescription(&self, prescription: Prescription) -> Result<()>;
-    // async fn delete_prescription(&self, prescription_id: Uuid) -> Result<()>;
+    // async fn get_prescriptions_by_prescription_id(&self, prescription_id: Uuid) ->
+    // Result<Vec<Prescription>>; async fn get_prescriptions_by_patient_id(&self, patient_id:
+    // Uuid) -> Result<Vec<Prescription>>; async fn update_prescription(&self, prescription:
+    // Prescription) -> Result<()>; async fn delete_prescription(&self, prescription_id: Uuid)
+    // -> Result<()>;
 }
 
 pub struct PrescriptionsRepositoryFake {
@@ -261,6 +264,8 @@ impl PrescriptionsRepository for PrescriptionsRepositoryFake {
 
 #[cfg(test)]
 mod tests {
+    use uuid::Uuid;
+
     use crate::domain::{
         doctors::{
             models::NewDoctor,
@@ -287,7 +292,6 @@ mod tests {
             },
         },
     };
-    use uuid::Uuid;
 
     struct DatabaseSeeds {
         doctor: NewDoctor,

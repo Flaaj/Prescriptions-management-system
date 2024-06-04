@@ -11,9 +11,10 @@
 
 use std::collections::HashSet;
 
-use crate::domain::prescriptions::models::{NewPrescribedDrug, NewPrescription, PrescriptionType};
 use chrono::{DateTime, Duration, Utc};
 use uuid::Uuid;
+
+use crate::domain::prescriptions::models::{NewPrescribedDrug, NewPrescription, PrescriptionType};
 
 #[derive(thiserror::Error, Debug, PartialEq)]
 pub enum NewPrescriptionValidationError {
@@ -89,9 +90,8 @@ mod tests {
     use chrono::{Duration, Utc};
     use uuid::Uuid;
 
-    use crate::domain::prescriptions::models::NewPrescribedDrug;
-
     use super::{NewPrescription, NewPrescriptionValidationError, PrescriptionType};
+    use crate::domain::prescriptions::models::NewPrescribedDrug;
 
     #[test]
     fn creates_prescription() {

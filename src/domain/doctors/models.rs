@@ -1,6 +1,5 @@
 use chrono::{DateTime, Utc};
-use rocket_okapi::okapi::schemars;
-use rocket_okapi::JsonSchema;
+use rocket_okapi::{okapi::schemars, JsonSchema};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 

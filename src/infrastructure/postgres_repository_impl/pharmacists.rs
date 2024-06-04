@@ -102,6 +102,8 @@ impl PharmacistsRepository for PostgresPharmacistsRepository {
 
 #[cfg(test)]
 mod tests {
+    use uuid::Uuid;
+
     use super::PostgresPharmacistsRepository;
     use crate::{
         domain::pharmacists::{
@@ -113,7 +115,6 @@ mod tests {
         },
         infrastructure::postgres_repository_impl::create_tables::create_tables,
     };
-    use uuid::Uuid;
 
     async fn setup_repository(pool: sqlx::PgPool) -> PostgresPharmacistsRepository {
         create_tables(&pool, true).await.unwrap();

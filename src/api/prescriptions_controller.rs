@@ -13,6 +13,7 @@ use schemars::{JsonSchema, Map};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use super::error::ApiError;
 use crate::{
     domain::prescriptions::{
         models::{Prescription, PrescriptionType},
@@ -28,8 +29,6 @@ use crate::{
     Ctx,
 };
 
-use super::error::ApiError;
-
 fn example_prescribed_drug() -> Vec<(Uuid, u32)> {
     vec![(Uuid::new_v4(), 2)]
 }
@@ -41,7 +40,10 @@ pub struct CreatePrescriptionDto {
     patient_id: Uuid,
     prescription_type: Option<PrescriptionType>,
     start_date: Option<DateTime<Utc>>,
-    #[schemars(example = "example_prescribed_drug", description = "List of tuples with drug_id and quantity")]
+    #[schemars(
+        example = "example_prescribed_drug",
+        description = "List of tuples with drug_id and quantity"
+    )]
     prescribed_drugs: Vec<PrescribedDrugDto>,
 }
 
@@ -310,6 +312,15 @@ pub async fn get_prescriptions_with_pagination(
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
+    use rocket::{
+        http::{ContentType, Status},
+        local::asynchronous::Client,
+        routes,
+        serde::json,
+    };
+
     use crate::{
         domain::{
             doctors::{models::Doctor, repository::DoctorsRepositoryFake, service::DoctorsService},
@@ -332,13 +343,6 @@ mod tests {
         },
         Context,
     };
-    use rocket::{
-        http::{ContentType, Status},
-        local::asynchronous::Client,
-        routes,
-        serde::json,
-    };
-    use std::sync::Arc;
     struct DatabaseSeeds {
         doctor: Doctor,
         pharmacist: Pharmacist,

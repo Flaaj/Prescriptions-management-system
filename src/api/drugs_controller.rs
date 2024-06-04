@@ -12,6 +12,7 @@ use schemars::{JsonSchema, Map};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use super::error::ApiError;
 use crate::{
     domain::drugs::{
         models::{Drug, DrugContentType},
@@ -20,8 +21,6 @@ use crate::{
     },
     Ctx,
 };
-
-use super::error::ApiError;
 
 fn example_drug_name() -> &'static str {
     "Apap"
@@ -217,6 +216,15 @@ pub async fn get_drugs_with_pagination(
 }
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
+    use rocket::{
+        http::{ContentType, Status},
+        local::asynchronous::Client,
+        routes,
+        serde::json,
+    };
+
     use crate::{
         domain::{
             doctors::{repository::DoctorsRepositoryFake, service::DoctorsService},
@@ -233,13 +241,6 @@ mod tests {
         },
         Context,
     };
-    use rocket::{
-        http::{ContentType, Status},
-        local::asynchronous::Client,
-        routes,
-        serde::json,
-    };
-    use std::sync::Arc;
 
     async fn create_api_client() -> Client {
         let doctors_repository = Box::new(DoctorsRepositoryFake::new());

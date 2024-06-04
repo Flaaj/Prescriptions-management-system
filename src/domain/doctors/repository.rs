@@ -1,11 +1,13 @@
+use std::sync::RwLock;
+
+use async_trait::async_trait;
+use chrono::Utc;
+use uuid::Uuid;
+
 use crate::domain::{
     doctors::models::{Doctor, NewDoctor},
     utils::pagination::get_pagination_params,
 };
-use async_trait::async_trait;
-use chrono::Utc;
-use std::sync::RwLock;
-use uuid::Uuid;
 
 #[derive(thiserror::Error, Debug, PartialEq)]
 pub enum CreateDoctorRepositoryError {
@@ -129,7 +131,8 @@ impl DoctorsRepository for DoctorsRepositoryFake {
 }
 
 #[cfg(test)]
-// the same tests as in postgres_repository_impl/doctors.rs to make sure fake repo works the same way
+// the same tests as in postgres_repository_impl/doctors.rs to make sure fake repo works the same
+// way
 mod tests {
     use uuid::Uuid;
 

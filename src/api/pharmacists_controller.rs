@@ -1,16 +1,3 @@
-use crate::{
-    domain::pharmacists::{
-        models::Pharmacist,
-        repository::{
-            CreatePharmacistRepositoryError, GetPharmacistByIdRepositoryError,
-            GetPharmacistsRepositoryError,
-        },
-        service::{
-            CreatePharmacistError, GetPharmacistByIdError, GetPharmacistsWithPaginationError,
-        },
-    },
-    Ctx,
-};
 use okapi::openapi3::Responses;
 use rocket::{
     get,
@@ -28,6 +15,19 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use super::error::ApiError;
+use crate::{
+    domain::pharmacists::{
+        models::Pharmacist,
+        repository::{
+            CreatePharmacistRepositoryError, GetPharmacistByIdRepositoryError,
+            GetPharmacistsRepositoryError,
+        },
+        service::{
+            CreatePharmacistError, GetPharmacistByIdError, GetPharmacistsWithPaginationError,
+        },
+    },
+    Ctx,
+};
 
 fn example_name() -> &'static str {
     "John Doe"
@@ -222,6 +222,15 @@ pub async fn get_pharmacists_with_pagination(
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
+    use rocket::{
+        http::{ContentType, Status},
+        local::asynchronous::Client,
+        routes,
+        serde::json,
+    };
+
     use crate::{
         domain::{
             doctors::{repository::DoctorsRepositoryFake, service::DoctorsService},
@@ -237,13 +246,6 @@ mod tests {
         },
         Context,
     };
-    use rocket::{
-        http::{ContentType, Status},
-        local::asynchronous::Client,
-        routes,
-        serde::json,
-    };
-    use std::sync::Arc;
 
     async fn create_api_client() -> Client {
         let pharmacists_repository = Box::new(PharmacistsRepositoryFake::new());

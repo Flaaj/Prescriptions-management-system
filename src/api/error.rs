@@ -1,6 +1,8 @@
 use chrono::Utc;
 use rocket::{
-    http::{self, ContentType},
+    http::{
+        ContentType, {self},
+    },
     serde::json,
     Request, Response,
 };

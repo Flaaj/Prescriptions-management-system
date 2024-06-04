@@ -33,8 +33,9 @@ pub fn validate_pwz_number(pwz_number: &str) -> anyhow::Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::validate_pwz_number;
     use rstest::rstest;
+
+    use super::validate_pwz_number;
 
     #[rstest]
     #[case("5425740", true)]

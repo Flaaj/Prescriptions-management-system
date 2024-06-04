@@ -110,8 +110,7 @@ impl PrescriptionsRepository for PostgresPrescriptionsRepository {
             .await
             .map_err(|err| CreatePrescriptionRepositoryError::DatabaseError(err.to_string()))?;
 
-        sqlx
-            ::query(
+        sqlx::query(
                 r#"INSERT INTO prescriptions (id, patient_id, doctor_id, code, prescription_type, start_date, end_date) VALUES ($1, $2, $3, $4, $5, $6, $7)"#
             )
             .bind(prescription.id)
@@ -464,8 +463,7 @@ impl PrescriptionsRepository for PostgresPrescriptionsRepository {
         &self,
         prescription_fill: NewPrescriptionFill,
     ) -> Result<PrescriptionFill, FillPrescriptionRepositoryError> {
-        let result = sqlx
-            ::query(
+        let result = sqlx::query(
                 r#"INSERT INTO prescription_fills (id, prescription_id, pharmacist_id) VALUES ($1, $2, $3) RETURNING id, prescription_id, pharmacist_id, created_at, updated_at"#
             )
             .bind(prescription_fill.id)
@@ -497,6 +495,8 @@ impl PrescriptionsRepository for PostgresPrescriptionsRepository {
 
 #[cfg(test)]
 mod tests {
+    use uuid::Uuid;
+
     use super::PostgresPrescriptionsRepository;
     use crate::{
         domain::{
@@ -522,7 +522,6 @@ mod tests {
             pharmacists::PostgresPharmacistsRepository,
         },
     };
-    use uuid::Uuid;
 
     struct DatabaseSeedData {
         doctor: NewDoctor,

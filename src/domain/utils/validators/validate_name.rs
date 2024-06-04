@@ -34,6 +34,7 @@ pub fn validate_name(name: &str) -> anyhow::Result<()> {
 #[cfg(test)]
 mod tests {
     use rstest::rstest;
+
     use super::validate_name;
 
     #[rstest]

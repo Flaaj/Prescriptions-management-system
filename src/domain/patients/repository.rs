@@ -1,11 +1,13 @@
+use std::sync::RwLock;
+
+use async_trait::async_trait;
+use chrono::Utc;
+use uuid::Uuid;
+
 use crate::domain::{
     patients::models::{NewPatient, Patient},
     utils::pagination::get_pagination_params,
 };
-use async_trait::async_trait;
-use chrono::Utc;
-use std::sync::RwLock;
-use uuid::Uuid;
 
 #[derive(thiserror::Error, Debug, PartialEq)]
 pub enum CreatePatientRepositoryError {
@@ -131,6 +133,8 @@ impl PatientsRepository for PatientsRepositoryFake {
 
 #[cfg(test)]
 mod tests {
+    use uuid::Uuid;
+
     use super::PatientsRepositoryFake;
     use crate::domain::patients::{
         models::NewPatient,
@@ -139,7 +143,6 @@ mod tests {
             GetPatientsRepositoryError, PatientsRepository,
         },
     };
-    use uuid::Uuid;
 
     async fn setup_repository() -> PatientsRepositoryFake {
         PatientsRepositoryFake::new()

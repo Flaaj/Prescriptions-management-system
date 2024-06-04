@@ -1,6 +1,8 @@
 pub mod api;
 pub mod domain;
 pub mod infrastructure;
+use std::{env, sync::Arc};
+
 use api::{
     doctors_controller, drugs_controller, patients_controller, pharmacists_controller,
     prescriptions_controller,
@@ -21,7 +23,6 @@ use rocket_okapi::{
     swagger_ui::{make_swagger_ui, SwaggerUIConfig},
 };
 use sqlx::{postgres::PgPoolOptions, PgPool};
-use std::{env, sync::Arc};
 
 async fn setup_database_connection() -> PgPool {
     let db_connection_string =

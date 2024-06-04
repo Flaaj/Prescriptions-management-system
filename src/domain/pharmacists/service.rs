@@ -1,12 +1,12 @@
-use crate::domain::pharmacists::{
-    models::{NewPharmacist, Pharmacist},
-    repository::PharmacistsRepository,
-};
 use uuid::Uuid;
 
 use super::repository::{
     CreatePharmacistRepositoryError, GetPharmacistByIdRepositoryError,
     GetPharmacistsRepositoryError,
+};
+use crate::domain::pharmacists::{
+    models::{NewPharmacist, Pharmacist},
+    repository::PharmacistsRepository,
 };
 
 pub struct PharmacistsService {
@@ -81,9 +81,10 @@ impl PharmacistsService {
 
 #[cfg(test)]
 mod tests {
+    use uuid::Uuid;
+
     use super::PharmacistsService;
     use crate::domain::pharmacists::repository::PharmacistsRepositoryFake;
-    use uuid::Uuid;
 
     fn setup_service() -> PharmacistsService {
         PharmacistsService::new(Box::new(PharmacistsRepositoryFake::new()))

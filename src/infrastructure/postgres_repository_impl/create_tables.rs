@@ -64,7 +64,7 @@ pub async fn create_tables(pool: &sqlx::PgPool, drop: bool) -> Result<(), sqlx::
             pwz_number VARCHAR(7) UNIQUE NOT NULL,
             created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
             updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
-        );"#
+        );"#,
     )
     .execute(pool)
     .await?;
@@ -77,7 +77,7 @@ pub async fn create_tables(pool: &sqlx::PgPool, drop: bool) -> Result<(), sqlx::
             pesel_number VARCHAR(11) UNIQUE NOT NULL,
             created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
             updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
-        );"#
+        );"#,
     )
     .execute(pool)
     .await?;
@@ -90,7 +90,7 @@ pub async fn create_tables(pool: &sqlx::PgPool, drop: bool) -> Result<(), sqlx::
             pesel_number VARCHAR(11) UNIQUE NOT NULL,
             created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
             updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
-        );"#
+        );"#,
     )
     .execute(pool)
     .await?;
@@ -107,7 +107,7 @@ pub async fn create_tables(pool: &sqlx::PgPool, drop: bool) -> Result<(), sqlx::
             end_date TIMESTAMPTZ NOT NULL,
             created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
             updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
-        );"#
+        );"#,
     )
     .execute(pool)
     .await?;
@@ -124,7 +124,7 @@ pub async fn create_tables(pool: &sqlx::PgPool, drop: bool) -> Result<(), sqlx::
             volume_ml INT,
             created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
             updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
-        );"#
+        );"#,
     )
     .execute(pool)
     .await?;
@@ -138,7 +138,7 @@ pub async fn create_tables(pool: &sqlx::PgPool, drop: bool) -> Result<(), sqlx::
             quantity INT NOT NULL,
             created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
             updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
-        );"#
+        );"#,
     )
     .execute(pool)
     .await?;
@@ -151,7 +151,7 @@ pub async fn create_tables(pool: &sqlx::PgPool, drop: bool) -> Result<(), sqlx::
             pharmacist_id UUID NOT NULL REFERENCES pharmacists(id),
             created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
             updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
-        );"#
+        );"#,
     )
     .execute(pool)
     .await?;

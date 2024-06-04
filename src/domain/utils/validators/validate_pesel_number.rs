@@ -41,8 +41,9 @@ pub fn validate_pesel_number(pesel_number: &str) -> anyhow::Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::validate_pesel_number;
     use rstest::rstest;
+
+    use super::validate_pesel_number;
 
     #[rstest]
     #[case("96021817257", true)]

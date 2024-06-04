@@ -1,18 +1,17 @@
+use async_trait::async_trait;
+use sqlx::Row;
+use uuid::Uuid;
+
 use crate::domain::{
     patients::{
-        models::{ NewPatient, Patient },
+        models::{NewPatient, Patient},
         repository::{
-            CreatePatientRepositoryError,
-            GetPatientByIdRepositoryError,
-            GetPatientsRepositoryError,
-            PatientsRepository,
+            CreatePatientRepositoryError, GetPatientByIdRepositoryError,
+            GetPatientsRepositoryError, PatientsRepository,
         },
     },
     utils::pagination::get_pagination_params,
 };
-use async_trait::async_trait;
-use sqlx::Row;
-use uuid::Uuid;
 
 pub struct PostgresPatientsRepository {
     pool: sqlx::PgPool,
@@ -38,10 +37,9 @@ impl PostgresPatientsRepository {
 impl PatientsRepository for PostgresPatientsRepository {
     async fn create_patient(
         &self,
-        patient: NewPatient
+        patient: NewPatient,
     ) -> Result<Patient, CreatePatientRepositoryError> {
-        let result = sqlx
-            ::query(
+        let result = sqlx::query(
                 r#"INSERT INTO patients (id, name, pesel_number) VALUES ($1, $2, $3) RETURNING id, name, pesel_number, created_at, updated_at"#
             )
             .bind(patient.id)
@@ -71,14 +69,12 @@ impl PatientsRepository for PostgresPatientsRepository {
     async fn get_patients(
         &self,
         page: Option<i64>,
-        page_size: Option<i64>
+        page_size: Option<i64>,
     ) -> Result<Vec<Patient>, GetPatientsRepositoryError> {
-        let (page_size, offset) = get_pagination_params(page, page_size).map_err(|err|
-            GetPatientsRepositoryError::InvalidPaginationParams(err.to_string())
-        )?;
+        let (page_size, offset) = get_pagination_params(page, page_size)
+            .map_err(|err| GetPatientsRepositoryError::InvalidPaginationParams(err.to_string()))?;
 
-        let patients_from_db = sqlx
-            ::query(
+        let patients_from_db = sqlx::query(
                 r#"SELECT id, name, pesel_number, created_at, updated_at FROM patients LIMIT $1 OFFSET $2"#
             )
             .bind(page_size)
@@ -99,20 +95,18 @@ impl PatientsRepository for PostgresPatientsRepository {
 
     async fn get_patient_by_id(
         &self,
-        patient_id: Uuid
+        patient_id: Uuid,
     ) -> Result<Patient, GetPatientByIdRepositoryError> {
-        let patient_from_db = sqlx
-            ::query(
-                r#"SELECT id, name, pesel_number, created_at, updated_at FROM patients WHERE id = $1"#
-            )
-            .bind(patient_id)
-            .fetch_one(&self.pool).await
-            .map_err(|err| {
-                match err {
-                    sqlx::Error::RowNotFound => GetPatientByIdRepositoryError::NotFound(patient_id),
-                    _ => GetPatientByIdRepositoryError::DatabaseError(err.to_string()),
-                }
-            })?;
+        let patient_from_db = sqlx::query(
+            r#"SELECT id, name, pesel_number, created_at, updated_at FROM patients WHERE id = $1"#,
+        )
+        .bind(patient_id)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|err| match err {
+            sqlx::Error::RowNotFound => GetPatientByIdRepositoryError::NotFound(patient_id),
+            _ => GetPatientByIdRepositoryError::DatabaseError(err.to_string()),
+        })?;
 
         let patient = self
             .parse_patients_row(patient_from_db)
@@ -123,20 +117,19 @@ impl PatientsRepository for PostgresPatientsRepository {
 
 #[cfg(test)]
 mod tests {
+    use uuid::Uuid;
+
     use super::PostgresPatientsRepository;
     use crate::{
         domain::patients::{
             models::NewPatient,
             repository::{
-                CreatePatientRepositoryError,
-                GetPatientByIdRepositoryError,
-                GetPatientsRepositoryError,
-                PatientsRepository,
+                CreatePatientRepositoryError, GetPatientByIdRepositoryError,
+                GetPatientsRepositoryError, PatientsRepository,
             },
         },
         infrastructure::postgres_repository_impl::create_tables::create_tables,
     };
-    use uuid::Uuid;
 
     async fn setup_repository(pool: sqlx::PgPool) -> PostgresPatientsRepository {
         create_tables(&pool, true).await.unwrap();
@@ -149,7 +142,10 @@ mod tests {
 
         let new_patient = NewPatient::new("John Doe".into(), "96021817257".into()).unwrap();
 
-        repository.create_patient(new_patient.clone()).await.unwrap();
+        repository
+            .create_patient(new_patient.clone())
+            .await
+            .unwrap();
 
         let patient_from_repo = repository.get_patient_by_id(new_patient.id).await.unwrap();
 
@@ -163,7 +159,10 @@ mod tests {
 
         let patient_from_repo = repository.get_patient_by_id(patient_id).await;
 
-        assert_eq!(patient_from_repo, Err(GetPatientByIdRepositoryError::NotFound(patient_id)));
+        assert_eq!(
+            patient_from_repo,
+            Err(GetPatientByIdRepositoryError::NotFound(patient_id))
+        );
     }
 
     #[sqlx::test]
@@ -175,10 +174,22 @@ mod tests {
         let new_patient_2 = NewPatient::new("John Doe".into(), "92022900002".into()).unwrap();
         let new_patient_3 = NewPatient::new("John Doe".into(), "96021807250".into()).unwrap();
 
-        repository.create_patient(new_patient_0.clone()).await.unwrap();
-        repository.create_patient(new_patient_1.clone()).await.unwrap();
-        repository.create_patient(new_patient_2.clone()).await.unwrap();
-        repository.create_patient(new_patient_3.clone()).await.unwrap();
+        repository
+            .create_patient(new_patient_0.clone())
+            .await
+            .unwrap();
+        repository
+            .create_patient(new_patient_1.clone())
+            .await
+            .unwrap();
+        repository
+            .create_patient(new_patient_2.clone())
+            .await
+            .unwrap();
+        repository
+            .create_patient(new_patient_3.clone())
+            .await
+            .unwrap();
 
         let patients = repository.get_patients(None, Some(10)).await.unwrap();
 
@@ -226,12 +237,12 @@ mod tests {
         let patient = NewPatient::new("John Doe".into(), "96021817257".into()).unwrap();
         assert!(repository.create_patient(patient).await.is_ok());
 
-        let patient_with_duplicated_pesel_number = NewPatient::new(
-            "John Doe".into(),
-            "96021817257".into()
-        ).unwrap();
+        let patient_with_duplicated_pesel_number =
+            NewPatient::new("John Doe".into(), "96021817257".into()).unwrap();
         assert_eq!(
-            repository.create_patient(patient_with_duplicated_pesel_number).await,
+            repository
+                .create_patient(patient_with_duplicated_pesel_number)
+                .await,
             Err(CreatePatientRepositoryError::DuplicatedPeselNumber)
         )
     }

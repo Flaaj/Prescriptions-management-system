@@ -1,3 +1,7 @@
+use async_trait::async_trait;
+use sqlx::Row;
+use uuid::Uuid;
+
 use crate::domain::{
     doctors::{
         models::{Doctor, NewDoctor},
@@ -8,9 +12,6 @@ use crate::domain::{
     },
     utils::pagination::get_pagination_params,
 };
-use async_trait::async_trait;
-use sqlx::Row;
-use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct PostgresDoctorsRepository {
@@ -125,6 +126,8 @@ impl DoctorsRepository for PostgresDoctorsRepository {
 
 #[cfg(test)]
 mod tests {
+    use uuid::Uuid;
+
     use super::PostgresDoctorsRepository;
     use crate::{
         domain::doctors::{
@@ -136,7 +139,6 @@ mod tests {
         },
         infrastructure::postgres_repository_impl::create_tables::create_tables,
     };
-    use uuid::Uuid;
 
     async fn setup_repository(pool: sqlx::PgPool) -> PostgresDoctorsRepository {
         create_tables(&pool, true).await.unwrap();

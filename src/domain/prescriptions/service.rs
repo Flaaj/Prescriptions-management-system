@@ -1,3 +1,6 @@
+use chrono::{DateTime, Utc};
+use uuid::Uuid;
+
 use super::{
     models::{NewPrescribedDrug, NewPrescription, Prescription, PrescriptionType},
     repository::{
@@ -6,8 +9,6 @@ use super::{
         PrescriptionsRepository,
     },
 };
-use chrono::{DateTime, Utc};
-use uuid::Uuid;
 
 pub struct PrescriptionsService {
     repository: Box<dyn PrescriptionsRepository>,

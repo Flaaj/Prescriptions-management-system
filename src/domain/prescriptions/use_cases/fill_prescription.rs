@@ -1,6 +1,7 @@
-use crate::domain::prescriptions::models::{NewPrescriptionFill, Prescription};
 use chrono::Utc;
 use uuid::Uuid;
+
+use crate::domain::prescriptions::models::{NewPrescriptionFill, Prescription};
 
 #[derive(thiserror::Error, Debug, PartialEq)]
 pub enum PrescriptionFillError {

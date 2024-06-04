@@ -1,3 +1,7 @@
+use async_trait::async_trait;
+use sqlx::Row;
+use uuid::Uuid;
+
 use crate::domain::{
     drugs::{
         models::{Drug, NewDrug},
@@ -8,9 +12,6 @@ use crate::domain::{
     },
     utils::pagination::get_pagination_params,
 };
-use async_trait::async_trait;
-use sqlx::Row;
-use uuid::Uuid;
 
 pub struct PostgresDrugsRepository {
     pool: sqlx::PgPool,
@@ -105,6 +106,8 @@ impl DrugsRepository for PostgresDrugsRepository {
 
 #[cfg(test)]
 mod tests {
+    use uuid::Uuid;
+
     use super::{DrugsRepository, PostgresDrugsRepository};
     use crate::{
         domain::drugs::{
@@ -113,7 +116,6 @@ mod tests {
         },
         infrastructure::postgres_repository_impl::create_tables::create_tables,
     };
-    use uuid::Uuid;
 
     async fn setup_repository(pool: sqlx::PgPool) -> PostgresDrugsRepository {
         create_tables(&pool, true).await.unwrap();

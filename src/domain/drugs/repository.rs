@@ -112,11 +112,12 @@ impl DrugsRepository for DrugsRepositoryFake {
 
 #[cfg(test)]
 mod tests {
+    use uuid::Uuid;
+
     use super::{
         DrugsRepository, DrugsRepositoryFake, GetDrugByIdRepositoryError, GetDrugsRepositoryError,
     };
     use crate::domain::drugs::models::{DrugContentType, NewDrug};
-    use uuid::Uuid;
 
     async fn setup_repository() -> DrugsRepositoryFake {
         DrugsRepositoryFake::new()

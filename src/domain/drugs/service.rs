@@ -2,7 +2,10 @@ use uuid::Uuid;
 
 use super::{
     models::{Drug, DrugContentType, NewDrug},
-    repository::{CreateDrugRepositoryError, DrugsRepository, GetDrugByIdRepositoryError, GetDrugsRepositoryError},
+    repository::{
+        CreateDrugRepositoryError, DrugsRepository, GetDrugByIdRepositoryError,
+        GetDrugsRepositoryError,
+    },
 };
 
 pub struct DrugsService {
@@ -87,9 +90,8 @@ impl DrugsService {
 mod tests {
     use uuid::Uuid;
 
-    use crate::domain::drugs::{models::DrugContentType, repository::DrugsRepositoryFake};
-
     use super::DrugsService;
+    use crate::domain::drugs::{models::DrugContentType, repository::DrugsRepositoryFake};
 
     fn setup_service() -> DrugsService {
         DrugsService::new(Box::new(DrugsRepositoryFake::new()))

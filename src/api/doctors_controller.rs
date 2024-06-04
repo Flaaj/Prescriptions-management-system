@@ -1,13 +1,3 @@
-use crate::{
-    domain::doctors::{
-        models::Doctor,
-        repository::{
-            CreateDoctorRepositoryError, GetDoctorByIdRepositoryError, GetDoctorsRepositoryError,
-        },
-        service::{CreateDoctorError, GetDoctorByIdError, GetDoctorsWithPaginationError},
-    },
-    Ctx,
-};
 use okapi::openapi3::Responses;
 use rocket::{
     get,
@@ -18,14 +8,24 @@ use rocket::{
     Request,
 };
 use rocket_okapi::{
-    gen::OpenApiGenerator, okapi::schemars, response::OpenApiResponderInner, OpenApiError,
+    gen::OpenApiGenerator, okapi::schemars, openapi, response::OpenApiResponderInner, JsonSchema,
+    OpenApiError,
 };
-use rocket_okapi::{openapi, JsonSchema};
 use schemars::Map;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use super::error::ApiError;
+use crate::{
+    domain::doctors::{
+        models::Doctor,
+        repository::{
+            CreateDoctorRepositoryError, GetDoctorByIdRepositoryError, GetDoctorsRepositoryError,
+        },
+        service::{CreateDoctorError, GetDoctorByIdError, GetDoctorsWithPaginationError},
+    },
+    Ctx,
+};
 
 fn example_name() -> &'static str {
     "John Doe"
@@ -222,6 +222,13 @@ pub async fn get_doctors_with_pagination(
 mod tests {
     use std::sync::Arc;
 
+    use rocket::{
+        http::{ContentType, Status},
+        local::asynchronous::Client,
+        routes,
+        serde::json,
+    };
+
     use crate::{
         domain::{
             doctors::{models::Doctor, repository::DoctorsRepositoryFake, service::DoctorsService},
@@ -233,12 +240,6 @@ mod tests {
             },
         },
         Context,
-    };
-    use rocket::{
-        http::{ContentType, Status},
-        local::asynchronous::Client,
-        routes,
-        serde::json,
     };
 
     async fn create_api_client() -> Client {
