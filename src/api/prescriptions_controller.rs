@@ -9,11 +9,11 @@ use rocket::{
     Request,
 };
 use rocket_okapi::{gen::OpenApiGenerator, openapi, response::OpenApiResponderInner, OpenApiError};
-use schemars::{JsonSchema, Map};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use super::error::ApiError;
+use super::utils::{error::ApiError, openapi_responses::get_openapi_responses};
 use crate::{
     domain::prescriptions::{
         models::{Prescription, PrescriptionType},
@@ -71,29 +71,18 @@ impl<'r> Responder<'r, 'static> for CreatePrescriptionError {
 
 impl OpenApiResponderInner for CreatePrescriptionError {
     fn responses(_: &mut OpenApiGenerator) -> Result<Responses, OpenApiError> {
-        use rocket_okapi::okapi::openapi3::{RefOr, Response as OpenApiReponse};
-
-        let mut responses = Map::new();
-        responses.insert(
-            "422".to_string(),
-            RefOr::Object(OpenApiReponse {
-                description: "Returned when the body parameters are invalid, or the doctor_id, patient_id or drug_id is not a valid UUID"
-                    .to_string(),
-                ..Default::default()
-            }),
-        );
-        responses.insert(
-            "404".to_string(),
-            RefOr::Object(OpenApiReponse {
-                description: "Returned when doctor, patient or drug with given id doesn't exist"
-                    .to_string(),
-                ..Default::default()
-            }),
-        );
-        Ok(Responses {
-            responses,
-            ..Default::default()
-        })
+        get_openapi_responses(
+            vec![
+                (
+                    "422",
+                    "Returned when the body parameters are invalid, or the doctor_id, patient_id or drug_id is not a valid UUID",
+                ),
+                (
+                    "404",
+                    "Returned when doctor, patient or drug with given id doesn't exist",
+                ),
+            ]
+        )
     }
 }
 
@@ -139,30 +128,16 @@ impl<'r> Responder<'r, 'static> for GetPrescriptionByIdError {
 
 impl OpenApiResponderInner for GetPrescriptionByIdError {
     fn responses(_: &mut OpenApiGenerator) -> Result<Responses, OpenApiError> {
-        use rocket_okapi::okapi::openapi3::{RefOr, Response as OpenApiReponse};
-
-        let mut responses = Map::new();
-        responses.insert(
-            "404".to_string(),
-            RefOr::Object(OpenApiReponse {
-                description: "Returned when the the prescription with given id doesn't exist"
-                    .to_string(),
-                ..Default::default()
-            }),
-        );
-        responses.insert(
-            "422".to_string(),
-            RefOr::Object(OpenApiReponse {
-                description:
-                    "Returned when the the prescription_id or pharmacist_id is not a valid UUID"
-                        .to_string(),
-                ..Default::default()
-            }),
-        );
-        Ok(Responses {
-            responses,
-            ..Default::default()
-        })
+        get_openapi_responses(vec![
+            (
+                "404",
+                "Returned when the the prescription with given id doesn't exist",
+            ),
+            (
+                "422",
+                "Returned when the the prescription_id is not a valid UUID",
+            ),
+        ])
     }
 }
 
@@ -199,7 +174,6 @@ impl<'r> Responder<'r, 'static> for FillPrescriptionError {
                 };
                 (message, status)
             }
-
             Self::DomainError(message) => (message, Status::UnprocessableEntity),
         };
 
@@ -209,29 +183,16 @@ impl<'r> Responder<'r, 'static> for FillPrescriptionError {
 
 impl OpenApiResponderInner for FillPrescriptionError {
     fn responses(_: &mut OpenApiGenerator) -> Result<Responses, OpenApiError> {
-        use rocket_okapi::okapi::openapi3::{RefOr, Response as OpenApiReponse};
-
-        let mut responses = Map::new();
-        responses.insert(
-            "404".to_string(),
-            RefOr::Object(OpenApiReponse {
-                description: "Returned when the the prescription with given id doesn't exist"
-                    .to_string(),
-                ..Default::default()
-            }),
-        );
-        responses.insert(
-            "422".to_string(),
-            RefOr::Object(OpenApiReponse {
-                description: "Returned when the the prescription_id is not a valid UUID"
-                    .to_string(),
-                ..Default::default()
-            }),
-        );
-        Ok(Responses {
-            responses,
-            ..Default::default()
-        })
+        get_openapi_responses(vec![
+            (
+                "404",
+                "Returned when the the prescription or pharmacist with given id doesn't exist",
+            ),
+            (
+                "422",
+                "Returned when the the prescription_id or pharmacist_id is not a valid UUID, prescriptions is already filled, or the prescription cant be filled today (e.g. today is before start_date or after end_date)",
+            ),
+        ])
     }
 }
 
@@ -278,20 +239,10 @@ impl<'r> Responder<'r, 'static> for GetPrescriptionsWithPaginationError {
 
 impl OpenApiResponderInner for GetPrescriptionsWithPaginationError {
     fn responses(_: &mut OpenApiGenerator) -> Result<Responses, OpenApiError> {
-        use rocket_okapi::okapi::openapi3::{RefOr, Response as OpenApiReponse};
-
-        let mut responses = Map::new();
-        responses.insert(
-            "422".to_string(),
-            RefOr::Object(OpenApiReponse {
-                description: "Returned when the the page < 0 or page_size < 1".to_string(),
-                ..Default::default()
-            }),
-        );
-        Ok(Responses {
-            responses,
-            ..Default::default()
-        })
+        get_openapi_responses(vec![(
+            "422",
+            "Returned when the the page < 0 or page_size < 1",
+        )])
     }
 }
 

@@ -10,11 +10,11 @@ use rocket::{
 use rocket_okapi::{
     gen::OpenApiGenerator, okapi::schemars, openapi, response::OpenApiResponderInner, OpenApiError,
 };
-use schemars::{JsonSchema, Map};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use super::error::ApiError;
+use super::utils::{error::ApiError, openapi_responses::get_openapi_responses};
 use crate::{
     domain::pharmacists::{
         models::Pharmacist,
@@ -66,29 +66,16 @@ impl<'r> Responder<'r, 'static> for CreatePharmacistError {
 
 impl OpenApiResponderInner for CreatePharmacistError {
     fn responses(_: &mut OpenApiGenerator) -> Result<Responses, OpenApiError> {
-        use rocket_okapi::okapi::openapi3::{RefOr, Response as OpenApiReponse};
-
-        let mut responses = Map::new();
-        responses.insert(
-            "422".to_string(),
-            RefOr::Object(OpenApiReponse {
-                description: "Returned when the name or the pesel_number are incorrect".to_string(),
-                ..Default::default()
-            }),
-        );
-        responses.insert(
-            "409".to_string(),
-            RefOr::Object(OpenApiReponse {
-                description:
-                    "Returned when pharmacist with given pesel_number exist in the database"
-                        .to_string(),
-                ..Default::default()
-            }),
-        );
-        Ok(Responses {
-            responses,
-            ..Default::default()
-        })
+        get_openapi_responses(vec![
+            (
+                "422",
+                "Returned when the name or the pesel_number are incorrect",
+            ),
+            (
+                "409",
+                "Returned when pharmacist with given pesel_number exist in the database",
+            ),
+        ])
     }
 }
 
@@ -128,28 +115,16 @@ impl<'r> Responder<'r, 'static> for GetPharmacistByIdError {
 
 impl OpenApiResponderInner for GetPharmacistByIdError {
     fn responses(_: &mut OpenApiGenerator) -> Result<Responses, OpenApiError> {
-        use rocket_okapi::okapi::openapi3::{RefOr, Response as OpenApiReponse};
-
-        let mut responses = Map::new();
-        responses.insert(
-            "404".to_string(),
-            RefOr::Object(OpenApiReponse {
-                description: "Returned when the the pharmacist with given id doesn't exist"
-                    .to_string(),
-                ..Default::default()
-            }),
-        );
-        responses.insert(
-            "422".to_string(),
-            RefOr::Object(OpenApiReponse {
-                description: "Returned when the the pharmacist_id is not a valid UUID".to_string(),
-                ..Default::default()
-            }),
-        );
-        Ok(Responses {
-            responses,
-            ..Default::default()
-        })
+        get_openapi_responses(vec![
+            (
+                "404",
+                "Returned when the the pharmacist with given id doesn't exist",
+            ),
+            (
+                "422",
+                "Returned when the the pharmacist_id is not a valid UUID",
+            ),
+        ])
     }
 }
 
@@ -188,20 +163,10 @@ impl<'r> Responder<'r, 'static> for GetPharmacistsWithPaginationError {
 
 impl OpenApiResponderInner for GetPharmacistsWithPaginationError {
     fn responses(_: &mut OpenApiGenerator) -> Result<Responses, OpenApiError> {
-        use rocket_okapi::okapi::openapi3::{RefOr, Response as OpenApiReponse};
-
-        let mut responses = Map::new();
-        responses.insert(
-            "422".to_string(),
-            RefOr::Object(OpenApiReponse {
-                description: "Returned when the the page < 0 or page_size < 1".to_string(),
-                ..Default::default()
-            }),
-        );
-        Ok(Responses {
-            responses,
-            ..Default::default()
-        })
+        get_openapi_responses(vec![(
+            "422",
+            "Returned when the the page < 0 or page_size < 1",
+        )])
     }
 }
 

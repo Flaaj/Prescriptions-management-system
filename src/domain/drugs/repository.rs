@@ -119,13 +119,13 @@ mod tests {
     };
     use crate::domain::drugs::models::{DrugContentType, NewDrug};
 
-    async fn setup_repository() -> DrugsRepositoryFake {
+    fn setup_repository() -> DrugsRepositoryFake {
         DrugsRepositoryFake::new()
     }
 
     #[sqlx::test]
     async fn create_and_read_drug_by_id() {
-        let repository = setup_repository().await;
+        let repository = setup_repository();
 
         let drug = NewDrug::new(
             "Gripex Max".into(),
@@ -148,7 +148,7 @@ mod tests {
 
     #[tokio::test]
     async fn returns_error_if_drug_with_given_id_doesnt_exist() {
-        let repository = setup_repository().await;
+        let repository = setup_repository();
         let drug_id = Uuid::new_v4();
 
         let drug_from_repo = repository.get_drug_by_id(drug_id).await;
@@ -161,7 +161,7 @@ mod tests {
 
     #[sqlx::test]
     async fn create_and_read_drugs_from_database() {
-        let repository = setup_repository().await;
+        let repository = setup_repository();
 
         let new_drug_0 = NewDrug::new(
             "Gripex".into(),
@@ -231,7 +231,7 @@ mod tests {
 
     #[tokio::test]
     async fn get_drugs_returns_error_if_pagination_params_are_incorrect() {
-        let repository = setup_repository().await;
+        let repository = setup_repository();
 
         assert!(match repository.get_drugs(Some(-1), Some(10)).await {
             Err(GetDrugsRepositoryError::InvalidPaginationParams(_)) => true,

@@ -148,13 +148,13 @@ mod tests {
         utils::pagination::PaginationError,
     };
 
-    async fn setup_repository() -> DoctorsRepositoryFake {
+    fn setup_repository() -> DoctorsRepositoryFake {
         DoctorsRepositoryFake::new()
     }
 
     #[tokio::test]
     async fn create_and_read_doctor_by_id() {
-        let repository = setup_repository().await;
+        let repository = setup_repository();
 
         let new_doctor =
             NewDoctor::new("John Does".into(), "5425740".into(), "96021817257".into()).unwrap();
@@ -168,7 +168,7 @@ mod tests {
 
     #[tokio::test]
     async fn returns_error_if_doctor_with_given_id_doesnt_exist() {
-        let repository = setup_repository().await;
+        let repository = setup_repository();
         let doctor_id = Uuid::new_v4();
 
         let doctor_from_repo = repository.get_doctor_by_id(doctor_id).await;
@@ -181,7 +181,7 @@ mod tests {
 
     #[tokio::test]
     async fn create_and_read_doctors_from_database() {
-        let repository = setup_repository().await;
+        let repository = setup_repository();
 
         let new_doctor_0 =
             NewDoctor::new("John First".into(), "5425740".into(), "96021817257".into()).unwrap();
@@ -235,7 +235,7 @@ mod tests {
 
     #[tokio::test]
     async fn get_doctors_returns_error_if_pagination_params_are_incorrect() {
-        let repository = setup_repository().await;
+        let repository = setup_repository();
 
         assert!(match repository.get_doctors(Some(-1), Some(10)).await {
             Err(GetDoctorsRepositoryError::InvalidPaginationParams(_)) => true,
@@ -252,7 +252,7 @@ mod tests {
 
     #[tokio::test]
     async fn doesnt_create_doctor_if_pwz_or_pesel_numbers_are_duplicated() {
-        let repository = setup_repository().await;
+        let repository = setup_repository();
 
         let doctor =
             NewDoctor::new("John Doe".into(), "5425740".into(), "96021817257".into()).unwrap();

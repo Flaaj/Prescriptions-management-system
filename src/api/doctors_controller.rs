@@ -11,11 +11,10 @@ use rocket_okapi::{
     gen::OpenApiGenerator, okapi::schemars, openapi, response::OpenApiResponderInner, JsonSchema,
     OpenApiError,
 };
-use schemars::Map;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use super::error::ApiError;
+use super::utils::{error::ApiError, openapi_responses::get_openapi_responses};
 use crate::{
     domain::doctors::{
         models::Doctor,
@@ -68,31 +67,16 @@ impl<'r> Responder<'r, 'static> for CreateDoctorError {
 
 impl OpenApiResponderInner for CreateDoctorError {
     fn responses(_: &mut OpenApiGenerator) -> Result<Responses, OpenApiError> {
-        use rocket_okapi::okapi::openapi3::{RefOr, Response as OpenApiReponse};
-
-        let mut responses = Map::new();
-        responses.insert(
-            "422".to_string(),
-            RefOr::Object(OpenApiReponse {
-                description:
-                    "Returned when the name, the pesel_number or the pwz_number are incorrect"
-                        .to_string(),
-                ..Default::default()
-            }),
-        );
-        responses.insert(
-            "409".to_string(),
-            RefOr::Object(OpenApiReponse {
-                description:
-                    "Returned when the doctor with given pwz_number or pesel_number exist in the database"
-                        .to_string(),
-                ..Default::default()
-            }),
-        );
-        Ok(Responses {
-            responses,
-            ..Default::default()
-        })
+        get_openapi_responses(vec![
+            (
+                "422",
+                "Returned when the name, the pesel_number or the pwz_number are incorrect",
+            ),
+            (
+                "409",
+                "Returned when the doctor with given pwz_number or pesel_number exist in the database",
+            ),
+        ])
     }
 }
 
@@ -130,27 +114,13 @@ impl<'r> Responder<'r, 'static> for GetDoctorByIdError {
 
 impl OpenApiResponderInner for GetDoctorByIdError {
     fn responses(_: &mut OpenApiGenerator) -> Result<Responses, OpenApiError> {
-        use rocket_okapi::okapi::openapi3::{RefOr, Response as OpenApiReponse};
-
-        let mut responses = Map::new();
-        responses.insert(
-            "404".to_string(),
-            RefOr::Object(OpenApiReponse {
-                description: "Returned when the the doctor with given id doesn't exist".to_string(),
-                ..Default::default()
-            }),
-        );
-        responses.insert(
-            "422".to_string(),
-            RefOr::Object(OpenApiReponse {
-                description: "Returned when the the doctor_id is not a valid UUID".to_string(),
-                ..Default::default()
-            }),
-        );
-        Ok(Responses {
-            responses,
-            ..Default::default()
-        })
+        get_openapi_responses(vec![
+            (
+                "404",
+                "Returned when the the doctor with given id doesn't exist",
+            ),
+            ("422", "Returned when the the doctor_id is not a valid UUID"),
+        ])
     }
 }
 
@@ -186,20 +156,10 @@ impl<'r> Responder<'r, 'static> for GetDoctorsWithPaginationError {
 
 impl OpenApiResponderInner for GetDoctorsWithPaginationError {
     fn responses(_: &mut OpenApiGenerator) -> Result<Responses, OpenApiError> {
-        use rocket_okapi::okapi::openapi3::{RefOr, Response as OpenApiReponse};
-
-        let mut responses = Map::new();
-        responses.insert(
-            "422".to_string(),
-            RefOr::Object(OpenApiReponse {
-                description: "Returned when the the page < 0 or page_size < 1".to_string(),
-                ..Default::default()
-            }),
-        );
-        Ok(Responses {
-            responses,
-            ..Default::default()
-        })
+        get_openapi_responses(vec![(
+            "422",
+            "Returned when the the page < 0 or page_size < 1",
+        )])
     }
 }
 

@@ -142,13 +142,13 @@ mod tests {
     };
     use crate::domain::pharmacists::models::NewPharmacist;
 
-    async fn setup_repository() -> PharmacistsRepositoryFake {
+    fn setup_repository() -> PharmacistsRepositoryFake {
         PharmacistsRepositoryFake::new()
     }
 
     #[sqlx::test]
     async fn create_and_read_pharmacist_by_id() {
-        let repository = setup_repository().await;
+        let repository = setup_repository();
 
         let new_pharmacist = NewPharmacist::new("John Doe".into(), "96021817257".into()).unwrap();
 
@@ -169,7 +169,7 @@ mod tests {
 
     #[sqlx::test]
     async fn returns_error_if_pharmacists_with_given_id_doesnt_exist() {
-        let repository = setup_repository().await;
+        let repository = setup_repository();
         let pharmacist_id = Uuid::new_v4();
 
         let pharmacist_from_repo = repository.get_pharmacist_by_id(pharmacist_id).await;
@@ -182,7 +182,7 @@ mod tests {
 
     #[sqlx::test]
     async fn create_and_read_pharmacists_from_database() {
-        let repository = setup_repository().await;
+        let repository = setup_repository();
 
         let new_pharmacist_0 = NewPharmacist::new("John Doe".into(), "96021817257".into()).unwrap();
         let new_pharmacist_1 = NewPharmacist::new("John Doe".into(), "99031301347".into()).unwrap();
@@ -232,7 +232,7 @@ mod tests {
 
     #[tokio::test]
     async fn get_patients_returns_error_if_pagination_params_are_incorrect() {
-        let repository = setup_repository().await;
+        let repository = setup_repository();
 
         assert!(match repository.get_pharmacists(Some(-1), Some(10)).await {
             Err(GetPharmacistsRepositoryError::InvalidPaginationParams(_)) => true,
@@ -247,7 +247,7 @@ mod tests {
 
     #[sqlx::test]
     async fn doesnt_create_pharmacist_if_pesel_number_is_duplicated() {
-        let repository = setup_repository().await;
+        let repository = setup_repository();
 
         let pharmacist = NewPharmacist::new("John Doe".into(), "96021817257".into()).unwrap();
 

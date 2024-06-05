@@ -243,6 +243,7 @@ impl PrescriptionsRepository for PrescriptionsRepositoryFake {
         let (index, prescription) = prescriptions
             .iter()
             .enumerate()
+            .find(|(_, prescription)| prescription.id == new_prescription_fill.prescription_id)
             .map(|(index, prescription)| {
                 (index, {
                     let mut prescription = prescription.clone();
@@ -250,7 +251,6 @@ impl PrescriptionsRepository for PrescriptionsRepositoryFake {
                     prescription
                 })
             })
-            .find(|(_, prescription)| prescription.id == new_prescription_fill.prescription_id)
             .unwrap();
 
         self.prescriptions
