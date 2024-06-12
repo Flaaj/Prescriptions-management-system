@@ -12,8 +12,8 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use super::utils::{error::ApiError, openapi_responses::get_openapi_responses};
 use crate::{
+    application::api::utils::{error::ApiError, openapi_responses::get_openapi_responses},
     domain::drugs::{
         models::{Drug, DrugContentType},
         repository::{GetDrugByIdRepositoryError, GetDrugsRepositoryError},

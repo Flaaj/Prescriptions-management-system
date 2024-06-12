@@ -1,10 +1,10 @@
-pub mod api;
+pub mod application;
 pub mod domain;
-// pub mod infrastructure;
+pub mod infrastructure;
 
 use std::{env, sync::Arc};
 
-use api::{
+use application::api::controllers::{
     doctors_controller, drugs_controller, patients_controller, pharmacists_controller,
     prescriptions_controller,
 };
@@ -13,35 +13,35 @@ use domain::{
     patients::service::PatientsService, pharmacists::service::PharmacistsService,
     prescriptions::service::PrescriptionsService,
 };
-// use infrastructure::postgres_repository_impl::{
-//     create_tables::create_tables, doctors::PostgresDoctorsRepository,
-//     drugs::PostgresDrugsRepository, patients::PostgresPatientsRepository,
-//     pharmacists::PostgresPharmacistsRepository,
-// prescriptions::PostgresPrescriptionsRepository, };
+use infrastructure::postgres_repository_impl::{
+    create_tables::create_tables, doctors::PostgresDoctorsRepository,
+    drugs::PostgresDrugsRepository, patients::PostgresPatientsRepository,
+    pharmacists::PostgresPharmacistsRepository, prescriptions::PostgresPrescriptionsRepository,
+};
 use rocket::{get, launch, routes, Build, Rocket, Route};
 use rocket_okapi::{
     openapi_get_routes,
     swagger_ui::{make_swagger_ui, SwaggerUIConfig},
 };
-// use sqlx::{postgres::PgPoolOptions, PgPool};
+use sqlx::{postgres::PgPoolOptions, PgPool};
 
-// async fn setup_database_connection() -> PgPool {
-//     let db_connection_string =
-//         &env::var("DATABASE_URL").unwrap_or("postgres://postgres:postgres@localhost:2137".into());
+async fn setup_database_connection() -> PgPool {
+    let db_connection_string =
+        &env::var("DATABASE_URL").unwrap_or("postgres://postgres:postgres@localhost:2137".into());
 
-//     PgPoolOptions::new()
-//         .max_connections(5)
-//         .connect(db_connection_string)
-//         .await
-//         .map_err(|err| {
-//             eprintln!(
-//                 "Failed to connect to the database: {:?}, connection string: {}",
-//                 err, db_connection_string
-//             );
-//             err
-//         })
-//         .unwrap()
-// }
+    PgPoolOptions::new()
+        .max_connections(5)
+        .connect(db_connection_string)
+        .await
+        .map_err(|err| {
+            eprintln!(
+                "Failed to connect to the database: {:?}, connection string: {}",
+                err, db_connection_string
+            );
+            err
+        })
+        .unwrap()
+}
 
 #[derive(Clone)]
 pub struct Context {
@@ -53,30 +53,30 @@ pub struct Context {
 }
 pub type Ctx = rocket::State<Context>;
 
-// fn setup_context(pool: PgPool) -> Context {
-//     let doctors_repository = Box::new(PostgresDoctorsRepository::new(pool.clone()));
-//     let doctors_service = Arc::new(DoctorsService::new(doctors_repository));
+fn setup_context(pool: PgPool) -> Context {
+    let doctors_repository = Box::new(PostgresDoctorsRepository::new(pool.clone()));
+    let doctors_service = Arc::new(DoctorsService::new(doctors_repository));
 
-//     let pharmacists_rerpository = Box::new(PostgresPharmacistsRepository::new(pool.clone()));
-//     let pharmacists_service = Arc::new(PharmacistsService::new(pharmacists_rerpository));
+    let pharmacists_repository = Box::new(PostgresPharmacistsRepository::new(pool.clone()));
+    let pharmacists_service = Arc::new(PharmacistsService::new(pharmacists_repository));
 
-//     let patients_repository = Box::new(PostgresPatientsRepository::new(pool.clone()));
-//     let patients_service = Arc::new(PatientsService::new(patients_repository));
+    let patients_repository = Box::new(PostgresPatientsRepository::new(pool.clone()));
+    let patients_service = Arc::new(PatientsService::new(patients_repository));
 
-//     let drugs_repository = Box::new(PostgresDrugsRepository::new(pool.clone()));
-//     let drugs_service = Arc::new(DrugsService::new(drugs_repository));
+    let drugs_repository = Box::new(PostgresDrugsRepository::new(pool.clone()));
+    let drugs_service = Arc::new(DrugsService::new(drugs_repository));
 
-//     let prescriptions_repository = Box::new(PostgresPrescriptionsRepository::new(pool.clone()));
-//     let prescriptions_service = Arc::new(PrescriptionsService::new(prescriptions_repository));
+    let prescriptions_repository = Box::new(PostgresPrescriptionsRepository::new(pool.clone()));
+    let prescriptions_service = Arc::new(PrescriptionsService::new(prescriptions_repository));
 
-//     Context {
-//         doctors_service,
-//         pharmacists_service,
-//         patients_service,
-//         drugs_service,
-//         prescriptions_service,
-//     }
-// }
+    Context {
+        doctors_service,
+        pharmacists_service,
+        patients_service,
+        drugs_service,
+        prescriptions_service,
+    }
+}
 
 fn get_routes() -> Vec<Route> {
     openapi_get_routes![
@@ -113,12 +113,12 @@ fn redirect_to_swagger_ui() -> rocket::response::Redirect {
 
 #[launch]
 async fn rocket() -> Rocket<Build> {
-    // let pool = setup_database_connection().await;
+    let pool = setup_database_connection().await;
 
-    // create_tables(&pool, false).await.unwrap();
+    create_tables(&pool, false).await.unwrap();
 
     rocket::build()
-        // .manage(setup_context(pool))
+        .manage(setup_context(pool))
         .mount("/", get_routes())
         .mount("/", routes![redirect_to_swagger_ui])
         .mount("/swagger-ui", setup_swagger_ui())

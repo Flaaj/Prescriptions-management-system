@@ -10,23 +10,23 @@ services:
       - "2137:5432"
     networks:
       - pms_network
-  backend:
-    build: .
-    image: flaaj/pms_backend
-    restart: always
-    volumes:
-      - .:/app
-    working_dir: /app
-    depends_on:
-      - db
-    environment:
-      DATABASE_URL: postgres://postgres:postgres@db:5432
-      ROCKET_ADDRESS: 0.0.0.0
-      ROCKET_PORT: 8000
-    ports:
-      - "2138:8000"
-    networks:
-      - pms_network
+  # backend:
+  #   build: .
+  #   image: flaaj/pms_backend
+  #   restart: always
+  #   volumes:
+  #     - .:/app
+  #   working_dir: /app
+  #   depends_on:
+  #     - db
+  #   environment:
+  #     DATABASE_URL: postgres://postgres:postgres@db:5432
+  #     ROCKET_ADDRESS: 0.0.0.0
+  #     ROCKET_PORT: 8000
+  #   ports:
+  #     - "2138:8000"
+  #   networks:
+  #     - pms_network
 networks:
   pms_network:
     driver: bridge

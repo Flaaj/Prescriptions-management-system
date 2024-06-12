@@ -17,7 +17,7 @@ use uuid::Uuid;
 use crate::domain::prescriptions::models::{NewPrescribedDrug, NewPrescription, PrescriptionType};
 
 #[derive(thiserror::Error, Debug, PartialEq)]
-pub enum NewPrescriptionValidationError {
+pub enum CreateNewPrescriptionDomainError {
     #[error("Prescription must have at least one prescribed drug")]
     NoPrescribedDrugs,
     #[error("Quantity of drug with id {0} can't be 0")]
@@ -44,20 +44,20 @@ impl NewPrescription {
         start_date: Option<DateTime<Utc>>,
         prescription_type: Option<PrescriptionType>,
         prescribed_drugs: Vec<NewPrescribedDrug>,
-    ) -> Result<Self, NewPrescriptionValidationError> {
+    ) -> Result<Self, CreateNewPrescriptionDomainError> {
         if prescribed_drugs.is_empty() {
-            Err(NewPrescriptionValidationError::NoPrescribedDrugs)?;
+            Err(CreateNewPrescriptionDomainError::NoPrescribedDrugs)?;
         }
 
         let mut ids_hashset: HashSet<Uuid> = HashSet::new();
         for prescribed_drug in &prescribed_drugs {
             if prescribed_drug.quantity == 0 {
-                Err(NewPrescriptionValidationError::InvalidDrugQuantity(
+                Err(CreateNewPrescriptionDomainError::InvalidDrugQuantity(
                     prescribed_drug.drug_id,
                 ))?;
             }
             if ids_hashset.contains(&prescribed_drug.drug_id) {
-                Err(NewPrescriptionValidationError::DuplicateDrugId(
+                Err(CreateNewPrescriptionDomainError::DuplicateDrugId(
                     prescribed_drug.drug_id,
                 ))?;
             }
@@ -90,7 +90,7 @@ mod tests {
     use chrono::{Duration, Utc};
     use uuid::Uuid;
 
-    use super::{NewPrescription, NewPrescriptionValidationError, PrescriptionType};
+    use super::{CreateNewPrescriptionDomainError, NewPrescription, PrescriptionType};
     use crate::domain::prescriptions::models::NewPrescribedDrug;
 
     #[test]
@@ -293,7 +293,9 @@ mod tests {
 
         assert_eq!(
             sut,
-            Err(NewPrescriptionValidationError::InvalidDrugQuantity(drug_id))
+            Err(CreateNewPrescriptionDomainError::InvalidDrugQuantity(
+                drug_id
+            ))
         );
     }
 
@@ -320,7 +322,7 @@ mod tests {
 
         assert_eq!(
             sut,
-            Err(NewPrescriptionValidationError::DuplicateDrugId(drug_id))
+            Err(CreateNewPrescriptionDomainError::DuplicateDrugId(drug_id))
         );
     }
 
@@ -328,6 +330,9 @@ mod tests {
     fn doesnt_create_prescription_when_no_drugs_are_added_to_prescription() {
         let sut = NewPrescription::new(Uuid::new_v4(), Uuid::new_v4(), None, None, vec![]);
 
-        assert_eq!(sut, Err(NewPrescriptionValidationError::NoPrescribedDrugs));
+        assert_eq!(
+            sut,
+            Err(CreateNewPrescriptionDomainError::NoPrescribedDrugs)
+        );
     }
 }

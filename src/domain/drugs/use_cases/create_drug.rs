@@ -3,7 +3,7 @@ use uuid::Uuid;
 use crate::domain::drugs::models::{DrugContentType, NewDrug};
 
 #[derive(thiserror::Error, Debug, PartialEq)]
-pub enum NewDrugValidationError {
+pub enum CreateNewDrugDomainError {
     #[error("Pills count and mg per pill must be provided for solid pills")]
     InvalidSolidPillsDescription,
     #[error("Pills count and ml per pill must be provided for liquid pills")]
@@ -28,7 +28,7 @@ impl NewDrug {
                     || mg_per_pill.is_none()
                     || mg_per_pill.unwrap() <= 0
                 {
-                    Err(NewDrugValidationError::InvalidSolidPillsDescription)?;
+                    Err(CreateNewDrugDomainError::InvalidSolidPillsDescription)?;
                 }
 
                 Ok(NewDrug {
@@ -47,7 +47,7 @@ impl NewDrug {
                     || ml_per_pill.is_none()
                     || ml_per_pill.unwrap() <= 0
                 {
-                    Err(NewDrugValidationError::InvalidLiquidPillsDescription)?;
+                    Err(CreateNewDrugDomainError::InvalidLiquidPillsDescription)?;
                 }
 
                 Ok(NewDrug {
@@ -62,7 +62,7 @@ impl NewDrug {
             }
             DrugContentType::BottleOfLiquid => {
                 if volume_ml.is_none() || volume_ml.unwrap() <= 0 {
-                    Err(NewDrugValidationError::InvalidBottleOfLiquidDescription)?;
+                    Err(CreateNewDrugDomainError::InvalidBottleOfLiquidDescription)?;
                 }
 
                 Ok(NewDrug {

@@ -8,6 +8,7 @@ pub fn get_openapi_responses(
     descriptions: Vec<ResponseDescription>,
 ) -> Result<Responses, OpenApiError> {
     let mut responses = Map::new();
+
     for (status_code, description) in descriptions {
         responses.insert(
             status_code.to_string(),
@@ -17,6 +18,7 @@ pub fn get_openapi_responses(
             }),
         );
     }
+
     Ok(Responses {
         responses,
         ..Default::default()
