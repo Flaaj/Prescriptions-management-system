@@ -17,7 +17,7 @@ use crate::{
     Context,
 };
 
-pub fn create_api_context() -> Context {
+pub fn create_fake_api_context() -> Context {
     let doctors_repository = Box::new(DoctorsRepositoryFake::new());
     let doctors_service = Arc::new(DoctorsService::new(doctors_repository));
 

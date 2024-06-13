@@ -196,12 +196,12 @@ mod tests {
     };
 
     use crate::{
-        application::api::controllers::fake_api_context::create_api_context,
+        application::api::utils::create_fake_api_context::create_fake_api_context,
         domain::pharmacists::models::Pharmacist,
     };
 
     async fn create_api_client() -> Client {
-        let context = create_api_context();
+        let context = create_fake_api_context();
 
         let routes = routes![
             super::create_pharmacist,

@@ -67,12 +67,17 @@ impl AuthenticationService {
         &self,
         username: String,
         pass: String,
+        role: UserRole,
     ) -> Result<User, AuthenticationWithCredentialsError> {
         let user = self
             .authentication_repository
             .get_user_by_username(&username)
             .await
             .map_err(|_| AuthenticationWithCredentialsError::InvalidCredentials)?;
+
+        if user.role != role {
+            Err(AuthenticationWithCredentialsError::InvalidCredentials)?;
+        }
 
         if !self.verify_user_password(&pass, &user) {
             Err(AuthenticationWithCredentialsError::InvalidCredentials)?;
@@ -130,7 +135,11 @@ mod tests {
             .unwrap();
 
         let result = service
-            .authenticate_with_credentials("username".to_string(), "password123".to_string())
+            .authenticate_with_credentials(
+                "username".to_string(),
+                "password123".to_string(),
+                UserRole::Doctor,
+            )
             .await;
 
         assert_eq!(result, Ok(seed_user))
@@ -153,7 +162,11 @@ mod tests {
             .unwrap();
 
         service
-            .authenticate_with_credentials("username".to_string(), "password124".to_string())
+            .authenticate_with_credentials(
+                "username".to_string(),
+                "password124".to_string(),
+                UserRole::Doctor,
+            )
             .await
             .unwrap_err();
     }
