@@ -4,9 +4,13 @@ pub mod infrastructure;
 
 use std::{env, sync::Arc};
 
-use application::api::controllers::{
-    doctors_controller, drugs_controller, patients_controller, pharmacists_controller,
-    prescriptions_controller,
+use application::{
+    api::controllers::{
+        doctors_controller, drugs_controller, patients_controller, pharmacists_controller,
+        prescriptions_controller,
+    },
+    authentication::{repository::AuthenticationRepositoryFake, service::AuthenticationService},
+    sessions::{repository::SessionsRepositoryFake, service::SessionsService},
 };
 use domain::{
     doctors::service::DoctorsService, drugs::service::DrugsService,
@@ -50,6 +54,8 @@ pub struct Context {
     pub patients_service: Arc<PatientsService>,
     pub drugs_service: Arc<DrugsService>,
     pub prescriptions_service: Arc<PrescriptionsService>,
+    pub authentication_service: Arc<AuthenticationService>,
+    pub sessions_service: Arc<SessionsService>,
 }
 pub type Ctx = rocket::State<Context>;
 
@@ -69,12 +75,20 @@ fn setup_context(pool: PgPool) -> Context {
     let prescriptions_repository = Box::new(PostgresPrescriptionsRepository::new(pool.clone()));
     let prescriptions_service = Arc::new(PrescriptionsService::new(prescriptions_repository));
 
+    let authentication_repository = Box::new(AuthenticationRepositoryFake::new());
+    let authentication_service = Arc::new(AuthenticationService::new(authentication_repository));
+
+    let sessions_repository = Box::new(SessionsRepositoryFake::new());
+    let sessions_service = Arc::new(SessionsService::new(sessions_repository));
+
     Context {
         doctors_service,
         pharmacists_service,
         patients_service,
         drugs_service,
         prescriptions_service,
+        authentication_service,
+        sessions_service,
     }
 }
 

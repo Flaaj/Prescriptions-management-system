@@ -187,7 +187,6 @@ pub async fn get_pharmacists_with_pagination(
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
 
     use rocket::{
         http::{ContentType, Status},
@@ -197,42 +196,12 @@ mod tests {
     };
 
     use crate::{
-        domain::{
-            doctors::{repository::DoctorsRepositoryFake, service::DoctorsService},
-            drugs::{repository::DrugsRepositoryFake, service::DrugsService},
-            patients::{repository::PatientsRepositoryFake, service::PatientsService},
-            pharmacists::{
-                models::Pharmacist, repository::PharmacistsRepositoryFake,
-                service::PharmacistsService,
-            },
-            prescriptions::{
-                repository::PrescriptionsRepositoryFake, service::PrescriptionsService,
-            },
-        },
-        Context,
+        application::api::controllers::fake_api_context::create_api_context,
+        domain::pharmacists::models::Pharmacist,
     };
 
     async fn create_api_client() -> Client {
-        let pharmacists_repository = Box::new(PharmacistsRepositoryFake::new());
-        let pharmacists_service = Arc::new(PharmacistsService::new(pharmacists_repository));
-        let patients_rerpository = Box::new(PatientsRepositoryFake::new());
-        let patients_service = Arc::new(PatientsService::new(patients_rerpository));
-        let doctors_repository = Box::new(DoctorsRepositoryFake::new());
-        let doctors_service = Arc::new(DoctorsService::new(doctors_repository));
-        let drugs_repository = Box::new(DrugsRepositoryFake::new());
-        let drugs_service = Arc::new(DrugsService::new(drugs_repository));
-        let prescriptions_repository = Box::new(PrescriptionsRepositoryFake::new(
-            None, None, None, None, None,
-        ));
-        let prescriptions_service = Arc::new(PrescriptionsService::new(prescriptions_repository));
-
-        let context = Context {
-            pharmacists_service,
-            patients_service,
-            doctors_service,
-            drugs_service,
-            prescriptions_service,
-        };
+        let context = create_api_context();
 
         let routes = routes![
             super::create_pharmacist,

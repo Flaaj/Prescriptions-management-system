@@ -12,8 +12,9 @@ pub enum CreateUserError {
     RepositoryError(CreateUserRepositoryError),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, thiserror::Error)]
 pub enum AuthenticationWithCredentialsError {
+    #[error("Invalid credentials")]
     InvalidCredentials,
 }
 

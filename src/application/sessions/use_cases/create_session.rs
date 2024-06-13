@@ -12,8 +12,8 @@ impl NewSession {
         pharmacist_id: Option<Uuid>,
         ip_address: IpAddr,
         user_agent: String,
-    ) -> Result<Self, &'static str> {
-        Ok(Self {
+    ) -> Self {
+        Self {
             id: Uuid::new_v4(),
             user_id,
             doctor_id,
@@ -21,7 +21,7 @@ impl NewSession {
             ip_address,
             user_agent,
             expires_at: Utc::now() + Duration::days(2),
-        })
+        }
     }
 }
 
@@ -47,10 +47,7 @@ mod tests {
             None,
             IpAddr::V4(Ipv4Addr::from_str("127.0.0.1").unwrap()),
             "Mozilla/5.0".to_string(),
-        )
-        .unwrap();
-
-        assert_eq!(new_session.user_id, new_session.user_id);
+        );
 
         let session_duration = new_session.expires_at - now;
 

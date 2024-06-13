@@ -180,8 +180,6 @@ pub async fn get_doctors_with_pagination(
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
-
     use rocket::{
         http::{ContentType, Status},
         local::asynchronous::Client,
@@ -190,43 +188,12 @@ mod tests {
     };
 
     use crate::{
-        domain::{
-            doctors::{models::Doctor, repository::DoctorsRepositoryFake, service::DoctorsService},
-            drugs::{repository::DrugsRepositoryFake, service::DrugsService},
-            patients::{repository::PatientsRepositoryFake, service::PatientsService},
-            pharmacists::{repository::PharmacistsRepositoryFake, service::PharmacistsService},
-            prescriptions::{
-                repository::PrescriptionsRepositoryFake, service::PrescriptionsService,
-            },
-        },
-        Context,
+        application::api::controllers::fake_api_context::create_api_context,
+        domain::doctors::models::Doctor,
     };
 
     async fn create_api_client() -> Client {
-        let doctors_repository = Box::new(DoctorsRepositoryFake::new());
-        let doctors_service = Arc::new(DoctorsService::new(doctors_repository));
-
-        let pharmacists_rerpository = Box::new(PharmacistsRepositoryFake::new());
-        let pharmacists_service = Arc::new(PharmacistsService::new(pharmacists_rerpository));
-
-        let patients_repository = Box::new(PatientsRepositoryFake::new());
-        let patients_service = Arc::new(PatientsService::new(patients_repository));
-
-        let drugs_repository = Box::new(DrugsRepositoryFake::new());
-        let drugs_service = Arc::new(DrugsService::new(drugs_repository));
-
-        let prescriptions_repository = Box::new(PrescriptionsRepositoryFake::new(
-            None, None, None, None, None,
-        ));
-        let prescriptions_service = Arc::new(PrescriptionsService::new(prescriptions_repository));
-
-        let context = Context {
-            doctors_service,
-            pharmacists_service,
-            patients_service,
-            drugs_service,
-            prescriptions_service,
-        };
+        let context = create_api_context();
 
         let routes = routes![
             super::create_doctor,

@@ -2,9 +2,11 @@ use chrono::Utc;
 
 use crate::application::sessions::models::Session;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, thiserror::Error)]
 pub enum SessionValidationError {
+    #[error("Session is expired")]
     SessionExpired,
+    #[error("Session is invalidated")]
     SessionInvalidated,
 }
 

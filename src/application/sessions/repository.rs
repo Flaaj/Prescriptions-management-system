@@ -7,7 +7,7 @@ use uuid::Uuid;
 use super::models::{NewSession, Session};
 
 #[derive(thiserror::Error, Debug, PartialEq)]
-pub enum CreateUserRepositoryError {
+pub enum CreateSessionRepositoryError {
     #[error("Database error: {0}")]
     DatabaseError(String),
 }
@@ -33,7 +33,7 @@ pub trait SessionsRepository: Send + Sync + 'static {
     async fn create_session(
         &self,
         new_session: NewSession,
-    ) -> Result<Session, CreateUserRepositoryError>;
+    ) -> Result<Session, CreateSessionRepositoryError>;
     async fn get_session_by_id(&self, id: Uuid) -> Result<Session, GetSessionRepositoryError>;
     async fn update_session(
         &self,
@@ -59,7 +59,7 @@ impl SessionsRepository for SessionsRepositoryFake {
     async fn create_session(
         &self,
         new_session: NewSession,
-    ) -> Result<Session, CreateUserRepositoryError> {
+    ) -> Result<Session, CreateSessionRepositoryError> {
         let session = Session {
             id: new_session.id,
             user_id: new_session.user_id,
@@ -137,7 +137,6 @@ mod tests {
             IpAddr::V4(Ipv4Addr::from_str("127.0.0.1").unwrap()),
             "Mozilla/5.0".to_string(),
         )
-        .unwrap()
     }
 
     #[tokio::test]
@@ -177,7 +176,7 @@ mod tests {
 
         assert!(created_session.invalidated_at.is_none());
 
-        created_session_by_id.invalidate();
+        created_session_by_id.invalidate().unwrap();
 
         repository
             .update_session(created_session_by_id.clone())

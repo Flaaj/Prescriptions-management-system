@@ -273,6 +273,12 @@ mod tests {
     };
 
     use crate::{
+        application::{
+            authentication::{
+                repository::AuthenticationRepositoryFake, service::AuthenticationService,
+            },
+            sessions::{repository::SessionsRepositoryFake, service::SessionsService},
+        },
         domain::{
             doctors::{models::Doctor, repository::DoctorsRepositoryFake, service::DoctorsService},
             drugs::{
@@ -381,6 +387,13 @@ mod tests {
                 ]),
             )));
 
+        let authentication_repository = Box::new(AuthenticationRepositoryFake::new());
+        let authentication_service =
+            Arc::new(AuthenticationService::new(authentication_repository));
+
+        let sessions_repository = Box::new(SessionsRepositoryFake::new());
+        let sessions_service = Arc::new(SessionsService::new(sessions_repository));
+
         (
             Context {
                 doctors_service: Arc::new(doctors_service),
@@ -388,6 +401,8 @@ mod tests {
                 patients_service: Arc::new(patients_service),
                 drugs_service: Arc::new(drugs_service),
                 prescriptions_service: Arc::new(prescriptions_service),
+                authentication_service,
+                sessions_service,
             },
             DatabaseSeeds {
                 doctor: created_doctor,

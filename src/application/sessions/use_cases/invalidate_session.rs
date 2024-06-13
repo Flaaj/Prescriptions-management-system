@@ -2,11 +2,21 @@ use chrono::Utc;
 
 use crate::application::sessions::models::Session;
 
+#[derive(thiserror::Error, Debug, PartialEq)]
+pub enum InvalidateSessionDomainError {
+    #[error("Session is already invalidated")]
+    AlreadyInvalidated,
+}
+
 impl Session {
-    pub fn invalidate(&mut self) {
+    pub fn invalidate(&mut self) -> Result<(), InvalidateSessionDomainError> {
+        if self.invalidated_at.is_some() {
+            Err(InvalidateSessionDomainError::AlreadyInvalidated)?;
+        }
         let now = Utc::now();
         self.invalidated_at = Some(now);
         self.updated_at = now;
+        Ok(())
     }
 }
 
@@ -41,8 +51,18 @@ mod tests {
     fn invalidates_session() {
         let mut session = create_mock_session();
 
-        session.invalidate();
+        session.invalidate().unwrap();
 
         assert_eq!(session.invalidated_at.unwrap(), session.updated_at)
+    }
+
+    #[test]
+    fn returns_error_if_session_is_already_invalidated() {
+        let mut session = create_mock_session();
+        session.invalidated_at = Some(Utc::now());
+
+        let result = session.invalidate();
+
+        assert!(result.is_err());
     }
 }
