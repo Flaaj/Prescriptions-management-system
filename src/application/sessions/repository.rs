@@ -21,7 +21,7 @@ pub enum GetSessionRepositoryError {
 }
 
 #[derive(thiserror::Error, Debug, PartialEq)]
-pub enum InvalidateSessionRepositoryError {
+pub enum UpdateSessionRepositoryError {
     #[error("Session with this id not found ({0})")]
     NotFound(Uuid),
     #[error("Database error: {0}")]
@@ -35,7 +35,10 @@ pub trait SessionsRepository: Send + Sync + 'static {
         new_session: NewSession,
     ) -> Result<Session, CreateUserRepositoryError>;
     async fn get_session_by_id(&self, id: Uuid) -> Result<Session, GetSessionRepositoryError>;
-    async fn invalidate_session(&self, id: Uuid) -> Result<(), InvalidateSessionRepositoryError>;
+    async fn update_session(
+        &self,
+        session: Session,
+    ) -> Result<Session, UpdateSessionRepositoryError>;
 }
 
 pub struct SessionsRepositoryFake {
@@ -88,22 +91,24 @@ impl SessionsRepository for SessionsRepositoryFake {
         }
     }
 
-    async fn invalidate_session(
+    async fn update_session(
         &self,
-        session_id: Uuid,
-    ) -> Result<(), InvalidateSessionRepositoryError> {
+        updated_session: Session,
+    ) -> Result<Session, UpdateSessionRepositoryError> {
         match self
             .sessions
             .write()
             .unwrap()
             .iter_mut()
-            .find(|session| session.id == session_id)
+            .find(|session| session.id == updated_session.id)
         {
             Some(session) => {
-                session.invalidated_at = Some(Utc::now());
-                Ok(())
+                session.invalidated_at = updated_session.invalidated_at;
+                session.expires_at = updated_session.expires_at;
+                session.updated_at = updated_session.updated_at;
+                Ok(session.clone())
             }
-            None => Err(InvalidateSessionRepositoryError::NotFound(session_id)),
+            None => Err(UpdateSessionRepositoryError::NotFound(updated_session.id)),
         }
     }
 }
@@ -156,7 +161,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn invalidates_session() {
+    async fn updates_session() {
         let repository = setup_repository();
         let mock_new_session = create_mock_new_session();
 
@@ -165,15 +170,22 @@ mod tests {
             .await
             .unwrap();
 
+        let mut created_session_by_id = repository
+            .get_session_by_id(created_session.id)
+            .await
+            .unwrap();
+
         assert!(created_session.invalidated_at.is_none());
 
+        created_session_by_id.invalidate();
+
         repository
-            .invalidate_session(created_session.id)
+            .update_session(created_session_by_id.clone())
             .await
             .unwrap();
 
         let invalidated_session = repository
-            .get_session_by_id(created_session.id)
+            .get_session_by_id(created_session_by_id.id)
             .await
             .unwrap();
 

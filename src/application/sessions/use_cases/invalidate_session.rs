@@ -4,7 +4,9 @@ use crate::application::sessions::models::Session;
 
 impl Session {
     pub fn invalidate(&mut self) {
-        self.invalidated_at = Some(Utc::now());
+        let now = Utc::now();
+        self.invalidated_at = Some(now);
+        self.updated_at = now;
     }
 }
 
@@ -41,6 +43,6 @@ mod tests {
 
         session.invalidate();
 
-        assert!(session.invalidated_at.is_some());
+        assert_eq!(session.invalidated_at.unwrap(), session.updated_at)
     }
 }

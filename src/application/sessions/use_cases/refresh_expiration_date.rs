@@ -4,7 +4,9 @@ use crate::application::sessions::models::Session;
 
 impl Session {
     pub fn refresh_expiration_date(&mut self) {
-        self.expires_at = Utc::now() + Duration::days(2);
+        let now = Utc::now();
+        self.expires_at = now + Duration::days(2);
+        self.updated_at = now;
     }
 }
 
@@ -15,7 +17,7 @@ mod tests {
         str::FromStr,
     };
 
-    use chrono::Utc;
+    use chrono::{Duration, Utc};
     use uuid::Uuid;
 
     use crate::application::sessions::models::Session;
@@ -39,12 +41,13 @@ mod tests {
     fn refreshes_expiration_date() {
         let now = Utc::now();
         let mut session = create_mock_session();
-        session.expires_at = Utc::now() + chrono::Duration::hours(1);
+        session.expires_at = Utc::now() + Duration::hours(1);
 
         session.refresh_expiration_date();
 
         let session_duration = session.expires_at - now;
 
         assert_eq!(session_duration.num_hours(), 48);
+        assert_eq!(session.expires_at, session.updated_at + Duration::days(2))
     }
 }
