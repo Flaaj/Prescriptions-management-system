@@ -1,5 +1,3 @@
-use std::net::Ipv4Addr;
-
 use okapi::openapi3::Responses;
 use rocket::{get, http::Status, post, response::Responder, serde::json::Json, Request};
 use rocket_okapi::{gen::OpenApiGenerator, openapi, response::OpenApiResponderInner, OpenApiError};
@@ -9,7 +7,10 @@ use serde::{Deserialize, Serialize};
 use crate::{
     application::{
         api::{
-            guards::authorization::{DoctorSession, PharmacistSession},
+            guards::{
+                authorization::{DoctorSession, PharmacistSession},
+                client_request_info::ClientRequestInfo,
+            },
             utils::{error::ApiError, openapi_responses::get_openapi_responses},
         },
         authentication::{
@@ -17,7 +18,10 @@ use crate::{
             repository::CreateUserRepositoryError,
             service::{AuthenticationWithCredentialsError, CreateUserError},
         },
-        sessions::{models::Session, repository::UpdateSessionRepositoryError, service::InvalidateSessionError},
+        sessions::{
+            models::Session, repository::UpdateSessionRepositoryError,
+            service::InvalidateSessionError,
+        },
     },
     domain::{
         doctors::{repository::CreateDoctorRepositoryError, service::CreateDoctorError},
@@ -258,7 +262,7 @@ impl OpenApiResponderInner for AuthenticationWithCredentialsError {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct LoginDto {
+pub struct LoginWithCredentialsDto {
     username: String,
     password: String,
 }
@@ -267,7 +271,8 @@ pub struct LoginDto {
 #[post("/auth/login/doctor", data = "<dto>", format = "application/json")]
 pub async fn login_doctor(
     ctx: &Ctx,
-    dto: Json<LoginDto>,
+    dto: Json<LoginWithCredentialsDto>,
+    client: ClientRequestInfo,
 ) -> Result<Json<SessionTokenResponse>, AuthenticationWithCredentialsError> {
     let user = ctx
         .authentication_service
@@ -281,8 +286,8 @@ pub async fn login_doctor(
             user.id,
             user.doctor.map(|d| d.id),
             None,
-            Ipv4Addr::new(127, 0, 0, 1).into(),
-            "".to_string(),
+            client.ip_address,
+            client.user_agent,
         )
         .await
         .unwrap();
@@ -296,7 +301,8 @@ pub async fn login_doctor(
 #[post("/auth/login/pharmacist", data = "<dto>", format = "application/json")]
 pub async fn login_pharmacist(
     ctx: &Ctx,
-    dto: Json<LoginDto>,
+    dto: Json<LoginWithCredentialsDto>,
+    client: ClientRequestInfo,
 ) -> Result<Json<SessionTokenResponse>, AuthenticationWithCredentialsError> {
     let user = ctx
         .authentication_service
@@ -310,8 +316,8 @@ pub async fn login_pharmacist(
             user.id,
             None,
             user.pharmacist.map(|p| p.id),
-            Ipv4Addr::new(127, 0, 0, 1).into(),
-            "".to_string(),
+            client.ip_address,
+            client.user_agent,
         )
         .await
         .unwrap();
@@ -459,6 +465,7 @@ mod tests {
             .await;
 
         assert_eq!(response.status(), Status::Ok);
+
         let token = response
             .into_json::<SessionTokenResponse>()
             .await
@@ -533,6 +540,7 @@ mod tests {
             .await;
 
         assert_eq!(response.status(), Status::Ok);
+
         let token = response
             .into_json::<SessionTokenResponse>()
             .await

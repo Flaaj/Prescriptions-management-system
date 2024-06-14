@@ -14,7 +14,9 @@ pub enum AuthorizationError {
     Unauthorized,
 }
 
-async fn get_session_from_req<'r>(req: &'r Request<'_>, ctx: &Context) -> Option<Session> {
+async fn get_session<'r>(req: &'r Request<'_>) -> Option<Session> {
+    let ctx = req.rocket().state::<Context>().unwrap();
+    
     let header = req.headers().get_one("Authorization")?;
     let (_, session_token) = header.split_at(7);
     let session_id = Uuid::parse_str(session_token).ok()?;
@@ -35,8 +37,7 @@ impl<'r> FromRequest<'r> for Session {
     type Error = AuthorizationError;
 
     async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-        let ctx = req.rocket().state::<Context>().unwrap();
-        let session = get_session_from_req(req, ctx).await;
+        let session = get_session(req).await;
         match session {
             Some(session) => Outcome::Success(session),
             None => Outcome::Error((Status::Forbidden, AuthorizationError::Unauthorized)),
@@ -52,8 +53,7 @@ impl<'r> FromRequest<'r> for DoctorSession {
     type Error = AuthorizationError;
 
     async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-        let ctx = req.rocket().state::<Context>().unwrap();
-        let session = get_session_from_req(req, ctx).await;
+        let session = get_session(req).await;
         match session {
             Some(session) if session.doctor_id.is_some() => Outcome::Success(Self(session)),
             _ => Outcome::Error((Status::Forbidden, AuthorizationError::Unauthorized)),
@@ -69,8 +69,7 @@ impl<'r> FromRequest<'r> for PharmacistSession {
     type Error = AuthorizationError;
 
     async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-        let ctx = req.rocket().state::<Context>().unwrap();
-        let session = get_session_from_req(req, ctx).await;
+        let session = get_session(req).await;
         match session {
             Some(session) if session.pharmacist_id.is_some() => Outcome::Success(Self(session)),
             _ => Outcome::Error((Status::Forbidden, AuthorizationError::Unauthorized)),
