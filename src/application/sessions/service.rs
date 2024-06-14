@@ -79,10 +79,13 @@ impl SessionsService {
             .invalidate()
             .map_err(|err| InvalidateSessionError::DomainError(err))?;
 
-        self.sessions_repository
+        let invalidated_session = self
+            .sessions_repository
             .update_session(session)
             .await
-            .map_err(|err| InvalidateSessionError::RepositoryError(err))
+            .map_err(|err| InvalidateSessionError::RepositoryError(err))?;
+
+        Ok(invalidated_session)
     }
 }
 
