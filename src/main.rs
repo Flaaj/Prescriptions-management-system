@@ -6,8 +6,8 @@ use std::{env, sync::Arc};
 
 use application::{
     api::controllers::{
-        doctors_controller, drugs_controller, patients_controller, pharmacists_controller,
-        prescriptions_controller,
+        authentication_controller, doctors_controller, drugs_controller, patients_controller,
+        pharmacists_controller, prescriptions_controller,
     },
     authentication::{repository::AuthenticationRepositoryFake, service::AuthenticationService},
     sessions::{repository::SessionsRepositoryFake, service::SessionsService},
@@ -109,7 +109,12 @@ fn get_routes() -> Vec<Route> {
         prescriptions_controller::create_prescription,
         prescriptions_controller::get_prescription_by_id,
         prescriptions_controller::get_prescriptions_with_pagination,
-        prescriptions_controller::fill_prescription
+        prescriptions_controller::fill_prescription,
+        authentication_controller::login_doctor,
+        authentication_controller::login_pharmacist,
+        authentication_controller::register_doctor,
+        authentication_controller::register_pharmacist,
+        authentication_controller::logout,
     ]
 }
 
