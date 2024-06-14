@@ -402,7 +402,7 @@ mod tests {
     };
 
     use super::SessionTokenResponse;
-    use crate::application::api::utils::create_fake_api_context::create_fake_api_context;
+    use crate::application::api::utils::fake_api_context::create_fake_api_context;
 
     async fn create_api_client() -> Client {
         let context = create_fake_api_context();

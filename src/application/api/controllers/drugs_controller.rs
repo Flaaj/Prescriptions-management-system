@@ -190,7 +190,7 @@ mod tests {
     };
 
     use crate::{
-        application::api::utils::create_fake_api_context::create_fake_api_context,
+        application::api::utils::fake_api_context::create_fake_api_context,
         domain::drugs::models::{Drug, DrugContentType},
     };
 

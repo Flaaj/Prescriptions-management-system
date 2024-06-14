@@ -16,7 +16,7 @@ pub enum AuthorizationError {
 
 async fn get_session<'r>(req: &'r Request<'_>) -> Option<Session> {
     let ctx = req.rocket().state::<Context>().unwrap();
-    
+
     let header = req.headers().get_one("Authorization")?;
     let (_, session_token) = header.split_at(7);
     let session_id = Uuid::parse_str(session_token).ok()?;
@@ -37,8 +37,7 @@ impl<'r> FromRequest<'r> for Session {
     type Error = AuthorizationError;
 
     async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-        let session = get_session(req).await;
-        match session {
+        match get_session(req).await {
             Some(session) => Outcome::Success(session),
             None => Outcome::Error((Status::Forbidden, AuthorizationError::Unauthorized)),
         }
@@ -53,8 +52,7 @@ impl<'r> FromRequest<'r> for DoctorSession {
     type Error = AuthorizationError;
 
     async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-        let session = get_session(req).await;
-        match session {
+        match get_session(req).await {
             Some(session) if session.doctor_id.is_some() => Outcome::Success(Self(session)),
             _ => Outcome::Error((Status::Forbidden, AuthorizationError::Unauthorized)),
         }
@@ -69,8 +67,7 @@ impl<'r> FromRequest<'r> for PharmacistSession {
     type Error = AuthorizationError;
 
     async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-        let session = get_session(req).await;
-        match session {
+        match get_session(req).await {
             Some(session) if session.pharmacist_id.is_some() => Outcome::Success(Self(session)),
             _ => Outcome::Error((Status::Forbidden, AuthorizationError::Unauthorized)),
         }
