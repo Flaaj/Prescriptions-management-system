@@ -15,7 +15,7 @@ pub enum AuthorizationError {
 }
 
 async fn get_session<'r>(req: &'r Request<'_>) -> Option<Session> {
-    let ctx = req.rocket().state::<Context>().unwrap();
+    let ctx = req.rocket().state::<Context>()?;
 
     let header = req.headers().get_one("Authorization")?;
     let (_, session_token) = header.split_at(7);
