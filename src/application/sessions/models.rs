@@ -1,6 +1,7 @@
 use std::net::IpAddr;
 
 use chrono::{DateTime, Utc};
+use rocket_okapi::OpenApiFromRequest;
 use uuid::Uuid;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -14,7 +15,7 @@ pub struct NewSession {
     pub expires_at: DateTime<Utc>,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, OpenApiFromRequest)]
 pub struct Session {
     pub id: Uuid,
     pub user_id: Uuid,

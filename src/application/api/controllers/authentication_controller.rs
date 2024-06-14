@@ -17,6 +17,7 @@ use crate::{
             repository::CreateUserRepositoryError,
             service::{AuthenticationWithCredentialsError, CreateUserError},
         },
+        sessions::{models::Session, repository::UpdateSessionRepositoryError, service::InvalidateSessionError},
     },
     domain::{
         doctors::{repository::CreateDoctorRepositoryError, service::CreateDoctorError},
@@ -320,6 +321,42 @@ pub async fn login_pharmacist(
     }))
 }
 
+impl<'r> Responder<'r, 'static> for InvalidateSessionError {
+    fn respond_to(self, req: &'r Request<'_>) -> rocket::response::Result<'static> {
+        let (message, status) = match self {
+            Self::DomainError(err) => (err.to_string(), Status::UnprocessableEntity),
+            Self::RepositoryError(err) => {
+                let message = err.to_string();
+                let status = match err {
+                    UpdateSessionRepositoryError::DatabaseError(_) => Status::InternalServerError,
+                    UpdateSessionRepositoryError::NotFound(_) => Status::NotFound,
+                };
+                (message, status)
+            }
+        };
+
+        ApiError::build_rocket_response(req, message, status)
+    }
+}
+
+impl OpenApiResponderInner for InvalidateSessionError {
+    fn responses(_: &mut OpenApiGenerator) -> Result<Responses, OpenApiError> {
+        get_openapi_responses(vec![("404", "Session not found")])
+    }
+}
+
+#[openapi(tag = "Auth")]
+#[post("/auth/logout", format = "application/json")]
+pub async fn logout(
+    ctx: &Ctx,
+    session: Session,
+) -> Result<Json<SuccessResponse>, InvalidateSessionError> {
+    ctx.sessions_service
+        .invalidate_session(session)
+        .await
+        .map(|_| Json(SuccessResponse { success: true }))
+}
+
 pub struct AuthError;
 
 impl<'r> Responder<'r, 'static> for AuthError {
@@ -371,6 +408,7 @@ mod tests {
             super::login_pharmacist,
             super::endpoint_that_requires_authorization_as_doctor,
             super::endpoint_that_requires_authorization_as_pharmacist,
+            super::logout
         ];
 
         let rocket = rocket::build().manage(context).mount("/", routes);
@@ -387,7 +425,7 @@ mod tests {
             .dispatch()
             .await;
 
-        assert_eq!(response.status(), Status::Unauthorized);
+        assert_eq!(response.status(), Status::Forbidden);
 
         let response = client
             .post("/auth/register/doctor")
@@ -434,6 +472,23 @@ mod tests {
             .await;
 
         assert_eq!(response.status(), Status::Ok);
+
+        let response = client
+            .post("/auth/logout")
+            .header(ContentType::JSON)
+            .header(Header::new("Authorization", format!("Bearer {}", token)))
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::Ok);
+
+        let response = client
+            .get("/test-collection/endpoint-that-requires-authorization-as-doctor")
+            .header(Header::new("Authorization", format!("Bearer {}", token)))
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::Forbidden);
     }
 
     #[tokio::test]
@@ -445,7 +500,7 @@ mod tests {
             .dispatch()
             .await;
 
-        assert_eq!(response.status(), Status::Unauthorized);
+        assert_eq!(response.status(), Status::Forbidden);
 
         let response = client
             .post("/auth/register/pharmacist")
@@ -491,5 +546,22 @@ mod tests {
             .await;
 
         assert_eq!(response.status(), Status::Ok);
+
+        let response = client
+            .post("/auth/logout")
+            .header(ContentType::JSON)
+            .header(Header::new("Authorization", format!("Bearer {}", token)))
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::Ok);
+
+        let response = client
+            .get("/test-collection/endpoint-that-requires-authorization-as-pharmacist")
+            .header(Header::new("Authorization", format!("Bearer {}", token)))
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::Forbidden);
     }
 }

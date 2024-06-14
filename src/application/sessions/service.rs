@@ -26,7 +26,7 @@ pub enum InvalidateSessionError {
     RepositoryError(UpdateSessionRepositoryError),
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum GetSessionByIdError {
     RepositoryError(GetSessionRepositoryError),
 }
@@ -133,7 +133,10 @@ mod tests {
 
         let invalidated_session = service.invalidate_session(session).await.unwrap();
 
-        let invalidated_session_by_id = service.get_session_by_id(invalidated_session.id).await.unwrap();
+        let invalidated_session_by_id = service
+            .get_session_by_id(invalidated_session.id)
+            .await
+            .unwrap();
 
         assert!(invalidated_session_by_id.invalidated_at.is_some());
     }
