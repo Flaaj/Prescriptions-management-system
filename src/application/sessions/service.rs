@@ -62,10 +62,13 @@ impl SessionsService {
         &self,
         session_id: Uuid,
     ) -> Result<Session, GetSessionByIdError> {
-        self.sessions_repository
+        let session = self
+            .sessions_repository
             .get_session_by_id(session_id)
             .await
-            .map_err(|err| GetSessionByIdError::RepositoryError(err))
+            .map_err(|err| GetSessionByIdError::RepositoryError(err))?;
+
+        Ok(session)
     }
 
     pub async fn invalidate_session(
