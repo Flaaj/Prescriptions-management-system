@@ -21,10 +21,16 @@ pub async fn create_tables(pool: &sqlx::PgPool, drop: bool) -> Result<(), sqlx::
         sqlx::query(r#"DROP TABLE IF EXISTS doctors;"#)
             .execute(pool)
             .await?;
+        sqlx::query(r#"DROP TABLE IF EXISTS sessions;"#)
+            .execute(pool)
+            .await?;
         sqlx::query(r#"DROP TYPE IF EXISTS prescription_type;"#)
             .execute(pool)
             .await?;
         sqlx::query(r#"DROP TYPE IF EXISTS drug_content_type;"#)
+            .execute(pool)
+            .await?;
+        sqlx::query(r#"DROP TYPE IF EXISTS user_role;"#)
             .execute(pool)
             .await?;
     }
@@ -54,6 +60,19 @@ pub async fn create_tables(pool: &sqlx::PgPool, drop: bool) -> Result<(), sqlx::
     )
         .execute(pool)
         .await?;
+
+    sqlx::query(
+            r#"
+            DO $$
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_role') THEN
+                CREATE TYPE user_role AS ENUM ('doctor', 'pharmacist');
+                END IF;
+            END
+            $$;"#
+        )
+            .execute(pool)
+            .await?;
 
     sqlx::query(
         r#"
@@ -151,6 +170,42 @@ pub async fn create_tables(pool: &sqlx::PgPool, drop: bool) -> Result<(), sqlx::
             pharmacist_id UUID NOT NULL REFERENCES pharmacists(id),
             created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
             updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
+        );"#,
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS users (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            username VARCHAR(100) UNIQUE NOT NULL,
+            password_hash VARCHAR(255) NOT NULL,
+            email VARCHAR(255) UNIQUE NOT NULL,
+            phone_number VARCHAR(15) NOT NULL,
+            role user_role NOT NULL,
+            doctor_id UUID,
+            pharmacist_id UUID,
+            created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+            updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
+        );"#,
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS sessions (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            user_id UUID NOT NULL,
+            doctor_id UUID,
+            pharmacist_id UUID,
+            ip_address VARCHAR(255) NOT NULL,
+            user_agent VARCHAR(255) NOT NULL,
+            created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+            updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+            expires_at TIMESTAMPTZ NOT NULL,
+            invalidated_at TIMESTAMPTZ
         );"#,
     )
     .execute(pool)

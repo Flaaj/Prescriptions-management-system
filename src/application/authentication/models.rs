@@ -4,7 +4,9 @@ use uuid::Uuid;
 
 use crate::domain::{doctors::models::Doctor, pharmacists::models::Pharmacist};
 
-#[derive(Debug, PartialEq, Clone, Copy, Serialize)]
+#[derive(sqlx::Type, Debug, PartialEq, Clone, Copy, Serialize)]
+#[sqlx(type_name = "user_role", rename_all = "snake_case")]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum UserRole {
     Doctor,
     Pharmacist,
