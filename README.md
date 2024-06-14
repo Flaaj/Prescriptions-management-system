@@ -20,16 +20,17 @@ A system for managing prescriptions.
 - `cargo run`
 
 ###### Hosted preview:
-- base url: https://prescriptions-management-system.onrender.com/
-- swagger: https://prescriptions-management-system.onrender.com/swagger-ui
+- base url: https://api.pms.flaaj-web.dev/
+- swagger docs: https://api.pms.flaaj-web.dev/swagger-ui
 
 #### TODO:
-- [ ] authorization for doctors and pharmacists
 - [ ] images service for storing drug images
 - [ ] require prescription code to fill
 - [ ] add deleting to each collection
 - [ ] add updating to each collection
 - [ ] add phone number to patient collection and send sms with prescription code
 - [ ] drug variants (e.g. 10 pills | 20 pills | 50 pills)
+- [ ] drug categories 
+- [ ] create a single fake repository that implements all "repository" traits and has initial records (or just use real database for testing services and controllers?)
 
 
