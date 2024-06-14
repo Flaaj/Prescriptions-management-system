@@ -10,10 +10,10 @@ A system for managing prescriptions.
 - prescribing drugs for patients by doctors
 - filling a prescription by pharmacists
 
-###### Run application:
+###### Run database in docker:
 - `docker compose up -d` (requires having docker-desktop installed and added to PATH)
 
-###### Run unit tests:
+###### Run tests:
 - `cargo watch -x test`
 
 ###### Run development:
