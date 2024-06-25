@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
 use super::{
-    models::{NewPrescribedDrug, NewPrescription, Prescription, PrescriptionType},
+    entities::{NewPrescribedDrug, NewPrescription, Prescription, PrescriptionType},
     repository::{
         CreatePrescriptionRepositoryError, FillPrescriptionRepositoryError,
         GetPrescriptionByIdRepositoryError, GetPrescriptionsRepositoryError,
@@ -74,6 +74,7 @@ impl PrescriptionsService {
         &self,
         prescription_id: Uuid,
         pharmacist_id: Uuid,
+        prescription_code: String,
     ) -> Result<Prescription, FillPrescriptionError> {
         let mut prescription = self
             .repository
@@ -91,7 +92,7 @@ impl PrescriptionsService {
             })?;
 
         let new_prescription_fill = prescription
-            .fill(pharmacist_id)
+            .fill(pharmacist_id, prescription_code)
             .map_err(|err| FillPrescriptionError::DomainError(err.to_string()))?;
 
         let prescription_fill = self
@@ -136,17 +137,20 @@ impl PrescriptionsService {
 mod tests {
     use super::{FillPrescriptionError, PrescriptionsService};
     use crate::domain::{
-        doctors::{models::Doctor, repository::DoctorsRepositoryFake, service::DoctorsService},
+        doctors::{entities::Doctor, repository::DoctorsRepositoryFake, service::DoctorsService},
         drugs::{
-            models::{Drug, DrugContentType},
+            entities::{Drug, DrugContentType},
             repository::DrugsRepositoryFake,
             service::DrugsService,
         },
-        patients::{models::Patient, repository::PatientsRepositoryFake, service::PatientsService},
-        pharmacists::{
-            models::Pharmacist, repository::PharmacistsRepositoryFake, service::PharmacistsService,
+        patients::{
+            entities::Patient, repository::PatientsRepositoryFake, service::PatientsService,
         },
-        prescriptions::{models::PrescriptionType, repository::PrescriptionsRepositoryFake},
+        pharmacists::{
+            entities::Pharmacist, repository::PharmacistsRepositoryFake,
+            service::PharmacistsService,
+        },
+        prescriptions::{entities::PrescriptionType, repository::PrescriptionsRepositoryFake},
     };
 
     struct DatabaseSeeds {
@@ -303,7 +307,11 @@ mod tests {
             .unwrap();
 
         let filled_prescription = service
-            .fill_prescription(seed_prescription.id, seeds.pharmacist.id)
+            .fill_prescription(
+                seed_prescription.id,
+                seeds.pharmacist.id,
+                seed_prescription.code,
+            )
             .await
             .unwrap();
         let fill = filled_prescription.fill.unwrap();
@@ -327,7 +335,11 @@ mod tests {
             .unwrap();
 
         let filled_prescription = service
-            .fill_prescription(seed_prescription.id, seeds.pharmacist.id)
+            .fill_prescription(
+                seed_prescription.id,
+                seeds.pharmacist.id,
+                seed_prescription.code,
+            )
             .await
             .unwrap();
         let fill = filled_prescription.fill.unwrap();
@@ -335,8 +347,9 @@ mod tests {
         assert!(fill.prescription_id == seed_prescription.id);
         assert!(fill.pharmacist_id == seeds.pharmacist.id);
 
+        let code = filled_prescription.code.clone();
         let prescription_filled_again = service
-            .fill_prescription(filled_prescription.id, seeds.pharmacist.id)
+            .fill_prescription(filled_prescription.id, seeds.pharmacist.id, code)
             .await;
 
         assert!(match prescription_filled_again {

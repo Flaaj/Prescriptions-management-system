@@ -4,7 +4,7 @@ use uuid::Uuid;
 
 use crate::domain::{
     drugs::{
-        models::{Drug, NewDrug},
+        entities::{Drug, NewDrug},
         repository::{
             CreateDrugRepositoryError, DrugsRepository, GetDrugByIdRepositoryError,
             GetDrugsRepositoryError,
@@ -111,7 +111,7 @@ mod tests {
     use super::{DrugsRepository, PostgresDrugsRepository};
     use crate::{
         domain::drugs::{
-            models::{DrugContentType, NewDrug},
+            entities::{DrugContentType, NewDrug},
             repository::{GetDrugByIdRepositoryError, GetDrugsRepositoryError},
         },
         infrastructure::postgres_repository_impl::create_tables::create_tables,

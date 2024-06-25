@@ -1,7 +1,7 @@
 use uuid::Uuid;
 
 use super::{
-    models::{NewUser, User, UserRole},
+    entities::{NewUser, User, UserRole},
     repository::{AuthenticationRepository, CreateUserRepositoryError},
 };
 use crate::application::helpers::hashing::Hasher;
@@ -93,7 +93,7 @@ mod tests {
 
     use super::AuthenticationService;
     use crate::application::authentication::{
-        models::UserRole, repository::AuthenticationRepositoryFake,
+        entities::UserRole, repository::AuthenticationRepositoryFake,
     };
 
     fn setup_service() -> AuthenticationService {

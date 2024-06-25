@@ -4,7 +4,7 @@ use super::repository::{
     CreatePatientRepositoryError, GetPatientByIdRepositoryError, GetPatientsRepositoryError,
 };
 use crate::domain::patients::{
-    models::{NewPatient, Patient},
+    entities::{NewPatient, Patient},
     repository::PatientsRepository,
 };
 

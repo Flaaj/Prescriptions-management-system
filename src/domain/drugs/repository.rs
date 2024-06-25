@@ -5,7 +5,7 @@ use chrono::Utc;
 use uuid::Uuid;
 
 use crate::domain::{
-    drugs::models::{Drug, NewDrug},
+    drugs::entities::{Drug, NewDrug},
     utils::pagination::get_pagination_params,
 };
 
@@ -117,7 +117,7 @@ mod tests {
     use super::{
         DrugsRepository, DrugsRepositoryFake, GetDrugByIdRepositoryError, GetDrugsRepositoryError,
     };
-    use crate::domain::drugs::models::{DrugContentType, NewDrug};
+    use crate::domain::drugs::entities::{DrugContentType, NewDrug};
 
     fn setup_repository() -> DrugsRepositoryFake {
         DrugsRepositoryFake::new()

@@ -3,8 +3,8 @@ use std::sync::RwLock;
 use chrono::Utc;
 use rocket::async_trait;
 
-use super::models::{NewUser, User};
-use crate::domain::{doctors::models::Doctor, pharmacists::models::Pharmacist};
+use super::entities::{NewUser, User};
+use crate::domain::{doctors::entities::Doctor, pharmacists::entities::Pharmacist};
 
 #[derive(thiserror::Error, Debug, PartialEq)]
 pub enum CreateUserRepositoryError {
@@ -80,16 +80,13 @@ impl AuthenticationRepository for AuthenticationRepositoryFake {
         &self,
         username: &'a str,
     ) -> Result<User, GetUserRepositoryError> {
-        match self
-            .users
+        self.users
             .read()
             .unwrap()
             .iter()
             .find(|user| user.username == username)
-        {
-            Some(user) => return Ok(user.clone()),
-            None => Err(GetUserRepositoryError::NotFound(username.to_owned())),
-        }
+            .ok_or(GetUserRepositoryError::NotFound(username.to_owned()))
+            .map(|user| user.to_owned())
     }
 }
 
@@ -98,7 +95,7 @@ mod tests {
     use uuid::Uuid;
 
     use super::{AuthenticationRepository, AuthenticationRepositoryFake};
-    use crate::application::authentication::models::{NewUser, UserRole};
+    use crate::application::authentication::entities::{NewUser, UserRole};
 
     fn setup_repository() -> AuthenticationRepositoryFake {
         AuthenticationRepositoryFake::new()

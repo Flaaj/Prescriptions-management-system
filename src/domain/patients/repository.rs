@@ -5,7 +5,7 @@ use chrono::Utc;
 use uuid::Uuid;
 
 use crate::domain::{
-    patients::models::{NewPatient, Patient},
+    patients::entities::{NewPatient, Patient},
     utils::pagination::get_pagination_params,
 };
 
@@ -137,7 +137,7 @@ mod tests {
 
     use super::PatientsRepositoryFake;
     use crate::domain::patients::{
-        models::NewPatient,
+        entities::NewPatient,
         repository::{
             CreatePatientRepositoryError, GetPatientByIdRepositoryError,
             GetPatientsRepositoryError, PatientsRepository,

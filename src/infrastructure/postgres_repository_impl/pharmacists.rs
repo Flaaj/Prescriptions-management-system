@@ -4,7 +4,7 @@ use uuid::Uuid;
 
 use crate::domain::{
     pharmacists::{
-        models::{NewPharmacist, Pharmacist},
+        entities::{NewPharmacist, Pharmacist},
         repository::{
             CreatePharmacistRepositoryError, GetPharmacistByIdRepositoryError,
             GetPharmacistsRepositoryError, PharmacistsRepository,
@@ -107,7 +107,7 @@ mod tests {
     use super::PostgresPharmacistsRepository;
     use crate::{
         domain::pharmacists::{
-            models::NewPharmacist,
+            entities::NewPharmacist,
             repository::{
                 CreatePharmacistRepositoryError, GetPharmacistByIdRepositoryError,
                 GetPharmacistsRepositoryError, PharmacistsRepository,

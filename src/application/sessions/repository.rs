@@ -4,7 +4,7 @@ use chrono::Utc;
 use rocket::async_trait;
 use uuid::Uuid;
 
-use super::models::{NewSession, Session};
+use super::entities::{NewSession, Session};
 
 #[derive(thiserror::Error, Debug, PartialEq)]
 pub enum CreateSessionRepositoryError {
@@ -123,7 +123,7 @@ mod tests {
     use uuid::Uuid;
 
     use super::{SessionsRepository, SessionsRepositoryFake};
-    use crate::application::sessions::models::NewSession;
+    use crate::application::sessions::entities::NewSession;
 
     fn setup_repository() -> SessionsRepositoryFake {
         SessionsRepositoryFake::new()

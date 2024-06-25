@@ -1,6 +1,6 @@
 use chrono::Utc;
 
-use crate::application::sessions::models::Session;
+use crate::application::sessions::entities::Session;
 
 #[derive(Debug, PartialEq, thiserror::Error)]
 pub enum SessionValidationError {
@@ -35,7 +35,7 @@ mod tests {
     use uuid::Uuid;
 
     use crate::application::sessions::{
-        models::Session, use_cases::validate_session::SessionValidationError,
+        entities::Session, use_cases::validate_session::SessionValidationError,
     };
 
     fn create_mock_session() -> Session {

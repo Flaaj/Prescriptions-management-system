@@ -16,7 +16,7 @@ use uuid::Uuid;
 use crate::{
     application::api::utils::{error::ApiError, openapi_responses::get_openapi_responses},
     domain::prescriptions::{
-        models::{Prescription, PrescriptionType},
+        entities::{Prescription, PrescriptionType},
         repository::{
             CreatePrescriptionRepositoryError, FillPrescriptionRepositoryError,
             GetPrescriptionByIdRepositoryError, GetPrescriptionsRepositoryError,
@@ -158,6 +158,7 @@ pub async fn get_prescription_by_id(
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct FillPrescriptionDto {
     pharmacist_id: Uuid,
+    prescription_code: String,
 }
 
 impl<'r> Responder<'r, 'static> for FillPrescriptionError {
@@ -209,7 +210,11 @@ pub async fn fill_prescription(
 ) -> Result<Created<Json<Prescription>>, FillPrescriptionError> {
     let prescription = ctx
         .prescriptions_service
-        .fill_prescription(prescription_id, dto.0.pharmacist_id)
+        .fill_prescription(
+            prescription_id,
+            dto.0.pharmacist_id,
+            dto.0.prescription_code,
+        )
         .await?;
 
     let location = format!("/prescriptions/{}", prescription.id);
@@ -280,21 +285,23 @@ mod tests {
             sessions::{repository::SessionsRepositoryFake, service::SessionsService},
         },
         domain::{
-            doctors::{models::Doctor, repository::DoctorsRepositoryFake, service::DoctorsService},
+            doctors::{
+                entities::Doctor, repository::DoctorsRepositoryFake, service::DoctorsService,
+            },
             drugs::{
-                models::{Drug, DrugContentType},
+                entities::{Drug, DrugContentType},
                 repository::DrugsRepositoryFake,
                 service::DrugsService,
             },
             patients::{
-                models::Patient, repository::PatientsRepositoryFake, service::PatientsService,
+                entities::Patient, repository::PatientsRepositoryFake, service::PatientsService,
             },
             pharmacists::{
-                models::Pharmacist, repository::PharmacistsRepositoryFake,
+                entities::Pharmacist, repository::PharmacistsRepositoryFake,
                 service::PharmacistsService,
             },
             prescriptions::{
-                models::Prescription, repository::PrescriptionsRepositoryFake,
+                entities::Prescription, repository::PrescriptionsRepositoryFake,
                 service::PrescriptionsService,
             },
         },
@@ -466,7 +473,14 @@ mod tests {
         let fill_prescription_response = client
             .post(format!("/prescriptions/{}/fill", created_prescription.id))
             .header(ContentType::JSON)
-            .body(format!(r#"{{"pharmacist_id": "{}"}}"#, seeds.pharmacist.id,))
+            .body(format!(
+                r#"{{
+                    "pharmacist_id": "{}",
+                    "prescription_code": "{}"
+                }}"#,
+                seeds.pharmacist.id,
+                created_prescription.code
+            ))
             .dispatch()
             .await;
 
@@ -518,7 +532,13 @@ mod tests {
             client
                 .post(format!("/prescriptions/{}/fill", seed_prescription.id))
                 .header(ContentType::JSON)
-                .body(format!(r#"{{"pharmacist_id": "{}"}}"#, seeds.pharmacist.id,))
+                .body(format!(
+                    r#"{{
+                        "pharmacist_id": "{}",
+                        "prescription_code": "{}"
+                    }}"#,
+                    seeds.pharmacist.id, seed_prescription.code,
+                ))
                 .dispatch()
                 .await
                 .status(),
@@ -529,7 +549,13 @@ mod tests {
             client
                 .post(format!("/prescriptions/{}/fill", seed_prescription.id))
                 .header(ContentType::JSON)
-                .body(format!(r#"{{"pharmacist_id": "{}"}}"#, seeds.pharmacist.id,))
+                .body(format!(
+                    r#"{{
+                        "pharmacist_id": "{}",
+                        "prescription_code": "{}"
+                    }}"#,
+                    seeds.pharmacist.id, seed_prescription.code,
+                ))
                 .dispatch()
                 .await
                 .status(),

@@ -1,7 +1,7 @@
 use uuid::Uuid;
 
 use super::{
-    models::{Drug, DrugContentType, NewDrug},
+    entities::{Drug, DrugContentType, NewDrug},
     repository::{
         CreateDrugRepositoryError, DrugsRepository, GetDrugByIdRepositoryError,
         GetDrugsRepositoryError,
@@ -91,7 +91,7 @@ mod tests {
     use uuid::Uuid;
 
     use super::DrugsService;
-    use crate::domain::drugs::{models::DrugContentType, repository::DrugsRepositoryFake};
+    use crate::domain::drugs::{entities::DrugContentType, repository::DrugsRepositoryFake};
 
     fn setup_service() -> DrugsService {
         DrugsService::new(Box::new(DrugsRepositoryFake::new()))

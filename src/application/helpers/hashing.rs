@@ -18,9 +18,9 @@ mod tests {
 
     #[test]
     fn hashes_password() {
-        let pass = "password".to_string();
-        let hash = Hasher::hash_password(&pass);
+        let pass = "password";
+        let hash = Hasher::hash_password(pass);
         assert_ne!(pass, hash);
-        assert!(Hasher::verify_password(&pass, &hash));
+        assert!(Hasher::verify_password(pass, &hash));
     }
 }

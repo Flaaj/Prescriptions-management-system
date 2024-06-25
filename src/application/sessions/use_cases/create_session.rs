@@ -3,7 +3,7 @@ use std::net::IpAddr;
 use chrono::{Duration, Utc};
 use uuid::Uuid;
 
-use crate::application::sessions::models::NewSession;
+use crate::application::sessions::entities::NewSession;
 
 impl NewSession {
     pub fn new(
@@ -35,7 +35,7 @@ mod tests {
     use chrono::Utc;
     use uuid::Uuid;
 
-    use crate::application::sessions::models::NewSession;
+    use crate::application::sessions::entities::NewSession;
 
     #[test]
     fn creates_new_session() {

@@ -1,7 +1,7 @@
 use uuid::Uuid;
 
 use super::{
-    models::{Doctor, NewDoctor},
+    entities::{Doctor, NewDoctor},
     repository::{
         CreateDoctorRepositoryError, DoctorsRepository, GetDoctorByIdRepositoryError,
         GetDoctorsRepositoryError,

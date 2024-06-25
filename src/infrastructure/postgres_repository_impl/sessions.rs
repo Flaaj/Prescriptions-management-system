@@ -3,7 +3,7 @@ use sqlx::Row;
 use uuid::Uuid;
 
 use crate::application::sessions::{
-    models::{NewSession, Session},
+    entities::{NewSession, Session},
     repository::{
         CreateSessionRepositoryError, GetSessionRepositoryError, SessionsRepository,
         UpdateSessionRepositoryError,
@@ -106,7 +106,7 @@ mod tests {
 
     use super::PostgresSessionsRepository;
     use crate::{
-        application::sessions::{models::NewSession, repository::SessionsRepository},
+        application::sessions::{entities::NewSession, repository::SessionsRepository},
         infrastructure::postgres_repository_impl::create_tables::create_tables,
     };
 

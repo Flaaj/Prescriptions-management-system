@@ -14,12 +14,12 @@ use crate::{
             utils::{error::ApiError, openapi_responses::get_openapi_responses},
         },
         authentication::{
-            models::UserRole,
+            entities::UserRole,
             repository::CreateUserRepositoryError,
             service::{AuthenticationWithCredentialsError, CreateUserError},
         },
         sessions::{
-            models::Session, repository::UpdateSessionRepositoryError,
+            entities::Session, repository::UpdateSessionRepositoryError,
             service::InvalidateSessionError,
         },
     },

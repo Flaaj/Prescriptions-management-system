@@ -15,7 +15,7 @@ use uuid::Uuid;
 use crate::{
     application::api::utils::{error::ApiError, openapi_responses::get_openapi_responses},
     domain::drugs::{
-        models::{Drug, DrugContentType},
+        entities::{Drug, DrugContentType},
         repository::{GetDrugByIdRepositoryError, GetDrugsRepositoryError},
         service::{CreateDrugError, GetDrugByIdError, GetDrugsWithPaginationError},
     },
@@ -191,7 +191,7 @@ mod tests {
 
     use crate::{
         application::api::utils::fake_api_context::create_fake_api_context,
-        domain::drugs::models::{Drug, DrugContentType},
+        domain::drugs::entities::{Drug, DrugContentType},
     };
 
     async fn create_api_client() -> Client {

@@ -5,7 +5,7 @@ use uuid::Uuid;
 
 use crate::domain::{
     prescriptions::{
-        models::{
+        entities::{
             NewPrescription, NewPrescriptionFill, PrescribedDrug, Prescription, PrescriptionDoctor,
             PrescriptionFill, PrescriptionPatient, PrescriptionType,
         },
@@ -500,15 +500,15 @@ mod tests {
     use super::PostgresPrescriptionsRepository;
     use crate::{
         domain::{
-            doctors::{models::NewDoctor, repository::DoctorsRepository},
+            doctors::{entities::NewDoctor, repository::DoctorsRepository},
             drugs::{
-                models::{DrugContentType, NewDrug},
+                entities::{DrugContentType, NewDrug},
                 repository::DrugsRepository,
             },
-            patients::{models::NewPatient, repository::PatientsRepository},
-            pharmacists::{models::NewPharmacist, repository::PharmacistsRepository},
+            patients::{entities::NewPatient, repository::PatientsRepository},
+            pharmacists::{entities::NewPharmacist, repository::PharmacistsRepository},
             prescriptions::{
-                models::{NewPrescribedDrug, NewPrescription},
+                entities::{NewPrescribedDrug, NewPrescription},
                 repository::{
                     CreatePrescriptionRepositoryError, FillPrescriptionRepositoryError,
                     GetPrescriptionByIdRepositoryError, GetPrescriptionsRepositoryError,
@@ -827,7 +827,10 @@ mod tests {
 
         assert!(prescription_from_db.fill.is_none());
 
-        let new_prescription_fill = prescription_from_db.fill(seeds.pharmacist.id).unwrap();
+        let code = prescription_from_db.code.clone();
+        let new_prescription_fill = prescription_from_db
+            .fill(seeds.pharmacist.id, code)
+            .unwrap();
         let created_prescription_fill = repository
             .fill_prescription(new_prescription_fill.clone())
             .await
@@ -871,8 +874,9 @@ mod tests {
             .await
             .unwrap();
 
+        let code = prescription_from_db.code.clone();
         let new_prescription_fill_with_nonexistent_pharmacist_id = prescription_from_db
-            .fill(nonexistent_pharmacist_id)
+            .fill(nonexistent_pharmacist_id, code)
             .unwrap();
 
         assert_eq!(

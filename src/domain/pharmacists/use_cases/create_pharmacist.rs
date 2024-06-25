@@ -1,7 +1,7 @@
 use uuid::Uuid;
 
 use crate::domain::{
-    pharmacists::models::NewPharmacist,
+    pharmacists::entities::NewPharmacist,
     utils::validators::{
         validate_name::validate_name, validate_pesel_number::validate_pesel_number,
     },

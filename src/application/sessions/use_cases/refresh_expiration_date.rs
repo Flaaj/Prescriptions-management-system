@@ -1,6 +1,6 @@
 use chrono::{Duration, Utc};
 
-use crate::application::sessions::models::Session;
+use crate::application::sessions::entities::Session;
 
 impl Session {
     pub fn refresh_expiration_date(&mut self) {
@@ -20,7 +20,7 @@ mod tests {
     use chrono::{Duration, Utc};
     use uuid::Uuid;
 
-    use crate::application::sessions::models::Session;
+    use crate::application::sessions::entities::Session;
 
     fn create_mock_session() -> Session {
         Session {

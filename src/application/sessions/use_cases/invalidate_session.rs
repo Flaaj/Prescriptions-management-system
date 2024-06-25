@@ -1,6 +1,6 @@
 use chrono::Utc;
 
-use crate::application::sessions::models::Session;
+use crate::application::sessions::entities::Session;
 
 #[derive(thiserror::Error, Debug, PartialEq)]
 pub enum InvalidateSessionDomainError {
@@ -30,7 +30,7 @@ mod tests {
     use chrono::Utc;
     use uuid::Uuid;
 
-    use crate::application::sessions::models::Session;
+    use crate::application::sessions::entities::Session;
 
     fn create_mock_session() -> Session {
         Session {

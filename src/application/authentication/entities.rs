@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use serde::Serialize;
 use uuid::Uuid;
 
-use crate::domain::{doctors::models::Doctor, pharmacists::models::Pharmacist};
+use crate::domain::{doctors::entities::Doctor, pharmacists::entities::Pharmacist};
 
 #[derive(sqlx::Type, Debug, PartialEq, Clone, Copy, Serialize)]
 #[sqlx(type_name = "user_role", rename_all = "snake_case")]

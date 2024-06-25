@@ -1,6 +1,6 @@
 use uuid::Uuid;
 
-use crate::domain::drugs::models::{DrugContentType, NewDrug};
+use crate::domain::drugs::entities::{DrugContentType, NewDrug};
 
 #[derive(thiserror::Error, Debug, PartialEq)]
 pub enum CreateNewDrugDomainError {
@@ -83,7 +83,7 @@ impl NewDrug {
 mod tests {
     use uuid::Uuid;
 
-    use crate::domain::drugs::models::{DrugContentType, NewDrug};
+    use crate::domain::drugs::entities::{DrugContentType, NewDrug};
 
     #[test]
     fn creates_drug() {

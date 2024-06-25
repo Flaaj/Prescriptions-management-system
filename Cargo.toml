@@ -30,6 +30,7 @@ rocket_okapi = { version = "0.8.0", features = ["swagger"] }
 schemars = { version = "0.8", features = ["uuid1", "chrono"] }
 okapi = "0.7.0"
 pwhash = "1.0.0"
+clokwerk = "0.4.0"
 
 [dependencies.uuid]
 version = "1.6.1"

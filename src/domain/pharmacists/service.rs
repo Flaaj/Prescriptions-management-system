@@ -5,7 +5,7 @@ use super::repository::{
     GetPharmacistsRepositoryError,
 };
 use crate::domain::pharmacists::{
-    models::{NewPharmacist, Pharmacist},
+    entities::{NewPharmacist, Pharmacist},
     repository::PharmacistsRepository,
 };
 

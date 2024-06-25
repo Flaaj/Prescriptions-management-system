@@ -3,7 +3,7 @@ use std::net::IpAddr;
 use uuid::Uuid;
 
 use super::{
-    models::{NewSession, Session},
+    entities::{NewSession, Session},
     repository::{
         CreateSessionRepositoryError, GetSessionRepositoryError, SessionsRepository,
         UpdateSessionRepositoryError,

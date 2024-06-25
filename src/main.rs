@@ -130,14 +130,30 @@ fn redirect_to_swagger_ui() -> rocket::response::Redirect {
     rocket::response::Redirect::to("/swagger-ui")
 }
 
+// fn setup_scheduler(ctx: &Context) {
+//     let mut scheduler = Scheduler::new();
+//     scheduler.every(1.day()).at("3:00 AM").run(|| {
+        // ctx.sessions_service.remove_sessions_older_than_one_week();
+//     });
+
+//     thread::spawn(move || loop {
+//         scheduler.run_pending();
+//         thread::sleep(Duration::from_secs(3600));
+//     });
+// }
+
 #[launch]
 async fn rocket() -> Rocket<Build> {
     let pool = setup_database_connection().await;
 
     create_tables(&pool, false).await.unwrap();
 
+    let context = setup_context(pool);
+
+    // setup_scheduler(&context);
+
     rocket::build()
-        .manage(setup_context(pool))
+        .manage(context)
         .mount("/", get_routes())
         .mount("/", routes![redirect_to_swagger_ui])
         .mount("/swagger-ui", setup_swagger_ui())

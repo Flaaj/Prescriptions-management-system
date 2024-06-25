@@ -7,7 +7,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{application::sessions::models::Session, Context};
+use crate::{application::sessions::entities::Session, Context};
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum AuthorizationError {

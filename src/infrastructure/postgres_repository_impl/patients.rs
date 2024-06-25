@@ -4,7 +4,7 @@ use uuid::Uuid;
 
 use crate::domain::{
     patients::{
-        models::{NewPatient, Patient},
+        entities::{NewPatient, Patient},
         repository::{
             CreatePatientRepositoryError, GetPatientByIdRepositoryError,
             GetPatientsRepositoryError, PatientsRepository,
@@ -122,7 +122,7 @@ mod tests {
     use super::PostgresPatientsRepository;
     use crate::{
         domain::patients::{
-            models::NewPatient,
+            entities::NewPatient,
             repository::{
                 CreatePatientRepositoryError, GetPatientByIdRepositoryError,
                 GetPatientsRepositoryError, PatientsRepository,

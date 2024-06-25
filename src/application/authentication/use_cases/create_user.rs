@@ -1,6 +1,6 @@
 use uuid::Uuid;
 
-use crate::application::{authentication::models::{NewUser, UserRole}, helpers::hashing::Hasher};
+use crate::application::{authentication::entities::{NewUser, UserRole}, helpers::hashing::Hasher};
 
 #[derive(thiserror::Error, Debug, PartialEq)]
 pub enum CreateNewUserError {
@@ -45,7 +45,7 @@ mod tests {
     use uuid::Uuid;
 
     use crate::application::{
-        authentication::models::{NewUser, UserRole},
+        authentication::entities::{NewUser, UserRole},
         helpers::hashing::Hasher,
     };
 

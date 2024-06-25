@@ -1,7 +1,7 @@
 use chrono::Utc;
 use uuid::Uuid;
 
-use crate::domain::prescriptions::models::{NewPrescriptionFill, Prescription};
+use crate::domain::prescriptions::entities::{NewPrescriptionFill, Prescription};
 
 #[derive(thiserror::Error, Debug, PartialEq)]
 pub enum PrescriptionFillError {
@@ -9,16 +9,25 @@ pub enum PrescriptionFillError {
     InvalidDate,
     #[error("Prescription is already filled")]
     AlreadyFilled,
+    #[error("Prescription code is invalid")]
+    InvalidCode,
 }
 
 impl Prescription {
-    pub fn fill(&self, pharmacist_id: Uuid) -> Result<NewPrescriptionFill, PrescriptionFillError> {
+    pub fn fill(
+        &self,
+        pharmacist_id: Uuid,
+        code: String,
+    ) -> Result<NewPrescriptionFill, PrescriptionFillError> {
         let now = Utc::now();
         if now < self.start_date || now > self.end_date {
             Err(PrescriptionFillError::InvalidDate)?;
         }
         if self.fill.is_some() {
             Err(PrescriptionFillError::AlreadyFilled)?;
+        }
+        if self.code != code {
+            Err(PrescriptionFillError::InvalidCode)?;
         }
 
         Ok(NewPrescriptionFill {
@@ -35,7 +44,7 @@ mod tests {
     use uuid::Uuid;
 
     use crate::domain::prescriptions::{
-        models::{
+        entities::{
             PrescribedDrug, Prescription, PrescriptionDoctor, PrescriptionFill,
             PrescriptionPatient, PrescriptionType,
         },
@@ -82,11 +91,20 @@ mod tests {
     #[test]
     fn fills_prescription() {
         let prescription = create_mock_prescription();
-        let pharmacist_id = Uuid::new_v4();
 
-        let sut = prescription.fill(pharmacist_id);
+        let sut = prescription.fill(Uuid::new_v4(), "12345678".into());
 
         assert!(sut.is_ok())
+    }
+
+    #[test]
+    fn doesnt_fill_if_prescription_the_code_is_invalid() {
+        let prescription = create_mock_prescription();
+        let code = "12345679".into();
+
+        let sut = prescription.fill(Uuid::new_v4(), code);
+
+        assert_eq!(sut, Err(PrescriptionFillError::InvalidCode));
     }
 
     #[test]
@@ -94,7 +112,7 @@ mod tests {
         let mut prescription = create_mock_prescription();
         prescription.start_date = Utc::now() + Duration::minutes(1);
 
-        let sut = prescription.fill(Uuid::new_v4());
+        let sut = prescription.fill(Uuid::new_v4(), "12345678".into());
 
         assert_eq!(sut, Err(PrescriptionFillError::InvalidDate));
     }
@@ -104,7 +122,7 @@ mod tests {
         let mut prescription: Prescription = create_mock_prescription();
         prescription.end_date = Utc::now() - Duration::minutes(1);
 
-        let sut = prescription.fill(Uuid::new_v4());
+        let sut = prescription.fill(Uuid::new_v4(), "12345678".into());
 
         assert_eq!(sut, Err(PrescriptionFillError::InvalidDate));
     }
@@ -120,7 +138,7 @@ mod tests {
             updated_at: Utc::now() - Duration::hours(1),
         });
 
-        let sut = prescription.fill(Uuid::new_v4());
+        let sut = prescription.fill(Uuid::new_v4(), "12345678".into());
 
         assert_eq!(sut, Err(PrescriptionFillError::AlreadyFilled));
     }

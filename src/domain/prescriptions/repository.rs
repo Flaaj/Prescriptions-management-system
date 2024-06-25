@@ -4,13 +4,15 @@ use async_trait::async_trait;
 use chrono::Utc;
 use uuid::Uuid;
 
-use super::models::{PrescribedDrug, PrescriptionDoctor, PrescriptionPatient};
+use super::entities::{PrescribedDrug, PrescriptionDoctor, PrescriptionPatient};
 use crate::domain::{
-    doctors::models::Doctor,
-    drugs::models::Drug,
-    patients::models::Patient,
-    pharmacists::models::Pharmacist,
-    prescriptions::models::{NewPrescription, NewPrescriptionFill, Prescription, PrescriptionFill},
+    doctors::entities::Doctor,
+    drugs::entities::Drug,
+    patients::entities::Patient,
+    pharmacists::entities::Pharmacist,
+    prescriptions::entities::{
+        NewPrescription, NewPrescriptionFill, Prescription, PrescriptionFill,
+    },
     utils::pagination::get_pagination_params,
 };
 
@@ -268,23 +270,23 @@ mod tests {
 
     use crate::domain::{
         doctors::{
-            models::NewDoctor,
+            entities::NewDoctor,
             repository::{DoctorsRepository, DoctorsRepositoryFake},
         },
         drugs::{
-            models::{DrugContentType, NewDrug},
+            entities::{DrugContentType, NewDrug},
             repository::{DrugsRepository, DrugsRepositoryFake},
         },
         patients::{
-            models::NewPatient,
+            entities::NewPatient,
             repository::{PatientsRepository, PatientsRepositoryFake},
         },
         pharmacists::{
-            models::NewPharmacist,
+            entities::NewPharmacist,
             repository::{PharmacistsRepository, PharmacistsRepositoryFake},
         },
         prescriptions::{
-            models::{NewPrescribedDrug, NewPrescription},
+            entities::{NewPrescribedDrug, NewPrescription},
             repository::{
                 CreatePrescriptionRepositoryError, FillPrescriptionRepositoryError,
                 GetPrescriptionByIdRepositoryError, GetPrescriptionsRepositoryError,
@@ -611,7 +613,10 @@ mod tests {
 
         assert!(prescription_from_db.fill.is_none());
 
-        let new_prescription_fill = prescription_from_db.fill(seeds.pharmacist.id).unwrap();
+        let code = prescription_from_db.code.clone();
+        let new_prescription_fill = prescription_from_db
+            .fill(seeds.pharmacist.id, code)
+            .unwrap();
         let created_prescription_fill = repository
             .fill_prescription(new_prescription_fill.clone())
             .await
@@ -655,8 +660,9 @@ mod tests {
             .await
             .unwrap();
 
+        let code = prescription_from_db.code.clone();
         let new_prescription_fill_with_nonexistent_pharmacist_id = prescription_from_db
-            .fill(nonexistent_pharmacist_id)
+            .fill(nonexistent_pharmacist_id, code)
             .unwrap();
 
         assert_eq!(

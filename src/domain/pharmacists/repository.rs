@@ -5,7 +5,7 @@ use chrono::Utc;
 use uuid::Uuid;
 
 use crate::domain::{
-    pharmacists::models::{NewPharmacist, Pharmacist},
+    pharmacists::entities::{NewPharmacist, Pharmacist},
     utils::pagination::get_pagination_params,
 };
 
@@ -140,7 +140,7 @@ mod tests {
         CreatePharmacistRepositoryError, GetPharmacistByIdRepositoryError,
         GetPharmacistsRepositoryError, PharmacistsRepository, PharmacistsRepositoryFake,
     };
-    use crate::domain::pharmacists::models::NewPharmacist;
+    use crate::domain::pharmacists::entities::NewPharmacist;
 
     fn setup_repository() -> PharmacistsRepositoryFake {
         PharmacistsRepositoryFake::new()

@@ -17,7 +17,7 @@ use uuid::Uuid;
 use crate::{
     application::api::utils::{error::ApiError, openapi_responses::get_openapi_responses},
     domain::patients::{
-        models::Patient,
+        entities::Patient,
         repository::{
             CreatePatientRepositoryError, GetPatientByIdRepositoryError, GetPatientsRepositoryError,
         },
@@ -187,7 +187,7 @@ mod tests {
 
     use crate::{
         application::api::utils::fake_api_context::create_fake_api_context,
-        domain::patients::models::Patient,
+        domain::patients::entities::Patient,
     };
 
     async fn create_api_client() -> Client {

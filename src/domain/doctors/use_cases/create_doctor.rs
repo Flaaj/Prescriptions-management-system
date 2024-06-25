@@ -1,7 +1,7 @@
 use uuid::Uuid;
 
 use crate::domain::{
-    doctors::models::NewDoctor,
+    doctors::entities::NewDoctor,
     utils::validators::{
         validate_name::validate_name, validate_pesel_number::validate_pesel_number,
         validate_pwz_number::validate_pwz_number,
@@ -25,7 +25,7 @@ impl NewDoctor {
 
 #[cfg(test)]
 mod tests {
-    use crate::domain::doctors::models::NewDoctor;
+    use crate::domain::doctors::entities::NewDoctor;
 
     #[test]
     fn creates_doctor() {

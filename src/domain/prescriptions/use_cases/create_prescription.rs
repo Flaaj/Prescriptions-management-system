@@ -14,7 +14,7 @@ use std::collections::HashSet;
 use chrono::{DateTime, Duration, Utc};
 use uuid::Uuid;
 
-use crate::domain::prescriptions::models::{NewPrescribedDrug, NewPrescription, PrescriptionType};
+use crate::domain::prescriptions::entities::{NewPrescribedDrug, NewPrescription, PrescriptionType};
 
 #[derive(thiserror::Error, Debug, PartialEq)]
 pub enum CreateNewPrescriptionDomainError {
@@ -91,7 +91,7 @@ mod tests {
     use uuid::Uuid;
 
     use super::{CreateNewPrescriptionDomainError, NewPrescription, PrescriptionType};
-    use crate::domain::prescriptions::models::NewPrescribedDrug;
+    use crate::domain::prescriptions::entities::NewPrescribedDrug;
 
     #[test]
     fn creates_prescription() {
