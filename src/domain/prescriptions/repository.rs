@@ -1,19 +1,8 @@
-use std::sync::RwLock;
-
 use async_trait::async_trait;
-use chrono::Utc;
 use uuid::Uuid;
 
-use super::entities::{PrescribedDrug, PrescriptionDoctor, PrescriptionPatient};
-use crate::domain::{
-    doctors::entities::Doctor,
-    drugs::entities::Drug,
-    patients::entities::Patient,
-    pharmacists::entities::Pharmacist,
-    prescriptions::entities::{
-        NewPrescription, NewPrescriptionFill, Prescription, PrescriptionFill,
-    },
-    utils::pagination::get_pagination_params,
+use crate::domain::prescriptions::entities::{
+    NewPrescription, NewPrescriptionFill, Prescription, PrescriptionFill,
 };
 
 #[derive(thiserror::Error, Debug, PartialEq)]

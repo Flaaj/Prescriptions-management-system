@@ -1,10 +1,6 @@
-use std::sync::RwLock;
-
-use chrono::Utc;
 use rocket::async_trait;
 
 use super::entities::{NewUser, User};
-use crate::domain::{doctors::entities::Doctor, pharmacists::entities::Pharmacist};
 
 #[derive(thiserror::Error, Debug, PartialEq)]
 pub enum CreateUserRepositoryError {

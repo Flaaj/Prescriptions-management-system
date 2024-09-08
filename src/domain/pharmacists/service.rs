@@ -84,10 +84,8 @@ mod tests {
     use uuid::Uuid;
 
     use super::PharmacistsService;
-    use crate::{
-        infrastructure::postgres_repository_impl::{
-            create_tables::create_tables, pharmacists::PostgresPharmacistsRepository,
-        },
+    use crate::infrastructure::postgres_repository_impl::{
+        create_tables::create_tables, pharmacists::PostgresPharmacistsRepository,
     };
 
     async fn setup_service(pool: sqlx::PgPool) -> PharmacistsService {
@@ -144,7 +142,9 @@ mod tests {
     }
 
     #[sqlx::test]
-    async fn get_pharmacist_by_id_returns_error_if_such_pharmacist_does_not_exist(pool: sqlx::PgPool) {
+    async fn get_pharmacist_by_id_returns_error_if_such_pharmacist_does_not_exist(
+        pool: sqlx::PgPool,
+    ) {
         let service = setup_service(pool).await;
 
         let result = service.get_pharmacist_by_id(Uuid::new_v4()).await;
@@ -217,7 +217,9 @@ mod tests {
     }
 
     #[sqlx::test]
-    async fn get_pharmacists_with_pagination_returns_error_if_params_are_invalid(pool: sqlx::PgPool) {
+    async fn get_pharmacists_with_pagination_returns_error_if_params_are_invalid(
+        pool: sqlx::PgPool,
+    ) {
         let service = setup_service(pool).await;
 
         assert!(service

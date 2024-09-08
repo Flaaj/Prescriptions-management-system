@@ -1,13 +1,7 @@
-use std::sync::RwLock;
-
 use async_trait::async_trait;
-use chrono::Utc;
 use uuid::Uuid;
 
-use crate::domain::{
-    patients::entities::{NewPatient, Patient},
-    utils::pagination::get_pagination_params,
-};
+use crate::domain::patients::entities::{NewPatient, Patient};
 
 #[derive(thiserror::Error, Debug, PartialEq)]
 pub enum CreatePatientRepositoryError {

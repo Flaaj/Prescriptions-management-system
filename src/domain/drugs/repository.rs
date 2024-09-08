@@ -1,13 +1,7 @@
-use std::sync::RwLock;
-
 use async_trait::async_trait;
-use chrono::Utc;
 use uuid::Uuid;
 
-use crate::domain::{
-    drugs::entities::{Drug, NewDrug},
-    utils::pagination::get_pagination_params,
-};
+use crate::domain::drugs::entities::{Drug, NewDrug};
 
 #[derive(thiserror::Error, Debug, PartialEq)]
 pub enum CreateDrugRepositoryError {
