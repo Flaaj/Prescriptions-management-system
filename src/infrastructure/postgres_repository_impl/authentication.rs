@@ -103,8 +103,9 @@ impl AuthenticationRepository for PostgresAuthenticationRepository {
             .map_err(|err| CreateUserRepositoryError::DatabaseError(err.to_string()))?;
 
         sqlx::query(
-            r#"INSERT INTO users (username, password_hash, email, phone_number, role, doctor_id, pharmacist_id) VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
+            r#"INSERT INTO users (id, username, password_hash, email, phone_number, role, doctor_id, pharmacist_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
         )
+        .bind(new_user.id)
         .bind(new_user.username.clone())
         .bind(new_user.password_hash)
         .bind(new_user.email)
@@ -205,20 +206,20 @@ mod tests {
         .unwrap()
     }
 
-    // #[sqlx::test]
-    // async fn creates_new_user_and_reads_by_username(pool: sqlx::PgPool) {
-    //     let repository = setup_repository(pool).await;
-    //     let mock_new_user = create_mock_new_user();
+    #[sqlx::test]
+    async fn creates_new_user_and_reads_by_username(pool: sqlx::PgPool) {
+        let repository = setup_repository(pool).await;
+        let mock_new_user = create_mock_new_user();
 
-    //     let created_user = repository.create_user(mock_new_user.clone()).await.unwrap();
+        let created_user = repository.create_user(mock_new_user.clone()).await.unwrap();
 
-    //     assert_eq!(created_user, mock_new_user);
+        assert_eq!(created_user, mock_new_user);
 
-    //     let user_by_username = repository
-    //         .get_user_by_username(&mock_new_user.username)
-    //         .await
-    //         .unwrap();
+        let user_by_username = repository
+            .get_user_by_username(&mock_new_user.username)
+            .await
+            .unwrap();
 
-    //     assert_eq!(created_user, user_by_username);
-    // }
+        assert_eq!(created_user, user_by_username);
+    }
 }
