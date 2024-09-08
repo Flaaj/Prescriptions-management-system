@@ -279,31 +279,23 @@ mod tests {
 
     use crate::{
         application::{
-            authentication::{
-                repository::AuthenticationRepositoryFake, service::AuthenticationService,
-            },
-            sessions::{repository::SessionsRepositoryFake, service::SessionsService},
+            authentication::service::AuthenticationService, sessions::service::SessionsService,
         },
         domain::{
-            doctors::{
-                entities::Doctor, repository::DoctorsRepositoryFake, service::DoctorsService,
-            },
+            doctors::{entities::Doctor, service::DoctorsService},
             drugs::{
                 entities::{Drug, DrugContentType},
-                repository::DrugsRepositoryFake,
                 service::DrugsService,
             },
-            patients::{
-                entities::Patient, repository::PatientsRepositoryFake, service::PatientsService,
-            },
-            pharmacists::{
-                entities::Pharmacist, repository::PharmacistsRepositoryFake,
-                service::PharmacistsService,
-            },
-            prescriptions::{
-                entities::Prescription, repository::PrescriptionsRepositoryFake,
-                service::PrescriptionsService,
-            },
+            patients::{entities::Patient, service::PatientsService},
+            pharmacists::{entities::Pharmacist, service::PharmacistsService},
+            prescriptions::{entities::Prescription, service::PrescriptionsService},
+        },
+        infrastructure::postgres_repository_impl::{
+            authentication::PostgresAuthenticationRepository, create_tables::create_tables,
+            doctors::PostgresDoctorsRepository, drugs::PostgresDrugsRepository,
+            patients::PostgresPatientsRepository, pharmacists::PostgresPharmacistsRepository,
+            prescriptions::PostgresPrescriptionsRepository, sessions::PostgresSessionsRepository,
         },
         Context,
     };
@@ -314,27 +306,31 @@ mod tests {
         drugs: Vec<Drug>,
     }
 
-    async fn setup_services_and_seed_database() -> (Context, DatabaseSeeds) {
-        let doctors_service = DoctorsService::new(Box::new(DoctorsRepositoryFake::new()));
+    async fn setup_services_and_seed_database(pool: sqlx::PgPool) -> (Context, DatabaseSeeds) {
+        create_tables(&pool, true).await.unwrap();
+
+        let doctors_service =
+            DoctorsService::new(Box::new(PostgresDoctorsRepository::new(pool.clone())));
         let created_doctor = doctors_service
             .create_doctor("John Doctor".into(), "92022900002".into(), "3123456".into())
             .await
             .unwrap();
 
         let pharmacist_service =
-            PharmacistsService::new(Box::new(PharmacistsRepositoryFake::new()));
+            PharmacistsService::new(Box::new(PostgresPharmacistsRepository::new(pool.clone())));
         let created_pharmacist = pharmacist_service
             .create_pharmacist("John Pharmacist".into(), "92022900002".into())
             .await
             .unwrap();
 
-        let patients_service = PatientsService::new(Box::new(PatientsRepositoryFake::new()));
+        let patients_service =
+            PatientsService::new(Box::new(PostgresPatientsRepository::new(pool.clone())));
         let created_patient = patients_service
             .create_patient("John Patient".into(), "92022900002".into())
             .await
             .unwrap();
 
-        let drugs_service = DrugsService::new(Box::new(DrugsRepositoryFake::new()));
+        let drugs_service = DrugsService::new(Box::new(PostgresDrugsRepository::new(pool.clone())));
         let created_drug_0 = drugs_service
             .create_drug(
                 "Gripex".into(),
@@ -381,24 +377,14 @@ mod tests {
             .unwrap();
 
         let prescriptions_service =
-            PrescriptionsService::new(Box::new(PrescriptionsRepositoryFake::new(
-                None,
-                Some(vec![created_doctor.clone()]),
-                Some(vec![created_patient.clone()]),
-                Some(vec![created_pharmacist.clone()]),
-                Some(vec![
-                    created_drug_0.clone(),
-                    created_drug_1.clone(),
-                    created_drug_2.clone(),
-                    created_drug_3.clone(),
-                ]),
-            )));
+            PrescriptionsService::new(Box::new(PostgresPrescriptionsRepository::new(pool.clone())));
 
-        let authentication_repository = Box::new(AuthenticationRepositoryFake::new());
+        let authentication_repository =
+            Box::new(PostgresAuthenticationRepository::new(pool.clone()));
         let authentication_service =
             Arc::new(AuthenticationService::new(authentication_repository));
 
-        let sessions_repository = Box::new(SessionsRepositoryFake::new());
+        let sessions_repository = Box::new(PostgresSessionsRepository::new(pool));
         let sessions_service = Arc::new(SessionsService::new(sessions_repository));
 
         (
@@ -425,8 +411,8 @@ mod tests {
         )
     }
 
-    async fn create_api_client() -> (Client, DatabaseSeeds) {
-        let (context, seeds) = setup_services_and_seed_database().await;
+    async fn create_api_client(pool: sqlx::PgPool) -> (Client, DatabaseSeeds) {
+        let (context, seeds) = setup_services_and_seed_database(pool).await;
 
         let routes = routes![
             super::create_prescription,
@@ -442,9 +428,9 @@ mod tests {
         (client, seeds)
     }
 
-    #[tokio::test]
-    async fn creates_and_fills_prescription() {
-        let (client, seeds) = create_api_client().await;
+    #[sqlx::test]
+    async fn creates_and_fills_prescription(pool: sqlx::PgPool) {
+        let (client, seeds) = create_api_client(pool).await;
 
         let create_prescription_response = client
             .post("/prescriptions")
@@ -478,8 +464,7 @@ mod tests {
                     "pharmacist_id": "{}",
                     "prescription_code": "{}"
                 }}"#,
-                seeds.pharmacist.id,
-                created_prescription.code
+                seeds.pharmacist.id, created_prescription.code
             ))
             .dispatch()
             .await;
@@ -503,9 +488,9 @@ mod tests {
         assert!(prescription_by_id.fill.is_some());
     }
 
-    #[tokio::test]
-    async fn doesnt_fill_if_already_filled() {
-        let (client, seeds) = create_api_client().await;
+    #[sqlx::test]
+    async fn doesnt_fill_if_already_filled(pool: sqlx::PgPool) {
+        let (client, seeds) = create_api_client(pool).await;
         let create_seed_prescription_response = client
             .post("/prescriptions")
             .header(ContentType::JSON)
@@ -563,9 +548,9 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn returns_error_if_prescription_does_not_exist() {
-        let (client, _) = create_api_client().await;
+    #[sqlx::test]
+    async fn returns_error_if_prescription_does_not_exist(pool: sqlx::PgPool) {
+        let (client, _) = create_api_client(pool).await;
 
         let get_prescription_by_id_response = client
             .get("/prescriptions/00000000-0000-0000-0000-000000000000")
@@ -576,9 +561,9 @@ mod tests {
         assert_eq!(get_prescription_by_id_response.status(), Status::NotFound);
     }
 
-    #[tokio::test]
-    async fn gets_pharmacists_with_pagination() {
-        let (client, seeds) = create_api_client().await;
+    #[sqlx::test]
+    async fn gets_pharmacists_with_pagination(pool: sqlx::PgPool) {
+        let (client, seeds) = create_api_client(pool).await;
 
         client
             .post("/prescriptions")
@@ -698,9 +683,11 @@ mod tests {
         assert_eq!(prescriptions.len(), 0);
     }
 
-    #[tokio::test]
-    async fn get_pharmacists_with_pagination_returns_error_if_params_are_invalid() {
-        let (client, _) = create_api_client().await;
+    #[sqlx::test]
+    async fn get_pharmacists_with_pagination_returns_error_if_params_are_invalid(
+        pool: sqlx::PgPool,
+    ) {
+        let (client, _) = create_api_client(pool).await;
 
         assert_eq!(
             client

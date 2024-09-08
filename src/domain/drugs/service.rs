@@ -91,15 +91,21 @@ mod tests {
     use uuid::Uuid;
 
     use super::DrugsService;
-    use crate::domain::drugs::{entities::DrugContentType, repository::DrugsRepositoryFake};
+    use crate::{
+        domain::drugs::entities::DrugContentType,
+        infrastructure::postgres_repository_impl::{
+            create_tables::create_tables, drugs::PostgresDrugsRepository,
+        },
+    };
 
-    fn setup_service() -> DrugsService {
-        DrugsService::new(Box::new(DrugsRepositoryFake::new()))
+    async fn setup_service(pool: sqlx::PgPool) -> DrugsService {
+        create_tables(&pool, true).await.unwrap();
+        DrugsService::new(Box::new(PostgresDrugsRepository::new(pool)))
     }
 
-    #[tokio::test]
-    async fn creates_drug_and_reads_by_id() {
-        let service = setup_service();
+    #[sqlx::test]
+    async fn creates_drug_and_reads_by_id(pool: sqlx::PgPool) {
+        let service = setup_service(pool).await;
 
         let created_drug = service
             .create_drug(
@@ -133,18 +139,18 @@ mod tests {
         assert_eq!(drug_from_repository.volume_ml, None);
     }
 
-    #[tokio::test]
-    async fn get_drug_by_id_returns_error_if_drug_doesnt_exist() {
-        let service = setup_service();
+    #[sqlx::test]
+    async fn get_drug_by_id_returns_error_if_drug_doesnt_exist(pool: sqlx::PgPool) {
+        let service = setup_service(pool).await;
 
         let result = service.get_drug_by_id(Uuid::new_v4()).await;
 
         assert!(result.is_err());
     }
 
-    #[tokio::test]
-    async fn gets_drugs_with_pagination() {
-        let service = setup_service();
+    #[sqlx::test]
+    async fn gets_drugs_with_pagination(pool: sqlx::PgPool) {
+        let service = setup_service(pool).await;
 
         let result = service
             .create_drug(
@@ -239,9 +245,9 @@ mod tests {
         assert_eq!(drugs.len(), 0);
     }
 
-    #[tokio::test]
-    async fn get_drugs_with_pagination_returns_error_if_params_are_invalid() {
-        let service = setup_service();
+    #[sqlx::test]
+    async fn get_drugs_with_pagination_returns_error_if_params_are_invalid(pool: sqlx::PgPool) {
+        let service = setup_service(pool).await;
 
         assert!(service
             .get_drugs_with_pagination(Some(-1), None)

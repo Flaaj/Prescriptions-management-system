@@ -190,12 +190,12 @@ mod tests {
     };
 
     use crate::{
-        application::api::utils::fake_api_context::create_fake_api_context,
+        context::setup_context,
         domain::drugs::entities::{Drug, DrugContentType},
     };
 
-    async fn create_api_client() -> Client {
-        let context = create_fake_api_context();
+    async fn create_api_client(pool: sqlx::PgPool) -> Client {
+        let context = setup_context(pool);
 
         let routes = routes![
             super::create_drug,
@@ -208,9 +208,9 @@ mod tests {
         Client::tracked(rocket).await.unwrap()
     }
 
-    #[tokio::test]
-    async fn creates_and_gets_drug_by_id() {
-        let client = create_api_client().await;
+    #[sqlx::test]
+    async fn creates_and_gets_drug_by_id(pool: sqlx::PgPool) {
+        let client = create_api_client(pool).await;
 
         let created_drug_response = client
             .post("/drugs")
@@ -237,9 +237,9 @@ mod tests {
         assert_eq!(response.status(), Status::Ok);
     }
 
-    #[tokio::test]
-    async fn create_drug_returns_unprocessable_entity_with_invalid_data() {
-        let client = create_api_client().await;
+    #[sqlx::test]
+    async fn create_drug_returns_unprocessable_entity_with_invalid_data(pool: sqlx::PgPool) {
+        let client = create_api_client(pool).await;
         assert_eq!(client
             .post("/drugs")
             .header(ContentType::JSON)
@@ -262,9 +262,11 @@ mod tests {
             .await.status(), Status::UnprocessableEntity);
     }
 
-    #[tokio::test]
-    async fn get_drug_by_id_returns_unprocessable_entity_if_id_param_is_invalid() {
-        let client = create_api_client().await;
+    #[sqlx::test]
+    async fn get_drug_by_id_returns_unprocessable_entity_if_id_param_is_invalid(
+        pool: sqlx::PgPool,
+    ) {
+        let client = create_api_client(pool).await;
 
         let request = client.get("/drugs/10").header(ContentType::JSON);
         let response = request.dispatch().await;
@@ -272,9 +274,9 @@ mod tests {
         assert_eq!(response.status(), Status::UnprocessableEntity);
     }
 
-    #[tokio::test]
-    async fn get_drug_by_id_returns_not_found_if_such_doctor_does_not_exist() {
-        let client = create_api_client().await;
+    #[sqlx::test]
+    async fn get_drug_by_id_returns_not_found_if_such_doctor_does_not_exist(pool: sqlx::PgPool) {
+        let client = create_api_client(pool).await;
 
         let request = client
             .get("/drugs/00000000-0000-0000-0000-000000000000")
@@ -284,9 +286,9 @@ mod tests {
         assert_eq!(response.status(), Status::NotFound);
     }
 
-    #[tokio::test]
-    async fn gets_drugs_with_pagination() {
-        let client = create_api_client().await;
+    #[sqlx::test]
+    async fn gets_drugs_with_pagination(pool: sqlx::PgPool) {
+        let client = create_api_client(pool).await;
         client
             .post("/drugs")
             .body(r#"{"name":"Drug 1", "pills_count":30, "mg_per_pill":300, "content_type":"SOLID_PILLS"}"#)
@@ -325,10 +327,11 @@ mod tests {
         assert_eq!(doctors.len(), 2);
     }
 
-    #[tokio::test]
+    #[sqlx::test]
     async fn get_drugs_with_pagination_returns_unprocessable_entity_if_page_or_page_size_is_invalid(
+        pool: sqlx::PgPool,
     ) {
-        let client = create_api_client().await;
+        let client = create_api_client(pool).await;
 
         assert_eq!(
             client

@@ -99,15 +99,18 @@ mod tests {
     use uuid::Uuid;
 
     use super::SessionsService;
-    use crate::application::sessions::repository::SessionsRepositoryFake;
+    use crate::infrastructure::postgres_repository_impl::{
+        create_tables::create_tables, sessions::PostgresSessionsRepository,
+    };
 
-    fn setup_service() -> SessionsService {
-        SessionsService::new(Box::new(SessionsRepositoryFake::new()))
+    async fn setup_service(pool: sqlx::PgPool) -> SessionsService {
+        create_tables(&pool, true).await.unwrap();
+        SessionsService::new(Box::new(PostgresSessionsRepository::new(pool)))
     }
 
-    #[tokio::test]
-    async fn creates_new_session() {
-        let service = setup_service();
+    #[sqlx::test]
+    async fn creates_new_session(pool: sqlx::PgPool) {
+        let service = setup_service(pool).await;
 
         service
             .create_session(
@@ -121,9 +124,9 @@ mod tests {
             .unwrap();
     }
 
-    #[tokio::test]
-    async fn invalidates_session() {
-        let service = setup_service();
+    #[sqlx::test]
+    async fn invalidates_session(pool: sqlx::PgPool) {
+        let service = setup_service(pool).await;
         let session = service
             .create_session(
                 Uuid::new_v4(),

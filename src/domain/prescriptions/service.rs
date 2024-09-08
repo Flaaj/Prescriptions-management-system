@@ -136,21 +136,23 @@ impl PrescriptionsService {
 #[cfg(test)]
 mod tests {
     use super::{FillPrescriptionError, PrescriptionsService};
-    use crate::domain::{
-        doctors::{entities::Doctor, repository::DoctorsRepositoryFake, service::DoctorsService},
-        drugs::{
-            entities::{Drug, DrugContentType},
-            repository::DrugsRepositoryFake,
-            service::DrugsService,
+    use crate::{
+        domain::{
+            doctors::{entities::Doctor, service::DoctorsService},
+            drugs::{
+                entities::{Drug, DrugContentType},
+                service::DrugsService,
+            },
+            patients::{entities::Patient, service::PatientsService},
+            pharmacists::{entities::Pharmacist, service::PharmacistsService},
+            prescriptions::entities::PrescriptionType,
         },
-        patients::{
-            entities::Patient, repository::PatientsRepositoryFake, service::PatientsService,
+        infrastructure::postgres_repository_impl::{
+            create_tables::create_tables, doctors::PostgresDoctorsRepository,
+            drugs::PostgresDrugsRepository, patients::PostgresPatientsRepository,
+            pharmacists::PostgresPharmacistsRepository,
+            prescriptions::PostgresPrescriptionsRepository,
         },
-        pharmacists::{
-            entities::Pharmacist, repository::PharmacistsRepositoryFake,
-            service::PharmacistsService,
-        },
-        prescriptions::{entities::PrescriptionType, repository::PrescriptionsRepositoryFake},
     };
 
     struct DatabaseSeeds {
@@ -160,27 +162,33 @@ mod tests {
         drugs: Vec<Drug>,
     }
 
-    async fn setup_services_and_seed_database() -> (PrescriptionsService, DatabaseSeeds) {
-        let doctors_service = DoctorsService::new(Box::new(DoctorsRepositoryFake::new()));
+    async fn setup_services_and_seed_database(
+        pool: sqlx::PgPool,
+    ) -> (PrescriptionsService, DatabaseSeeds) {
+        create_tables(&pool, true).await.unwrap();
+
+        let doctors_service =
+            DoctorsService::new(Box::new(PostgresDoctorsRepository::new(pool.clone())));
         let created_doctor = doctors_service
             .create_doctor("John Doctor".into(), "92022900002".into(), "3123456".into())
             .await
             .unwrap();
 
         let pharmacist_service =
-            PharmacistsService::new(Box::new(PharmacistsRepositoryFake::new()));
+            PharmacistsService::new(Box::new(PostgresPharmacistsRepository::new(pool.clone())));
         let created_pharmacist = pharmacist_service
             .create_pharmacist("John Pharmacist".into(), "92022900002".into())
             .await
             .unwrap();
 
-        let patients_service = PatientsService::new(Box::new(PatientsRepositoryFake::new()));
+        let patients_service =
+            PatientsService::new(Box::new(PostgresPatientsRepository::new(pool.clone())));
         let created_patient = patients_service
             .create_patient("John Patient".into(), "92022900002".into())
             .await
             .unwrap();
 
-        let drugs_service = DrugsService::new(Box::new(DrugsRepositoryFake::new()));
+        let drugs_service = DrugsService::new(Box::new(PostgresDrugsRepository::new(pool.clone())));
         let created_drug_0 = drugs_service
             .create_drug(
                 "Gripex".into(),
@@ -227,18 +235,7 @@ mod tests {
             .unwrap();
 
         (
-            PrescriptionsService::new(Box::new(PrescriptionsRepositoryFake::new(
-                None,
-                Some(vec![created_doctor.clone()]),
-                Some(vec![created_patient.clone()]),
-                Some(vec![created_pharmacist.clone()]),
-                Some(vec![
-                    created_drug_0.clone(),
-                    created_drug_1.clone(),
-                    created_drug_2.clone(),
-                    created_drug_3.clone(),
-                ]),
-            ))),
+            PrescriptionsService::new(Box::new(PostgresPrescriptionsRepository::new(pool.clone()))),
             DatabaseSeeds {
                 doctor: created_doctor,
                 pharmacist: created_pharmacist,
@@ -253,9 +250,9 @@ mod tests {
         )
     }
 
-    #[tokio::test]
-    async fn creates_and_reads_prescription_by_id() {
-        let (service, seeds) = setup_services_and_seed_database().await;
+    #[sqlx::test]
+    async fn creates_and_reads_prescription_by_id(pool: sqlx::PgPool) {
+        let (service, seeds) = setup_services_and_seed_database(pool).await;
 
         let created_prescription = service
             .create_prescription(
@@ -282,9 +279,9 @@ mod tests {
         assert_eq!(created_prescription, prescription_from_repository);
     }
 
-    #[tokio::test]
-    async fn get_prescription_by_id_returns_error_if_prescription_doesnt_exist() {
-        let (service, _) = setup_services_and_seed_database().await;
+    #[sqlx::test]
+    async fn get_prescription_by_id_returns_error_if_prescription_doesnt_exist(pool: sqlx::PgPool) {
+        let (service, _) = setup_services_and_seed_database(pool).await;
         let prescription_id = uuid::Uuid::new_v4();
 
         let prescription = service.get_prescription_by_id(prescription_id).await;
@@ -292,9 +289,9 @@ mod tests {
         assert!(prescription.is_err());
     }
 
-    #[tokio::test]
-    async fn fills_prescription() {
-        let (service, seeds) = setup_services_and_seed_database().await;
+    #[sqlx::test]
+    async fn fills_prescription(pool: sqlx::PgPool) {
+        let (service, seeds) = setup_services_and_seed_database(pool).await;
         let seed_prescription = service
             .create_prescription(
                 seeds.doctor.id,
@@ -320,9 +317,9 @@ mod tests {
         assert!(fill.pharmacist_id == seeds.pharmacist.id);
     }
 
-    #[tokio::test]
-    async fn doesnt_fill_if_already_filled() {
-        let (service, seeds) = setup_services_and_seed_database().await;
+    #[sqlx::test]
+    async fn doesnt_fill_if_already_filled(pool: sqlx::PgPool) {
+        let (service, seeds) = setup_services_and_seed_database(pool).await;
         let seed_prescription = service
             .create_prescription(
                 seeds.doctor.id,
@@ -358,9 +355,9 @@ mod tests {
         });
     }
 
-    #[tokio::test]
-    async fn gets_pharmacists_with_pagination() {
-        let (service, seeds) = setup_services_and_seed_database().await;
+    #[sqlx::test]
+    async fn gets_pharmacists_with_pagination(pool: sqlx::PgPool) {
+        let (service, seeds) = setup_services_and_seed_database(pool).await;
 
         service
             .create_prescription(
@@ -446,9 +443,11 @@ mod tests {
         assert_eq!(prescriptions.len(), 0);
     }
 
-    #[tokio::test]
-    async fn get_pharmacists_with_pagination_returns_error_if_params_are_invalid() {
-        let (service, _) = setup_services_and_seed_database().await;
+    #[sqlx::test]
+    async fn get_pharmacists_with_pagination_returns_error_if_params_are_invalid(
+        pool: sqlx::PgPool,
+    ) {
+        let (service, _) = setup_services_and_seed_database(pool).await;
 
         assert!(service
             .get_prescriptions_with_pagination(Some(-1), None)

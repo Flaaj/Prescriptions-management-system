@@ -195,13 +195,10 @@ mod tests {
         serde::json,
     };
 
-    use crate::{
-        application::api::utils::fake_api_context::create_fake_api_context,
-        domain::pharmacists::entities::Pharmacist,
-    };
+    use crate::{context::setup_context, domain::pharmacists::entities::Pharmacist};
 
-    async fn create_api_client() -> Client {
-        let context = create_fake_api_context();
+    async fn create_api_client(pool: sqlx::PgPool) -> Client {
+        let context = setup_context(pool);
 
         let routes = routes![
             super::create_pharmacist,
@@ -214,9 +211,9 @@ mod tests {
         Client::tracked(rocket).await.unwrap()
     }
 
-    #[tokio::test]
-    async fn creates_pharmacist_and_reads_by_id() {
-        let client = create_api_client().await;
+    #[sqlx::test]
+    async fn creates_pharmacist_and_reads_by_id(pool: sqlx::PgPool) {
+        let client = create_api_client(pool).await;
 
         let create_pharmacist_response = client
             .post("/pharmacists")
@@ -248,9 +245,11 @@ mod tests {
         assert_eq!(pharmacist.pesel_number, "96021807250");
     }
 
-    #[tokio::test]
-    async fn create_pharmacist_returns_unprocessable_entity_if_body_has_incorrect_keys() {
-        let client = create_api_client().await;
+    #[sqlx::test]
+    async fn create_pharmacist_returns_unprocessable_entity_if_body_has_incorrect_keys(
+        pool: sqlx::PgPool,
+    ) {
+        let client = create_api_client(pool).await;
 
         let request_with_wrong_key = client
             .post("/pharmacists")
@@ -261,10 +260,11 @@ mod tests {
         assert_eq!(response.status(), Status::UnprocessableEntity);
     }
 
-    #[tokio::test]
-    async fn create_pharmacist_returns_unprocessable_entity_if_body_has_incorrect_value_incorrect()
-    {
-        let client = create_api_client().await;
+    #[sqlx::test]
+    async fn create_pharmacist_returns_unprocessable_entity_if_body_has_incorrect_value_incorrect(
+        pool: sqlx::PgPool,
+    ) {
+        let client = create_api_client(pool).await;
 
         let mut request_with_incorrect_value = client
             .post("/pharmacists")
@@ -275,9 +275,9 @@ mod tests {
         assert_eq!(response.status(), Status::UnprocessableEntity);
     }
 
-    #[tokio::test]
-    async fn create_pharmacist_returns_conflict_if_pesel_number_is_duplicated() {
-        let client = create_api_client().await;
+    #[sqlx::test]
+    async fn create_pharmacist_returns_conflict_if_pesel_number_is_duplicated(pool: sqlx::PgPool) {
+        let client = create_api_client(pool).await;
 
         let request = client
             .post("/pharmacists")
@@ -294,9 +294,11 @@ mod tests {
         assert_eq!(response.status(), Status::Conflict);
     }
 
-    #[tokio::test]
-    async fn get_pharmacist_by_id_returns_unprocessable_entity_if_id_param_is_invalid() {
-        let client = create_api_client().await;
+    #[sqlx::test]
+    async fn get_pharmacist_by_id_returns_unprocessable_entity_if_id_param_is_invalid(
+        pool: sqlx::PgPool,
+    ) {
+        let client = create_api_client(pool).await;
 
         let request = client.get("/pharmacists/10").header(ContentType::JSON);
         let response = request.dispatch().await;
@@ -304,9 +306,11 @@ mod tests {
         assert_eq!(response.status(), Status::UnprocessableEntity);
     }
 
-    #[tokio::test]
-    async fn get_pharmacist_by_id_returns_not_found_if_such_pharmacist_does_not_exist() {
-        let client = create_api_client().await;
+    #[sqlx::test]
+    async fn get_pharmacist_by_id_returns_not_found_if_such_pharmacist_does_not_exist(
+        pool: sqlx::PgPool,
+    ) {
+        let client = create_api_client(pool).await;
 
         let request = client
             .get("/pharmacists/00000000-0000-0000-0000-000000000000")
@@ -316,9 +320,9 @@ mod tests {
         assert_eq!(response.status(), Status::NotFound);
     }
 
-    #[tokio::test]
-    async fn gets_pharmacists_with_pagination() {
-        let client = create_api_client().await;
+    #[sqlx::test]
+    async fn gets_pharmacists_with_pagination(pool: sqlx::PgPool) {
+        let client = create_api_client(pool).await;
         client
             .post("/pharmacists")
             .body(r#"{"name":"John Doex", "pesel_number":"96021817257"}"#)
@@ -358,10 +362,11 @@ mod tests {
         assert_eq!(pharmacists.len(), 2);
     }
 
-    #[tokio::test]
+    #[sqlx::test]
     async fn get_pharmacists_with_pagination_returns_unprocessable_entity_if_page_or_page_size_is_invalid(
+        pool: sqlx::PgPool,
     ) {
-        let client = create_api_client().await;
+        let client = create_api_client(pool).await;
 
         assert_eq!(
             client

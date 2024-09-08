@@ -402,10 +402,10 @@ mod tests {
     };
 
     use super::SessionTokenResponse;
-    use crate::application::api::utils::fake_api_context::create_fake_api_context;
+    use crate::context::setup_context;
 
-    async fn create_api_client() -> Client {
-        let context = create_fake_api_context();
+    async fn create_api_client(pool: sqlx::PgPool) -> Client {
+        let context = setup_context(pool);
 
         let routes = routes![
             super::register_doctor,
@@ -422,9 +422,9 @@ mod tests {
         Client::tracked(rocket).await.unwrap()
     }
 
-    #[tokio::test]
-    async fn test_doctor_auth() {
-        let client = create_api_client().await;
+    #[sqlx::test]
+    async fn test_doctor_auth(pool: sqlx::PgPool) {
+        let client = create_api_client(pool).await;
 
         let response = client
             .get("/test-collection/endpoint-that-requires-authorization-as-doctor")
@@ -498,9 +498,9 @@ mod tests {
         assert_eq!(response.status(), Status::Forbidden);
     }
 
-    #[tokio::test]
-    async fn test_pharmacist_auth() {
-        let client = create_api_client().await;
+    #[sqlx::test]
+    async fn test_pharmacist_auth(pool: sqlx::PgPool) {
+        let client = create_api_client(pool).await;
 
         let response = client
             .get("/test-collection/endpoint-that-requires-authorization-as-pharmacist")

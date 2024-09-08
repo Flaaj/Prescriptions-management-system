@@ -84,15 +84,20 @@ mod tests {
     use uuid::Uuid;
 
     use super::PharmacistsService;
-    use crate::domain::pharmacists::repository::PharmacistsRepositoryFake;
+    use crate::{
+        infrastructure::postgres_repository_impl::{
+            create_tables::create_tables, pharmacists::PostgresPharmacistsRepository,
+        },
+    };
 
-    fn setup_service() -> PharmacistsService {
-        PharmacistsService::new(Box::new(PharmacistsRepositoryFake::new()))
+    async fn setup_service(pool: sqlx::PgPool) -> PharmacistsService {
+        create_tables(&pool, true).await.unwrap();
+        PharmacistsService::new(Box::new(PostgresPharmacistsRepository::new(pool)))
     }
 
-    #[tokio::test]
-    async fn creates_pharmacist_and_reads_by_id() {
-        let service = setup_service();
+    #[sqlx::test]
+    async fn creates_pharmacist_and_reads_by_id(pool: sqlx::PgPool) {
+        let service = setup_service(pool).await;
 
         let created_pharmacist = service
             .create_pharmacist("John Doex".into(), "96021807250".into())
@@ -111,9 +116,9 @@ mod tests {
         assert_eq!(pharmacist_from_repository.pesel_number, "96021807250");
     }
 
-    #[tokio::test]
-    async fn create_pharmacist_returns_error_if_body_is_incorrect() {
-        let service = setup_service();
+    #[sqlx::test]
+    async fn create_pharmacist_returns_error_if_body_is_incorrect(pool: sqlx::PgPool) {
+        let service = setup_service(pool).await;
 
         let result = service
             .create_pharmacist("John Doex".into(), "96021807251".into()) // invalid pesel
@@ -122,9 +127,9 @@ mod tests {
         assert!(result.is_err());
     }
 
-    #[tokio::test]
-    async fn create_pharmacist_returns_error_if_pesel_number_is_duplicated() {
-        let service = setup_service();
+    #[sqlx::test]
+    async fn create_pharmacist_returns_error_if_pesel_number_is_duplicated(pool: sqlx::PgPool) {
+        let service = setup_service(pool).await;
 
         service
             .create_pharmacist("John Doex".into(), "96021807250".into())
@@ -138,18 +143,18 @@ mod tests {
         assert!(duplicated_pesel_number_result.is_err());
     }
 
-    #[tokio::test]
-    async fn get_pharmacist_by_id_returns_error_if_such_pharmacist_does_not_exist() {
-        let service = setup_service();
+    #[sqlx::test]
+    async fn get_pharmacist_by_id_returns_error_if_such_pharmacist_does_not_exist(pool: sqlx::PgPool) {
+        let service = setup_service(pool).await;
 
         let result = service.get_pharmacist_by_id(Uuid::new_v4()).await;
 
         assert!(result.is_err());
     }
 
-    #[tokio::test]
-    async fn gets_pharmacists_with_pagination() {
-        let service = setup_service();
+    #[sqlx::test]
+    async fn gets_pharmacists_with_pagination(pool: sqlx::PgPool) {
+        let service = setup_service(pool).await;
 
         service
             .create_pharmacist("John Doex".into(), "96021817257".into())
@@ -211,9 +216,9 @@ mod tests {
         assert_eq!(pharmacists.len(), 0);
     }
 
-    #[tokio::test]
-    async fn get_pharmacists_with_pagination_returns_error_if_params_are_invalid() {
-        let service = setup_service();
+    #[sqlx::test]
+    async fn get_pharmacists_with_pagination_returns_error_if_params_are_invalid(pool: sqlx::PgPool) {
+        let service = setup_service(pool).await;
 
         assert!(service
             .get_pharmacists_with_pagination(Some(-1), None)

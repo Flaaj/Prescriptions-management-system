@@ -1,27 +1,16 @@
 pub mod application;
+pub mod context;
 pub mod domain;
 pub mod infrastructure;
 
-use std::{env, sync::Arc};
+use std::env;
 
-use application::{
-    api::controllers::{
-        authentication_controller, doctors_controller, drugs_controller, patients_controller,
-        pharmacists_controller, prescriptions_controller,
-    },
-    authentication::{repository::AuthenticationRepositoryFake, service::AuthenticationService},
-    sessions::{repository::SessionsRepositoryFake, service::SessionsService},
+use application::api::controllers::{
+    authentication_controller, doctors_controller, drugs_controller, patients_controller,
+    pharmacists_controller, prescriptions_controller,
 };
-use domain::{
-    doctors::service::DoctorsService, drugs::service::DrugsService,
-    patients::service::PatientsService, pharmacists::service::PharmacistsService,
-    prescriptions::service::PrescriptionsService,
-};
-use infrastructure::postgres_repository_impl::{
-    create_tables::create_tables, doctors::PostgresDoctorsRepository,
-    drugs::PostgresDrugsRepository, patients::PostgresPatientsRepository,
-    pharmacists::PostgresPharmacistsRepository, prescriptions::PostgresPrescriptionsRepository,
-};
+use context::{setup_context, Context};
+use infrastructure::postgres_repository_impl::create_tables::create_tables;
 use rocket::{get, launch, routes, Build, Rocket, Route};
 use rocket_okapi::{
     openapi_get_routes,
@@ -47,50 +36,7 @@ async fn setup_database_connection() -> PgPool {
         .unwrap()
 }
 
-#[derive(Clone)]
-pub struct Context {
-    pub doctors_service: Arc<DoctorsService>,
-    pub pharmacists_service: Arc<PharmacistsService>,
-    pub patients_service: Arc<PatientsService>,
-    pub drugs_service: Arc<DrugsService>,
-    pub prescriptions_service: Arc<PrescriptionsService>,
-    pub authentication_service: Arc<AuthenticationService>,
-    pub sessions_service: Arc<SessionsService>,
-}
 pub type Ctx = rocket::State<Context>;
-
-fn setup_context(pool: PgPool) -> Context {
-    let doctors_repository = Box::new(PostgresDoctorsRepository::new(pool.clone()));
-    let doctors_service = Arc::new(DoctorsService::new(doctors_repository));
-
-    let pharmacists_repository = Box::new(PostgresPharmacistsRepository::new(pool.clone()));
-    let pharmacists_service = Arc::new(PharmacistsService::new(pharmacists_repository));
-
-    let patients_repository = Box::new(PostgresPatientsRepository::new(pool.clone()));
-    let patients_service = Arc::new(PatientsService::new(patients_repository));
-
-    let drugs_repository = Box::new(PostgresDrugsRepository::new(pool.clone()));
-    let drugs_service = Arc::new(DrugsService::new(drugs_repository));
-
-    let prescriptions_repository = Box::new(PostgresPrescriptionsRepository::new(pool.clone()));
-    let prescriptions_service = Arc::new(PrescriptionsService::new(prescriptions_repository));
-
-    let authentication_repository = Box::new(AuthenticationRepositoryFake::new());
-    let authentication_service = Arc::new(AuthenticationService::new(authentication_repository));
-
-    let sessions_repository = Box::new(SessionsRepositoryFake::new());
-    let sessions_service = Arc::new(SessionsService::new(sessions_repository));
-
-    Context {
-        doctors_service,
-        pharmacists_service,
-        patients_service,
-        drugs_service,
-        prescriptions_service,
-        authentication_service,
-        sessions_service,
-    }
-}
 
 fn get_routes() -> Vec<Route> {
     openapi_get_routes![
@@ -133,7 +79,7 @@ fn redirect_to_swagger_ui() -> rocket::response::Redirect {
 // fn setup_scheduler(ctx: &Context) {
 //     let mut scheduler = Scheduler::new();
 //     scheduler.every(1.day()).at("3:00 AM").run(|| {
-        // ctx.sessions_service.remove_sessions_older_than_one_week();
+// ctx.sessions_service.remove_sessions_older_than_one_week();
 //     });
 
 //     thread::spawn(move || loop {

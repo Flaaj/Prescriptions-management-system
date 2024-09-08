@@ -6,3 +6,4 @@ pub mod pharmacists;
 pub mod prescriptions;
 pub mod sessions;
 pub mod authentication;
+pub mod test;

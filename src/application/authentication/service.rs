@@ -92,17 +92,21 @@ mod tests {
     use uuid::Uuid;
 
     use super::AuthenticationService;
-    use crate::application::authentication::{
-        entities::UserRole, repository::AuthenticationRepositoryFake,
+    use crate::{
+        application::authentication::entities::UserRole,
+        infrastructure::postgres_repository_impl::{
+            authentication::PostgresAuthenticationRepository, create_tables::create_tables,
+        },
     };
 
-    fn setup_service() -> AuthenticationService {
-        AuthenticationService::new(Box::new(AuthenticationRepositoryFake::new()))
+    async fn setup_service(pool: sqlx::PgPool) -> AuthenticationService {
+        create_tables(&pool, true).await.unwrap();
+        AuthenticationService::new(Box::new(PostgresAuthenticationRepository::new(pool)))
     }
 
-    #[tokio::test]
-    async fn registers_user() {
-        let service = setup_service();
+    #[sqlx::test]
+    async fn registers_user(pool: sqlx::PgPool) {
+        let service = setup_service(pool).await;
 
         service
             .register_user(
@@ -118,9 +122,9 @@ mod tests {
             .unwrap();
     }
 
-    #[tokio::test]
-    async fn authenticates_user_by_credentials() {
-        let service = setup_service();
+    #[sqlx::test]
+    async fn authenticates_user_by_credentials(pool: sqlx::PgPool) {
+        let service = setup_service(pool).await;
         let seed_user = service
             .register_user(
                 "username".to_string(), //
@@ -145,9 +149,9 @@ mod tests {
         assert_eq!(result, Ok(seed_user))
     }
 
-    #[tokio::test]
-    async fn doesnt_authenticate_with_wrong_credentials() {
-        let service = setup_service();
+    #[sqlx::test]
+    async fn doesnt_authenticate_with_wrong_credentials(pool: sqlx::PgPool) {
+        let service = setup_service(pool).await;
         service
             .register_user(
                 "username".to_string(), //
