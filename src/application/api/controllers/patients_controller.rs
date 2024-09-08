@@ -15,15 +15,13 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
-    application::api::utils::{error::ApiError, openapi_responses::get_openapi_responses},
-    domain::patients::{
+    application::api::utils::{error::ApiError, openapi_responses::get_openapi_responses}, context::Ctx, domain::patients::{
         entities::Patient,
         repository::{
             CreatePatientRepositoryError, GetPatientByIdRepositoryError, GetPatientsRepositoryError,
         },
         service::{CreatePatientError, GetPatientByIdError, GetPatientsWithPaginationError},
-    },
-    Ctx,
+    }
 };
 
 fn example_name() -> &'static str {

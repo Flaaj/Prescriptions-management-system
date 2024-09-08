@@ -60,3 +60,5 @@ pub fn setup_context(pool: sqlx::PgPool) -> Context {
         sessions_service,
     }
 }
+
+pub type Ctx = rocket::State<Context>;

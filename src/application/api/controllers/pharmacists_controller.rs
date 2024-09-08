@@ -15,8 +15,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
-    application::api::utils::{error::ApiError, openapi_responses::get_openapi_responses},
-    domain::pharmacists::{
+    application::api::utils::{error::ApiError, openapi_responses::get_openapi_responses}, context::Ctx, domain::pharmacists::{
         entities::Pharmacist,
         repository::{
             CreatePharmacistRepositoryError, GetPharmacistByIdRepositoryError,
@@ -25,8 +24,7 @@ use crate::{
         service::{
             CreatePharmacistError, GetPharmacistByIdError, GetPharmacistsWithPaginationError,
         },
-    },
-    Ctx,
+    }
 };
 
 fn example_name() -> &'static str {

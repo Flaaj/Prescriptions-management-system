@@ -14,12 +14,12 @@ use uuid::Uuid;
 
 use crate::{
     application::api::utils::{error::ApiError, openapi_responses::get_openapi_responses},
+    context::Ctx,
     domain::drugs::{
         entities::{Drug, DrugContentType},
         repository::{GetDrugByIdRepositoryError, GetDrugsRepositoryError},
         service::{CreateDrugError, GetDrugByIdError, GetDrugsWithPaginationError},
     },
-    Ctx,
 };
 
 fn example_drug_name() -> &'static str {

@@ -23,13 +23,13 @@ use crate::{
             service::InvalidateSessionError,
         },
     },
+    context::Ctx,
     domain::{
         doctors::{repository::CreateDoctorRepositoryError, service::CreateDoctorError},
         pharmacists::{
             repository::CreatePharmacistRepositoryError, service::CreatePharmacistError,
         },
     },
-    Ctx,
 };
 
 fn example_username() -> &'static str {

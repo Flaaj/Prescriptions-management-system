@@ -36,7 +36,6 @@ async fn setup_database_connection() -> PgPool {
         .unwrap()
 }
 
-pub type Ctx = rocket::State<Context>;
 
 fn get_routes() -> Vec<Route> {
     openapi_get_routes![

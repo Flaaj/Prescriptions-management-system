@@ -15,6 +15,7 @@ use uuid::Uuid;
 
 use crate::{
     application::api::utils::{error::ApiError, openapi_responses::get_openapi_responses},
+    context::Ctx,
     domain::prescriptions::{
         entities::{Prescription, PrescriptionType},
         repository::{
@@ -26,7 +27,6 @@ use crate::{
             GetPrescriptionsWithPaginationError,
         },
     },
-    Ctx,
 };
 
 fn example_prescribed_drug() -> Vec<(Uuid, u32)> {
