@@ -402,9 +402,13 @@ mod tests {
     };
 
     use super::SessionTokenResponse;
-    use crate::context::setup_context;
+    use crate::{
+        context::setup_context,
+        infrastructure::postgres_repository_impl::create_tables::create_tables,
+    };
 
     async fn create_api_client(pool: sqlx::PgPool) -> Client {
+        create_tables(&pool, true).await.unwrap();
         let context = setup_context(pool);
 
         let routes = routes![

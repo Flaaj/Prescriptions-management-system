@@ -187,9 +187,13 @@ mod tests {
         serde::json,
     };
 
-    use crate::{context::setup_context, domain::doctors::entities::Doctor};
+    use crate::{
+        context::setup_context, domain::doctors::entities::Doctor,
+        infrastructure::postgres_repository_impl::create_tables::create_tables,
+    };
 
     async fn create_api_client(pool: sqlx::PgPool) -> Client {
+        create_tables(&pool, true).await.unwrap();
         let context = setup_context(pool);
 
         let routes = routes![

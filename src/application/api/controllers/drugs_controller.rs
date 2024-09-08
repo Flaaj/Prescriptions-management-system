@@ -192,9 +192,11 @@ mod tests {
     use crate::{
         context::setup_context,
         domain::drugs::entities::{Drug, DrugContentType},
+        infrastructure::postgres_repository_impl::create_tables::create_tables,
     };
 
     async fn create_api_client(pool: sqlx::PgPool) -> Client {
+        create_tables(&pool, true).await.unwrap();
         let context = setup_context(pool);
 
         let routes = routes![
@@ -275,7 +277,7 @@ mod tests {
     }
 
     #[sqlx::test]
-    async fn get_drug_by_id_returns_not_found_if_such_doctor_does_not_exist(pool: sqlx::PgPool) {
+    async fn get_drug_by_id_returns_not_found_if_such_drug_does_not_exist(pool: sqlx::PgPool) {
         let client = create_api_client(pool).await;
 
         let request = client
